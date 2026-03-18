@@ -5,57 +5,46 @@ Eine native, schnelle Desktop-App für Claude AI – kein Browser nötig.
 ## Features
 
 - **Native Fenster** – Eigene App in der Taskleiste, Alt+Tab-fähig
+- **Google OAuth** – Login mit Google funktioniert direkt
 - **Deutsches Menü** – Neuer Chat (Strg+N), Einstellungen (Strg+,)
 - **Dark Mode** – Dunkles Theme, passend zu Claude
-- **Globaler Shortcut** – Strg+Shift+C bringt Claude sofort in den Vordergrund
+- **Sicherheit** – Sandbox aktiviert, nur erlaubte Domains, sichere URL-Prüfung
 - **Externe Links** – Öffnen sich automatisch im System-Browser
 - **Custom Scrollbars** – Schlankes, modernes Scrollbar-Design
 - **Zoom** – Strg++ / Strg+- zum Vergrößern/Verkleinern
 
 ## Installation
 
-### Voraussetzungen
+### Option 1: .deb-Paket (empfohlen für Ubuntu/Debian)
 
-- Node.js (v18 oder neuer): https://nodejs.org/
-- npm (kommt mit Node.js)
-
-### Schnellstart
+Lade die neueste `.deb`-Datei von den [Releases](https://github.com/simongettkandt/claude-desktop/releases) herunter und installiere sie:
 
 ```bash
-# 1. In das Projektverzeichnis wechseln
-cd claude-desktop-electron
+sudo dpkg -i claude-desktop_1.0.1_amd64.deb
+```
 
-# 2. Abhängigkeiten installieren
+### Option 2: Aus Quellcode
+
+Voraussetzungen: Node.js (v18+) und npm
+
+```bash
+git clone https://github.com/simongettkandt/claude-desktop.git
+cd claude-desktop
 npm install
-
-# 3. App starten
 npm start
 ```
 
-### Als .deb-Paket bauen (für Ubuntu/Debian)
+### Selbst bauen
 
 ```bash
+# Als .deb-Paket
 npm run build-deb
-```
 
-Das fertige `.deb`-Paket findest du dann unter `dist/`.
-
-Installation:
-```bash
-sudo dpkg -i dist/claude-desktop_1.0.0_amd64.deb
-```
-
-### Als AppImage bauen (für alle Linux-Distros)
-
-```bash
+# Als AppImage
 npm run build-appimage
 ```
 
-Das AppImage unter `dist/` ist sofort lauffähig:
-```bash
-chmod +x dist/Claude-Desktop-1.0.0.AppImage
-./dist/Claude-Desktop-1.0.0.AppImage
-```
+Die fertigen Dateien liegen dann unter `dist/`.
 
 ## Tastenkürzel
 
@@ -64,17 +53,23 @@ chmod +x dist/Claude-Desktop-1.0.0.AppImage
 | Strg+N | Neuer Chat |
 | Strg+, | Einstellungen |
 | Strg+R | Neu laden |
-| Strg+Shift+C | Claude in den Vordergrund (global) |
 | Strg++ / Strg+- | Zoom |
 | F11 | Vollbild |
 
-## Anpassungen
+## Changelog
 
-Die App lädt `https://claude.ai` in einem Electron-Fenster. Du kannst in `main.js` weitere Anpassungen vornehmen, z.B.:
+### v1.0.1 – Sicherheitsupdate & Bugfix
+- Sandbox aktiviert (`sandbox: true`)
+- Sichere Domain-Prüfung via URL-Parsing statt `string.includes()`
+- `shell.openExternal` nur noch für `https:`-URLs
+- `will-navigate` blockiert unbekannte Domains
+- DevTools nur im Entwicklungsmodus
+- Fokus-Bug behoben (Tastatureingaben landeten in App trotz Fensterwechsel)
 
-- **Fenstergröße** ändern (`width`, `height`)
-- **Zusätzliches CSS** injizieren (in `did-finish-load`)
-- **Tray-Icon** hinzufügen für Minimize-to-Tray
+### v1.0.0 – Initial Release
+- BrowserWindow lädt claude.ai mit Chrome User-Agent
+- Google OAuth Popup-Handling
+- Dark Mode, deutsches Menü, Custom CSS
 
 ## Lizenz
 
