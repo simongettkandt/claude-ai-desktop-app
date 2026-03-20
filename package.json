@@ -3,14 +3,14 @@
   "version": "1.1.2",
   "description": "Claude AI – Native Desktop App für Linux",
   "main": "main.js",
-  "homepage": "https://github.com/simongettkandt/claude-desktop",
+  "homepage": "https://github.com/simongettkandt/claude-ai-desktop-app",
   "author": {
     "name": "Simon Gettkandt",
     "email": "simon@gettkandt.de"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/simongettkandt/claude-desktop.git"
+    "url": "https://github.com/simongettkandt/claude-ai-desktop-app.git"
   },
   "scripts": {
     "start": "electron .",
@@ -24,8 +24,17 @@
     "publish": {
       "provider": "github",
       "owner": "simongettkandt",
-      "repo": "claude-desktop"
+      "repo": "claude-ai-desktop-app"
     },
+    "files": [
+      "main.js",
+      "preload-tabbar.js",
+      "icon.png",
+      "package.json",
+      "node_modules/**/*",
+      "!node_modules/*/{test,tests,__tests__,docs,doc,example,examples}/**",
+      "!**/*.{md,ts,map,d.ts}"
+    ],
     "linux": {
       "target": ["AppImage"],
       "icon": "icon.png",
