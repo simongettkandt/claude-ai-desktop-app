@@ -1,16 +1,18 @@
 name: claude-ai-desktop
-version: '1.1.3'
+version: '1.2.0'
 summary: Claude AI – Native Desktop App für Linux
 description: |
   Eine schnelle, native Desktop-App für Claude AI.
   Nutze Claude direkt vom Desktop – ohne Browser, ablenkungsfrei und immer griffbereit.
-  
+
   Features:
-  - Native Fenster mit eigenem Taskleisten-Icon
-  - Google OAuth Login
+  - Tab-System mit visueller Tab-Leiste
+  - Dark/Light Mode Toggle
+  - Custom Design (Modern/Classic) mit Gradient-Akzenten
+  - Google OAuth & Connector Login (GitHub, Google Drive, GitLab, etc.)
   - Automatische Updates
-  - Dark Mode
-  - Deutsches Menü
+  - Deutsch & Englisch
+  - Electron 41 mit Chromium 134
 
 base: core22
 grade: stable
