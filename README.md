@@ -2,6 +2,8 @@
 
 A fast, native desktop app for Claude AI – no browser needed. Runs on all Linux distributions.
 
+[![Get it from the Snap Store](https://snapcraft.io/static/images/badges/en/snap-store-black.svg)](https://snapcraft.io/claude-ai-desktop)
+
 > **v1.2.0** – Electron 41, WebContentsView, Custom Design System, 0 vulnerabilities
 
 ---
