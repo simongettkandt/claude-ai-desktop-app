@@ -2,6 +2,7 @@ const { app, BrowserWindow, WebContentsView, shell, Menu, nativeTheme, dialog, N
 const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const fs = require('fs');
+const { version } = require('./package.json');
 
 // ── Electron "Object has been destroyed" Error-Dialog abfangen ──
 const _origErrorBox = dialog.showErrorBox;
@@ -447,7 +448,9 @@ function setupView(view) {
   });
 
   // ── Tab-Titel ──
-  wc.on('page-title-updated', (_, title) => {
+  wc.on('page-title-updated', (e, title) => {
+    e.preventDefault();
+    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.setTitle(`Claude v${version}`);
     const idx = tabs.findIndex(tab => tab.view === view);
     if (idx >= 0) {
       const clean = title.replace(/\s*[-\u2013]\s*Claude.*$/, '') || t('Neuer Chat', 'New Chat');
@@ -613,13 +616,8 @@ function closeTab(index) {
 }
 
 function updateTitle() {
-  if (!mainWindow || mainWindow.isDestroyed() || !tabs[activeTabIndex]) return;
-  const wc = tabs[activeTabIndex].view.webContents;
-  if (wc.isDestroyed()) return;
-  const info = tabs.length > 1 ? ` (${activeTabIndex + 1}/${tabs.length})` : '';
-  const title = !isOnline ? 'Claude \u2013 Offline'
-    : wc.isLoading() ? 'Claude \u2013 ' + t('Laden\u2026', 'Loading\u2026') + info
-    : 'Claude' + info;
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  const title = `Claude v${version}`;
   if (mainWindow.getTitle() !== title) mainWindow.setTitle(title);
 }
 
@@ -961,7 +959,7 @@ function createWindow() {
 
   mainWindow = new BrowserWindow({
     width: state.width, height: state.height, x: state.x, y: state.y,
-    minWidth: 480, minHeight: 600, title: 'Claude',
+    minWidth: 480, minHeight: 600, title: `Claude v${version}`,
     icon: icon(),
     backgroundColor: theme().bg,
     show: false,
@@ -976,6 +974,7 @@ function createWindow() {
   if (state.isMaximized) mainWindow.maximize();
 
   mainWindow.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(getTabBarHTML()));
+  mainWindow.setTitle(`Claude v${version}`);
   mainWindow.once('ready-to-show', () => mainWindow.show());
 
   mainWindow.on('resize', () => { saveWindowState(); resizeActiveView(); });
