@@ -40,7 +40,6 @@
       "en-US",
       "de"
     ],
-    "compression": "maximum",
     "asar": true,
     "files": [
       "main.js",
