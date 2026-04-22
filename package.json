@@ -15,7 +15,6 @@
   "scripts": {
     "start": "electron .",
     "build": "electron-builder --linux",
-    "build:beta": "electron-builder --linux -c.directories.output=snap-beta/dist",
     "build-appimage": "electron-builder --linux AppImage",
     "build-deb": "electron-builder --linux deb"
   },

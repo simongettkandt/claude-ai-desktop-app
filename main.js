@@ -171,7 +171,6 @@ const RELEASE_NOTES = {
     { icon: 'settings', title: 'App-Einstellungen', text: 'Neuer Dialog f\u00fcr Tray-Verhalten und Hotkey \u2013 jederzeit \u00fcber das Men\u00fc erreichbar.' }
   ]
 };
-RELEASE_NOTES['1.3.0-beta.1'] = RELEASE_NOTES['1.3.0'];
 
 function loadWindowState() {
   try {
