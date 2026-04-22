@@ -26,9 +26,10 @@
   // ── CSS-Variable Override (einmalig) ──
 
   var varsDone = false;
+  var varsFailed = false;
 
   function overrideVars() {
-    if (varsDone) return;
+    if (varsDone || varsFailed) return;
     var sheet = document.getElementById('cd-vars');
     if (!sheet) {
       sheet = document.createElement('style');
@@ -60,6 +61,9 @@
     if (found) {
       sheet.textContent = rules + '}';
       varsDone = true;
+    } else {
+      varsFailed = true;
+      console.warn('[claude-desktop] Kein Orange-Recoloring möglich — claude.ai CSS hat sich möglicherweise geändert. Fallback: Classic-Design wählen.');
     }
   }
 

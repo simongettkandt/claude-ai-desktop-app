@@ -159,14 +159,11 @@ let quickPromptWindow = null;
 let whatsNewWindow = null;
 let minimizeOnClose = false;
 let currentHotkey = null;
+let updateCheckInterval = null;
+let onlineCheckInterval = null;
+let waitForFirstTabInterval = null;
 
 const RELEASE_NOTES = {
-  '1.3.0-beta.1': [
-    { icon: 'tray', title: 'Systemtray & Hintergrund-Modus', text: 'Claude l\u00e4uft jetzt im Hintergrund weiter und ist \u00fcber das Tray-Symbol erreichbar.' },
-    { icon: 'bolt', title: 'Globaler Quick-Prompt', text: 'Ein frei w\u00e4hlbarer Hotkey \u00f6ffnet ein Eingabefenster f\u00fcr neue Chats \u2013 direkt aus jeder App.' },
-    { icon: 'check', title: 'Update-Check mit Feedback', text: 'Das Men\u00fc zeigt jetzt klar an, ob ein Update bereitsteht oder die App aktuell ist.' },
-    { icon: 'settings', title: 'App-Einstellungen', text: 'Neuer Dialog f\u00fcr Tray-Verhalten und Hotkey \u2013 jederzeit \u00fcber das Men\u00fc erreichbar.' }
-  ],
   '1.3.0': [
     { icon: 'tray', title: 'Systemtray & Hintergrund-Modus', text: 'Claude l\u00e4uft jetzt im Hintergrund weiter und ist \u00fcber das Tray-Symbol erreichbar.' },
     { icon: 'bolt', title: 'Globaler Quick-Prompt', text: 'Ein frei w\u00e4hlbarer Hotkey \u00f6ffnet ein Eingabefenster f\u00fcr neue Chats \u2013 direkt aus jeder App.' },
@@ -174,6 +171,7 @@ const RELEASE_NOTES = {
     { icon: 'settings', title: 'App-Einstellungen', text: 'Neuer Dialog f\u00fcr Tray-Verhalten und Hotkey \u2013 jederzeit \u00fcber das Men\u00fc erreichbar.' }
   ]
 };
+RELEASE_NOTES['1.3.0-beta.1'] = RELEASE_NOTES['1.3.0'];
 
 function loadWindowState() {
   try {
@@ -183,10 +181,29 @@ function loadWindowState() {
   if (windowState.isDarkMode !== undefined) isDarkMode = windowState.isDarkMode;
   minimizeOnClose = windowState.minimizeOnClose === true;
   currentHotkey = typeof windowState.hotkey === 'string' && windowState.hotkey.length > 0 ? windowState.hotkey : null;
-  return {
+
+  const result = {
     width: windowState.width || 1200, height: windowState.height || 800,
     x: windowState.x, y: windowState.y, isMaximized: windowState.isMaximized || false
   };
+
+  // Gespeicherte Position auf sichtbare Displays clampen
+  if (result.x !== undefined && result.y !== undefined) {
+    try {
+      const displays = screen.getAllDisplays();
+      const onScreen = displays.some(d => {
+        const wa = d.workArea;
+        return result.x < wa.x + wa.width && result.x + result.width > wa.x
+          && result.y < wa.y + wa.height && result.y + result.height > wa.y;
+      });
+      if (!onScreen) {
+        delete result.x;
+        delete result.y;
+      }
+    } catch {}
+  }
+
+  return result;
 }
 
 function buildState() {
@@ -498,10 +515,7 @@ function setupView(view) {
 
   wc.on('will-frame-navigate', (event) => {
     const navUrl = event.url;
-    if (!isAllowedDomain(navUrl) && !isOAuthDomain(navUrl)) {
-      try { const p = new URL(navUrl).protocol; if (p !== 'https:' && p !== 'http:') event.preventDefault(); }
-      catch { event.preventDefault(); }
-    }
+    if (!isAllowedDomain(navUrl) && !isOAuthDomain(navUrl)) event.preventDefault();
   });
 
   // ── Tab-Titel ──
@@ -527,7 +541,7 @@ function setupView(view) {
   // ── Crash-Recovery ──
   wc.on('render-process-gone', (_, details) => {
     if (details.reason === 'clean-exit' || wc.isDestroyed()) return;
-    const tab = tabs.find(t => t.view === view);
+    const tab = tabs.find(tb => tb.view === view);
     if (!tab) return;
     tab.crashCount = (tab.crashCount || 0) + 1;
     if (tab.crashCount > MAX_CRASH_RELOADS) {
@@ -607,6 +621,18 @@ function createTab(url = 'https://claude.ai') {
 }
 
 let lastViewBounds = '';
+
+function throttleActiveView(throttleOn) {
+  const active = tabs[activeTabIndex];
+  if (!active || !alive(active.view)) return;
+  try {
+    active.view.webContents.setBackgroundThrottling(throttleOn);
+    if (typeof active.view.webContents.setFrameRate === 'function') {
+      active.view.webContents.setFrameRate(throttleOn ? 10 : 60);
+    }
+  } catch {}
+}
+
 const resizeActiveView = throttle(() => {
   if (!mainWindow || mainWindow.isDestroyed() || !tabs[activeTabIndex]) return;
   const b = mainWindow.getContentBounds();
@@ -686,6 +712,13 @@ function toggleDesign() {
   customDesign = !customDesign;
 
   if (mainWindow && !mainWindow.isDestroyed()) mainWindow.setIcon(icon());
+  if (tray) {
+    try {
+      let img = nativeImage.createFromPath(icon());
+      if (!img.isEmpty()) img = img.resize({ width: 22, height: 22, quality: 'best' });
+      tray.setImage(img.isEmpty() ? icon() : img);
+    } catch {}
+  }
   try { fs.copyFileSync(icon(), path.join(app.getPath('home'), 'Apps', 'claude-desktop-icon.png')); } catch {}
 
   drainPool();
@@ -798,8 +831,7 @@ body{padding:10px}
 .frame{height:100%;border-radius:12px;padding:2px;
   background:linear-gradient(135deg,${ac.from},${ac.to},${ac.from},${ac.to});
   background-size:300% 300%;
-  animation:gradShift 6s ease-in-out infinite;
-  box-shadow:0 8px 32px rgba(0,0,0,.35), 0 0 24px color-mix(in srgb,${ac.from} 30%,transparent)}
+  animation:gradShift 6s ease-in-out infinite}
 .inner{height:100%;background:${th.bg};border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
 .wrap{flex:1;display:flex;align-items:flex-start;gap:12px}
 .logo{width:28px;height:28px;flex-shrink:0;border-radius:7px;margin-top:4px;object-fit:contain;
@@ -1321,19 +1353,20 @@ function handleOnlineChange(online) {
 function showOfflinePage() {
   const tab = tabs[activeTabIndex];
   if (!tab || !alive(tab.view)) return;
+  const th = theme();
   tab.view.webContents.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(
     `<!DOCTYPE html><html><head>
     <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline';">
     <style>
-    body{background:#171310;color:#e8e0d8;font-family:system-ui,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;margin:0}
+    body{background:${th.bg};color:${th.textActive};font-family:system-ui,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;margin:0}
     h1{font-size:22px;font-weight:600;margin-bottom:8px}
-    p{color:#8a7e72;font-size:14px;max-width:360px;text-align:center;line-height:1.6}
+    p{color:${th.text};font-size:14px;max-width:360px;text-align:center;line-height:1.6}
     button{margin-top:20px;background:#E8524F;color:#fff;border:none;padding:10px 28px;border-radius:10px;font-size:14px;cursor:pointer;font-weight:500}
     button:hover{background:#F0635C}
     .pulse{animation:p 2s ease-in-out infinite}@keyframes p{0%,100%{opacity:.3}50%{opacity:1}}
     </style></head><body>
     <h1>${t('Keine Verbindung', 'No Connection')}</h1>
-    <p>${t('Pr\u00fcfe deine Netzwerkverbindung.', 'Check your network connection.')}</p>
+    <p>${t('Prüfe deine Netzwerkverbindung.', 'Check your network connection.')}</p>
     <p class="pulse" style="font-size:12px">${t('Automatische Wiederverbindung\u2026', 'Reconnecting automatically\u2026')}</p>
     <button onclick="location.href='https://claude.ai'">${t('Erneut versuchen', 'Try Again')}</button>
     </body></html>`
@@ -1385,11 +1418,13 @@ function setupAutoUpdater() {
   if (isDev) return;
   let failures = 0;
 
+  const dialogParent = () => (mainWindow && !mainWindow.isDestroyed()) ? mainWindow : null;
+
   autoUpdater.on('update-available', (info) => {
     failures = 0;
     if (manualUpdateCheck) {
       manualUpdateCheck = false;
-      dialog.showMessageBox(mainWindow, { type: 'info', title: t('Update verf\u00fcgbar', 'Update available'), message: `v${info.version} ${t('wird heruntergeladen\u2026', 'is downloading\u2026')}` });
+      dialog.showMessageBox(dialogParent(), { type: 'info', title: t('Update verf\u00fcgbar', 'Update available'), message: `v${info.version} ${t('wird heruntergeladen\u2026', 'is downloading\u2026')}` });
     } else {
       new Notification({ title: t('Update verf\u00fcgbar', 'Update available'), body: `v${info.version} ${t('wird geladen\u2026', 'downloading\u2026')}` }).show();
     }
@@ -1399,7 +1434,7 @@ function setupAutoUpdater() {
     failures = 0;
     if (manualUpdateCheck) {
       manualUpdateCheck = false;
-      dialog.showMessageBox(mainWindow, { type: 'info', title: t('Kein Update', 'No Update'), message: t('Du verwendest bereits die neueste Version.', 'You are already on the latest version.'), detail: `v${app.getVersion()}` });
+      dialog.showMessageBox(dialogParent(), { type: 'info', title: t('Kein Update', 'No Update'), message: t('Du verwendest bereits die neueste Version.', 'You are already on the latest version.'), detail: `v${app.getVersion()}` });
     }
   });
 
@@ -1412,7 +1447,7 @@ function setupAutoUpdater() {
 
   autoUpdater.on('update-downloaded', (info) => {
     if (mainWindow && !mainWindow.isDestroyed()) { mainWindow.setTitle('Claude'); mainWindow.setProgressBar(-1); }
-    if (dialog.showMessageBoxSync(mainWindow, {
+    if (dialog.showMessageBoxSync(dialogParent(), {
       type: 'info', title: t('Update bereit', 'Update ready'),
       message: `v${info.version} ${t('heruntergeladen. Jetzt neu starten?', 'downloaded. Restart now?')}`,
       buttons: [t('Neu starten', 'Restart'), t('Sp\u00e4ter', 'Later')], defaultId: 0
@@ -1425,12 +1460,12 @@ function setupAutoUpdater() {
     if (manualUpdateCheck) {
       manualUpdateCheck = false;
       const short = (err.message || '').split('\n')[0].slice(0, 200);
-      dialog.showMessageBox(mainWindow, { type: 'error', title: t('Update-Fehler', 'Update Error'), message: t('Update-Pr\u00fcfung fehlgeschlagen.', 'Update check failed.'), detail: short });
+      dialog.showMessageBox(dialogParent(), { type: 'error', title: t('Update-Fehler', 'Update Error'), message: t('Update-Pr\u00fcfung fehlgeschlagen.', 'Update check failed.'), detail: short });
     }
   });
 
   autoUpdater.checkForUpdates().catch(() => {});
-  setInterval(() => {
+  updateCheckInterval = setInterval(() => {
     if (failures > 0) {
       const skip = (1 << Math.min(failures, 5)) - 1;
       if (Math.random() < skip / (skip + 1)) return;
@@ -1479,8 +1514,13 @@ ipcMain.on('settings-minimize', (_, v) => {
   minimizeOnClose = v === true;
   saveWindowState();
 });
+const HOTKEY_RE = /^(?:(?:Command|Cmd|Control|Ctrl|CommandOrControl|CmdOrCtrl|Alt|Option|AltGr|Shift|Super|Meta)\+)*[A-Za-z0-9]+$|^(?:(?:Command|Cmd|Control|Ctrl|CommandOrControl|CmdOrCtrl|Alt|Option|AltGr|Shift|Super|Meta)\+)*(?:F1[0-9]?|F20|F[1-9]|Plus|Space|Tab|Backspace|Delete|Insert|Return|Enter|Up|Down|Left|Right|Home|End|PageUp|PageDown|Escape|Esc|VolumeUp|VolumeDown|VolumeMute|MediaPlayPause|PrintScreen|numdec|numadd|numsub|nummult|numdiv|num[0-9])$/;
+
 ipcMain.handle('settings-hotkey', (_, accel) => {
-  const value = (typeof accel === 'string' && accel.length > 0 && accel.length < 64) ? accel : null;
+  let value = null;
+  if (typeof accel === 'string' && accel.length > 0 && accel.length < 64 && HOTKEY_RE.test(accel)) {
+    value = accel;
+  }
   const ok = registerHotkey(value);
   saveWindowState();
   return ok;
@@ -1489,12 +1529,15 @@ ipcMain.on('settings-close', () => {
   if (settingsWindow && !settingsWindow.isDestroyed()) settingsWindow.close();
 });
 
-ipcMain.on('quickprompt-submit', (_, text) => {
-  if (quickPromptWindow && !quickPromptWindow.isDestroyed()) quickPromptWindow.close();
+ipcMain.on('quickprompt-submit', (event, text) => {
+  if (!quickPromptWindow || quickPromptWindow.isDestroyed() || event.sender !== quickPromptWindow.webContents) return;
+  quickPromptWindow.close();
+  if (typeof text !== 'string' || text.length > 8000) return;
   submitQuickPrompt(text);
 });
-ipcMain.on('quickprompt-cancel', () => {
-  if (quickPromptWindow && !quickPromptWindow.isDestroyed()) quickPromptWindow.close();
+ipcMain.on('quickprompt-cancel', (event) => {
+  if (!quickPromptWindow || quickPromptWindow.isDestroyed() || event.sender !== quickPromptWindow.webContents) return;
+  quickPromptWindow.close();
 });
 
 ipcMain.on('whatsnew-close', () => {
@@ -1530,6 +1573,7 @@ ipcMain.on('theme-toggle', () => {
   }
 
   setTimeout(fillPool, 3000);
+  saveWindowState();
 });
 
 // ═══════════════════════════════════════════════════════════════════
@@ -1562,8 +1606,15 @@ function createWindow() {
 
   mainWindow.on('resize', () => { saveWindowState(); resizeActiveView(); });
   mainWindow.on('move', saveWindowState);
-  mainWindow.on('maximize', saveWindowState);
-  mainWindow.on('unmaximize', saveWindowState);
+  mainWindow.on('maximize', () => { saveWindowState(); lastViewBounds = ''; resizeActiveView(); });
+  mainWindow.on('unmaximize', () => { saveWindowState(); lastViewBounds = ''; resizeActiveView(); });
+  mainWindow.on('enter-full-screen', () => { lastViewBounds = ''; resizeActiveView(); });
+  mainWindow.on('leave-full-screen', () => { lastViewBounds = ''; resizeActiveView(); });
+  mainWindow.on('show', () => { lastViewBounds = ''; resizeActiveView(); throttleActiveView(false); });
+  mainWindow.on('restore', () => throttleActiveView(false));
+  mainWindow.on('focus', () => throttleActiveView(false));
+  mainWindow.on('minimize', () => throttleActiveView(true));
+  mainWindow.on('hide', () => throttleActiveView(true));
 
   mainWindow.on('close', (e) => {
     if (!isQuitting && minimizeOnClose && tray) {
@@ -1574,8 +1625,8 @@ function createWindow() {
 
   mainWindow.on('closed', () => {
     mainWindow = null;
-    tabs.forEach(t => {
-      if (alive(t.view)) t.view.webContents.close();
+    tabs.forEach(tab => {
+      if (alive(tab.view)) tab.view.webContents.close();
     });
     tabs = [];
     drainPool();
@@ -1585,7 +1636,11 @@ function createWindow() {
   mainWindow.webContents.once('did-finish-load', () => {
     const tab = createTab('https://claude.ai');
     if (tab) {
-      tab.view.webContents.once('did-finish-load', () => setTimeout(fillPool, 2000));
+      tab.view.webContents.once('did-finish-load', () => {
+        lastViewBounds = '';
+        resizeActiveView();
+        setTimeout(fillPool, 2000);
+      });
     }
   });
 }
@@ -1595,7 +1650,9 @@ function createWindow() {
 // ═══════════════════════════════════════════════════════════════════
 
 app.on('second-instance', () => {
-  if (mainWindow) { if (mainWindow.isMinimized()) mainWindow.restore(); mainWindow.focus(); }
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  if (!mainWindow.isVisible()) showMainWindow();
+  else { if (mainWindow.isMinimized()) mainWindow.restore(); mainWindow.focus(); }
 });
 
 // Webview-Tags blockieren (Security)
@@ -1612,17 +1669,27 @@ app.whenReady().then(() => {
   setupTray();
   if (currentHotkey) registerHotkey(currentHotkey);
   handleOnlineChange(net.isOnline());
-  setInterval(() => handleOnlineChange(net.isOnline()), ONLINE_CHECK_MS);
+  onlineCheckInterval = setInterval(() => handleOnlineChange(net.isOnline()), ONLINE_CHECK_MS);
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
 
   if (mainWindow && windowState.lastSeenVersion !== version && RELEASE_NOTES[version]) {
-    mainWindow.once('ready-to-show', () => {
-      setTimeout(() => {
-        openWhatsNewWindow();
-        windowState.lastSeenVersion = version;
-        saveWindowStateSync();
-      }, 1200);
-    });
+    const showWhatsNew = () => {
+      if (!mainWindow || mainWindow.isDestroyed()) return;
+      openWhatsNewWindow();
+      windowState.lastSeenVersion = version;
+      saveWindowStateSync();
+    };
+    waitForFirstTabInterval = setInterval(() => {
+      const firstTab = tabs[0];
+      if (firstTab && alive(firstTab.view)) {
+        clearInterval(waitForFirstTabInterval);
+        waitForFirstTabInterval = null;
+        firstTab.view.webContents.once('did-finish-load', () => setTimeout(showWhatsNew, 600));
+      }
+    }, 100);
+    setTimeout(() => {
+      if (waitForFirstTabInterval) { clearInterval(waitForFirstTabInterval); waitForFirstTabInterval = null; }
+    }, 15000);
   }
 });
 
@@ -1632,6 +1699,9 @@ app.on('window-all-closed', () => {
 
 app.on('before-quit', () => {
   isQuitting = true;
+  if (updateCheckInterval) { clearInterval(updateCheckInterval); updateCheckInterval = null; }
+  if (onlineCheckInterval) { clearInterval(onlineCheckInterval); onlineCheckInterval = null; }
+  if (waitForFirstTabInterval) { clearInterval(waitForFirstTabInterval); waitForFirstTabInterval = null; }
   saveWindowStateSync();
 });
 
