@@ -1,0 +1,12 @@
+[Desktop Entry]
+Name=Claude AI Desktop
+GenericName=Claude AI
+Comment=Native Desktop App für Claude AI
+Exec=claude-ai-desktop %U
+Terminal=false
+Type=Application
+Icon=${SNAP}/meta/gui/claude-ai-desktop.png
+Categories=Utility;Network;
+Keywords=Claude;AI;Anthropic;Chat;Assistant;
+StartupWMClass=Claude
+StartupNotify=true

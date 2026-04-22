@@ -41,6 +41,10 @@
       "de"
     ],
     "asar": true,
+    "asarUnpack": [
+      "icon.png",
+      "icon-original.png"
+    ],
     "files": [
       "main.js",
       "preload-tabbar.js",

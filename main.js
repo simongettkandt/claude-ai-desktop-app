@@ -713,8 +713,7 @@ function toggleDesign() {
   if (mainWindow && !mainWindow.isDestroyed()) mainWindow.setIcon(icon());
   if (tray) {
     try {
-      let img = nativeImage.createFromPath(icon());
-      if (!img.isEmpty()) img = img.resize({ width: 22, height: 22, quality: 'best' });
+      const img = nativeImage.createFromPath(icon());
       tray.setImage(img.isEmpty() ? icon() : img);
     } catch {}
   }
@@ -961,9 +960,9 @@ function centerOnMainDisplay(width, height) {
 function setupTray() {
   if (tray) return;
   try {
-    let img = nativeImage.createFromPath(icon());
-    if (!img.isEmpty()) img = img.resize({ width: 22, height: 22, quality: 'best' });
+    const img = nativeImage.createFromPath(icon());
     tray = new Tray(img.isEmpty() ? icon() : img);
+    if (!img.isEmpty()) tray.setImage(img);
     tray.setToolTip('Claude');
     tray.on('click', toggleMainWindow);
     updateTrayMenu();
@@ -1602,6 +1601,11 @@ function createWindow() {
   mainWindow.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(getTabBarHTML()));
   mainWindow.setTitle(`Claude v${version}`);
   mainWindow.once('ready-to-show', () => mainWindow.show());
+  setTimeout(() => {
+    if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.isVisible()) {
+      mainWindow.show();
+    }
+  }, 3000);
 
   mainWindow.on('resize', () => { saveWindowState(); resizeActiveView(); });
   mainWindow.on('move', saveWindowState);

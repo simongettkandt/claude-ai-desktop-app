@@ -1,0 +1,59 @@
+name: claude-ai-desktop
+version: '1.3.0'
+summary: Claude AI – Native Desktop App für Linux
+description: |
+  Eine schnelle, native Desktop-App für Claude AI.
+  Nutze Claude direkt vom Desktop – ohne Browser, ablenkungsfrei und immer griffbereit.
+
+  Features:
+  - Tab-System mit visueller Tab-Leiste
+  - Dark/Light Mode Toggle
+  - Custom Design (Modern/Classic) mit Gradient-Akzenten
+  - Google OAuth & Connector Login (GitHub, Google Drive, GitLab, etc.)
+  - Automatische Updates
+  - Deutsch & Englisch
+  - Electron 41 mit Chromium 134
+
+base: core24
+grade: stable
+confinement: strict
+
+platforms:
+  amd64:
+
+apps:
+  claude-ai-desktop:
+    command: app/electron-launch
+    extensions: [gnome]
+    plugs:
+      - browser-support
+      - network
+      - audio-playback
+      - desktop
+      - home
+      - x11
+      - wayland
+      - gsettings
+      - opengl
+
+parts:
+  electron-app:
+    plugin: dump
+    source: dist/linux-unpacked
+    organize:
+      '*': app/
+    stage-packages:
+      - libnotify4
+      - libnss3
+      - libxss1
+      - libxtst6
+      - xdg-utils
+      - libdrm2
+      - libgbm1
+      - libayatana-appindicator3-1
+
+  launcher:
+    plugin: dump
+    source: snap/local
+    organize:
+      electron-launch: app/electron-launch
