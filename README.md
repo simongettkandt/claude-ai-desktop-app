@@ -6,7 +6,7 @@ A fast, native desktop app for Claude AI – no browser needed. Runs on all Linu
 
 [![Get it from the Snap Store](https://snapcraft.io/static/images/badges/en/snap-store-black.svg)](https://snapcraft.io/claude-ai-desktop)
 
-Oder via Terminal:
+Or via Terminal:
 
 ​```bash
 sudo snap install claude-ai-desktop
