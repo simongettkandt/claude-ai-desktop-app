@@ -1,6 +1,6 @@
 # Claude Desktop App for Linux
 
-A fast, native desktop app for Claude AI – no browser needed. Runs on all Linux distributions.
+A fast, desktop app for Claude AI – no browser needed. Runs on all Linux distributions.
 
 ## Installation
 
