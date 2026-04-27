@@ -4,6 +4,8 @@ A fast, native desktop app for Claude AI – no browser needed. Runs on all Linu
 
 [![Get it from the Snap Store](https://snapcraft.io/static/images/badges/en/snap-store-black.svg)](https://snapcraft.io/claude-ai-desktop)
 
+<iframe title="Publicise card" src="https://snapcraft.io/claude-ai-desktop/embedded?button=black&channels=true&summary=true&screenshot=true" style="width: 100%; height: 100%; border: 1px solid #CCC; border-radius: 2px;"></iframe>
+
 > **v1.3.1** – System Tray, Global Quick-Prompt Hotkey, App Settings, Autostart, Multi-Monitor Fixes
 
 ---
