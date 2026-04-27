@@ -4,14 +4,14 @@
   "description": "Claude AI – Native Desktop App für Linux",
   "main": "main.js",
   "license": "MIT",
-  "homepage": "https://github.com/simongettkandt/claude-ai-desktop-app",
+  "homepage": "https://github.com/simonlinuxcraft/claude-ai-desktop-app",
   "author": {
     "name": "Simon Gettkandt",
     "email": "simon@gettkandt.de"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/simongettkandt/claude-ai-desktop-app.git"
+    "url": "https://github.com/simonlinuxcraft/claude-ai-desktop-app.git"
   },
   "scripts": {
     "start": "electron .",
@@ -24,7 +24,7 @@
     "productName": "Claude Desktop",
     "publish": {
       "provider": "github",
-      "owner": "simongettkandt",
+      "owner": "simonlinuxcraft",
       "repo": "claude-ai-desktop-app"
     },
     "linux": {
