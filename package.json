@@ -1,6 +1,6 @@
 {
   "name": "claude-desktop",
-  "version": "1.3.3",
+  "version": "1.3.4",
   "description": "Claude AI – Native Desktop App für Linux",
   "main": "main.js",
   "license": "MIT",

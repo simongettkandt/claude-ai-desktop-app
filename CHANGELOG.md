@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.3.4] – 2026-04-30
+
+### Fixed
+- **Snap autostart** now works without any manual setup. Replaced the `personal-files` plug with the snap-native `autostart:` directive — the desktop file is written to `$SNAP_USER_DATA/.config/autostart/` and snapd-userd handles launching at login. Auto-Review by the Snap Store is now possible (no more privileged interfaces).
+
+### Changed
+- AppImage path for autostart unchanged (`~/.config/autostart/claude-ai-desktop.desktop` with `Exec=$APPIMAGE --no-sandbox`).
+- Settings UI: removed the "manual `sudo snap connect`" notice — no longer needed.
+
+---
+
 ## [1.3.3] – 2026-04-29
 
 ### Fixed

@@ -178,16 +178,22 @@ const RELEASE_NOTES = {
     { icon: 'tray', title: 'Tray-Icon besser erkennbar', text: 'Das Symbol in der Systemleiste zeigt jetzt das Sparkle-Logo gr\u00f6\u00dfer und transparent \u2013 deutlich sichtbar auf hellen wie dunklen Tray-Hintergr\u00fcnden.' },
     { icon: 'bolt', title: 'Autostart beim Anmelden', text: 'Optional kann Claude jetzt automatisch beim Hochfahren des Systems starten \u2013 ein- und ausschaltbar in den App-Einstellungen.' }
   ],
-  '1.3.2': [
-    {
-      icon: 'settings',
-      title: 'Autostart: einmaliger Setup-Schritt im Snap',
-      text: 'Damit der Autostart-Schalter funktioniert, einmalig im Terminal:<br><code>sudo snap connect claude-ai-desktop:dot-config-autostart</code><br>Die Snap-Sandbox blockiert sonst den Schreibzugriff auf den Autostart-Ordner. Sobald das automatische Verbinden im Snap Store genehmigt ist, f\u00e4llt der Schritt weg. Den Befehl findest du auch in den App-Einstellungen.',
-      if: 'snap'
-    }
-  ],
   '1.3.3': [
     { icon: 'check', title: 'Artifact-Vorschauen werden wieder angezeigt', text: 'HTML-, React- und Wireframe-Vorschauen aus Chats erscheinen jetzt wieder im Vorschau-Panel \u2013 vorher blieb es leer, weil die App den separaten Anzeige-Server (claudeusercontent.com) blockiert hat.' }
+  ],
+  '1.3.4': [
+    {
+      icon: 'check',
+      title: 'Autostart funktioniert jetzt automatisch',
+      text: 'Der Autostart-Schalter in den App-Einstellungen funktioniert ab sofort ohne manuellen Setup-Schritt \u2013 einfach umlegen, fertig.',
+      if: 'snap'
+    },
+    {
+      icon: 'check',
+      title: 'Kleines Wartungs-Update',
+      text: 'Diese Version ist ein Versions-Sync mit der Snap-Variante. Funktional \u00e4ndert sich f\u00fcr dich nichts \u2013 die App l\u00e4uft wie gewohnt.',
+      if: 'appimage'
+    }
   ]
 };
 
@@ -1078,21 +1084,7 @@ function getSettingsHTML() {
     minimizeHint: t('Claude bleibt im Hintergrund erreichbar \u2013 \u00fcber das Tray-Symbol oder den Hotkey unten.', 'Claude stays reachable in the background \u2013 via the tray icon or the hotkey below.'),
     autostartLabel: t('Beim Anmelden automatisch starten', 'Start automatically at login'),
     autostartHint: t('Claude startet beim Hochfahren des Systems automatisch.', 'Claude launches automatically when the system starts.'),
-    snapNoticeTitle: t('Einmaliger Setup-Schritt für Snap', 'One-time setup step for Snap'),
-    snapNoticeBody: t(
-      'Die Snap-Sandbox erlaubt der App standardmäßig nicht, in den Autostart-Ordner zu schreiben. Bitte einmalig diesen Befehl im Terminal ausführen, danach den Schalter erneut aktivieren:',
-      'The Snap sandbox prevents the app from writing to the autostart folder by default. Please run this command once in a terminal, then toggle again:'
-    ),
-    snapNoticeFooter: t(
-      'Sobald der Snap Store das automatische Verbinden genehmigt hat, fällt dieser Schritt weg.',
-      'Once the Snap Store approves auto-connect, this step will no longer be needed.'
-    ),
-    snapDeniedBanner: t(
-      'Schreibzugriff verweigert — bitte den Befehl unten ausführen und es danach erneut versuchen.',
-      'Write access denied — please run the command below and try again.'
-    ),
-    copy: t('Kopieren', 'Copy'),
-    copied: t('Kopiert', 'Copied'),
+    autostartFailed: t('Autostart konnte nicht aktiviert werden.', 'Could not enable autostart.'),
     hotkeyLabel: t('Globaler Hotkey (neuer Chat)', 'Global hotkey (new chat)'),
     press: t('Klick hier und dr\u00fccke eine Tastenkombination', 'Click here and press a key combination'),
     pressing: t('Dr\u00fccke die gew\u00fcnschte Tastenkombination\u2026', 'Press your key combination\u2026'),
@@ -1118,16 +1110,6 @@ label{display:block;margin-bottom:6px;font-weight:500}
 .hotkey{display:flex;gap:8px;align-items:center}
 .capture{flex:1;padding:10px 12px;background:${th.bgHover};border:1px solid ${th.border};border-radius:6px;font-family:monospace;cursor:pointer;color:${th.textActive};outline:none;min-height:38px;display:flex;align-items:center}
 .capture.listening{border-color:${ac.from};background:${th.bgActive}}
-.notice{display:none;margin:8px 0 0 24px;padding:10px 12px;background:${th.bgHover};border:1px solid ${th.border};border-radius:6px;font-size:12px;line-height:1.5}
-.notice.show{display:block}
-.notice.warn{border-color:${ac.from}}
-.notice .ttl{font-weight:600;margin-bottom:6px;color:${th.textActive}}
-.notice .body{color:${th.text};margin-bottom:8px}
-.notice .ftr{color:${th.text};margin-top:8px;font-size:11px;opacity:.8}
-.notice .banner{color:${ac.from};font-weight:500;margin-bottom:8px}
-.cmdrow{display:flex;gap:6px;align-items:stretch}
-.cmd{flex:1;padding:7px 10px;background:${th.bg};border:1px solid ${th.border};border-radius:4px;font-family:monospace;font-size:11px;color:${th.textActive};user-select:text;overflow-x:auto;white-space:nowrap}
-.copybtn{padding:6px 10px;font-size:11px;border-radius:4px}
 button{background:linear-gradient(135deg,${ac.from},${ac.to});color:#fff;border:none;padding:9px 16px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:500}
 button.secondary{background:${th.bgHover};color:${th.textActive};border:1px solid ${th.border}}
 button:hover{filter:brightness(1.05)}
@@ -1145,16 +1127,6 @@ button:hover{filter:brightness(1.05)}
 <div class="row">
   <label class="chk"><input type="checkbox" id="as"><span>${i18n.autostartLabel}</span></label>
   <div class="hint">${i18n.autostartHint}</div>
-  <div class="notice" id="snapNotice">
-    <div class="banner" id="snapBanner" style="display:none">${i18n.snapDeniedBanner}</div>
-    <div class="ttl">${i18n.snapNoticeTitle}</div>
-    <div class="body">${i18n.snapNoticeBody}</div>
-    <div class="cmdrow">
-      <code class="cmd" id="snapCmd">sudo snap connect claude-ai-desktop:dot-config-autostart</code>
-      <button class="secondary copybtn" id="snapCopy">${i18n.copy}</button>
-    </div>
-    <div class="ftr">${i18n.snapNoticeFooter}</div>
-  </div>
 </div>
 
 <div class="row">
@@ -1188,16 +1160,10 @@ function resetCapture() {
   cap.textContent = currentDisplay;
 }
 
-const snapNotice = document.getElementById('snapNotice');
-const snapBanner = document.getElementById('snapBanner');
-const snapCmd = document.getElementById('snapCmd');
-const snapCopy = document.getElementById('snapCopy');
-
 api.get().then(s => {
   mc.checked = !!s.minimizeOnClose;
   as.checked = !!s.autostart;
   if (s.hotkey) { currentDisplay = s.hotkey; cap.textContent = s.hotkey; }
-  if (s.isSnap) snapNotice.classList.add('show');
 });
 
 mc.addEventListener('change', () => api.setMinimize(mc.checked));
@@ -1206,28 +1172,13 @@ as.addEventListener('change', async () => {
   as.disabled = true;
   try {
     const r = await api.setAutostart(want);
-    if (r === 'ok') {
-      snapBanner.style.display = 'none';
-      snapNotice.classList.remove('warn');
-    } else {
+    if (r !== 'ok') {
       as.checked = !want;
-      if (r === 'denied') {
-        snapNotice.classList.add('show', 'warn');
-        snapBanner.style.display = 'block';
-      }
+      status.textContent = I.autostartFailed;
     }
   } finally {
     as.disabled = false;
   }
-});
-
-snapCopy.addEventListener('click', async () => {
-  try {
-    await navigator.clipboard.writeText(snapCmd.textContent);
-    const o = snapCopy.textContent;
-    snapCopy.textContent = I.copied;
-    setTimeout(() => { snapCopy.textContent = o; }, 1500);
-  } catch {}
 });
 
 cap.addEventListener('click', () => {
@@ -1825,17 +1776,16 @@ function setupSession() {
 //  IPC-Handler
 // ═══════════════════════════════════════════════════════════════════
 
-// Linux Autostart: schreibt eine .desktop-Datei in ~/.config/autostart/.
-// Im Snap-Sandbox wird der echte Pfad nur über den personal-files-Plug
-// 'dot-config-autostart' beschreibbar — Plug muss vom User per
-// 'sudo snap connect claude-ai-desktop:dot-config-autostart' aktiviert werden,
-// solange Auto-Connect nicht vom Snap Store genehmigt ist.
+// Linux Autostart: schreibt eine .desktop-Datei.
+// AppImage: ~/.config/autostart/claude-ai-desktop.desktop (echtes Home).
+// Snap: $SNAP_USER_DATA/.config/autostart/claude-ai-desktop.desktop. snapd-userd
+// liest die Datei beim Login und startet die App über den command-wrapper aus
+// snapcraft.yaml (autostart-Direktive). Kein personal-files-Plug nötig.
 const isSnap = !!(process.env.SNAP_NAME || process.env.SNAP);
-// Im Snap-Sandbox ist $HOME auf $SNAP_USER_DATA gemappt — wir brauchen den
-// echten Nutzer-Home, damit die Datei in das via personal-files freigegebene
-// /home/<user>/.config/autostart/ landet.
-const REAL_HOME = (isSnap && process.env.SNAP_REAL_HOME) ? process.env.SNAP_REAL_HOME : app.getPath('home');
-const AUTOSTART_FILE = path.join(REAL_HOME, '.config', 'autostart', 'claude-ai-desktop.desktop');
+const AUTOSTART_DIR = isSnap
+  ? path.join(process.env.SNAP_USER_DATA, '.config', 'autostart')
+  : path.join(app.getPath('home'), '.config', 'autostart');
+const AUTOSTART_FILE = path.join(AUTOSTART_DIR, 'claude-ai-desktop.desktop');
 
 function getAutostartExec() {
   if (process.env.APPIMAGE) return `"${process.env.APPIMAGE}" --no-sandbox`;
@@ -1852,7 +1802,7 @@ function getAutostart() {
 
 // Liefert eine der Konstanten:
 //   'ok'       — Autostart-Status erfolgreich gesetzt
-//   'denied'   — Schreibzugriff verweigert (Snap-Plug nicht verbunden)
+//   'denied'   — Schreibzugriff verweigert (sollte unter normalen Bedingungen nicht passieren)
 //   'failed'   — sonstiger Fehler
 function setAutostart(enabled) {
   enabled = !!enabled;
@@ -1889,8 +1839,7 @@ X-GNOME-Autostart-enabled=true
 ipcMain.handle('settings-get', () => ({
   minimizeOnClose,
   hotkey: currentHotkey,
-  autostart: getAutostart(),
-  isSnap
+  autostart: getAutostart()
 }));
 ipcMain.on('settings-minimize', (_, v) => {
   minimizeOnClose = v === true;
