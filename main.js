@@ -116,8 +116,54 @@ function t(de, en) { return isDE ? de : en; }
 
 // Lokalisierte Strings für den Bug-Report-Dialog
 const bugReportStrings = {
-  en: { title: 'Report a Bug', body: 'Found a bug or have a suggestion?\nPlease send an email to:', btn: 'Copy Email', copied: 'Copied!' },
-  de: { title: 'Fehler melden', body: 'Einen Fehler gefunden oder einen Vorschlag?\nBitte sende eine E-Mail an:', btn: 'E-Mail kopieren', copied: 'Kopiert!' },
+  en: {
+    title: 'Report a Bug',
+    intro: 'Found a bug or have a suggestion? Send us a message — your feedback helps improve the app.',
+    descLabel: 'Description',
+    descPlaceholder: 'What happened? What did you expect?',
+    errorLabel: 'Error codes / messages (optional)',
+    errorPlaceholder: 'e.g. console output, error numbers, stack traces',
+    emailLabel: 'Your email (optional)',
+    emailPlaceholder: 'so we can reply to you',
+    autoInfoLabel: 'Include app version, OS and language',
+    autoInfoHint: 'Helps us reproduce the issue — recommended.',
+    sendBtn: 'Send report',
+    sendingBtn: 'Sending…',
+    successTitle: 'Report sent — thank you!',
+    successMsg: 'We’ll get back to you if you provided your email.',
+    errorTitle: 'Could not send report',
+    errorHint: 'Please check your internet connection or send an email manually:',
+    copyBtn: 'Copy Email',
+    copied: 'Copied!',
+    closeBtn: 'Close',
+    cancelBtn: 'Cancel',
+    body: 'Found a bug or have a suggestion?\nPlease send an email to:',
+    btn: 'Copy Email'
+  },
+  de: {
+    title: 'Fehler melden',
+    intro: 'Einen Fehler gefunden oder einen Vorschlag? Schick uns eine Nachricht – dein Feedback hilft, die App zu verbessern.',
+    descLabel: 'Beschreibung',
+    descPlaceholder: 'Was ist passiert? Was hast du erwartet?',
+    errorLabel: 'Fehlercodes / Meldungen (optional)',
+    errorPlaceholder: 'z.B. Konsolen-Ausgaben, Fehlernummern, Stack-Traces',
+    emailLabel: 'Deine E-Mail (optional)',
+    emailPlaceholder: 'damit wir antworten können',
+    autoInfoLabel: 'App-Version, OS und Sprache mitsenden',
+    autoInfoHint: 'Hilft uns, das Problem nachzuvollziehen – empfohlen.',
+    sendBtn: 'Bericht senden',
+    sendingBtn: 'Wird gesendet…',
+    successTitle: 'Bericht gesendet – danke!',
+    successMsg: 'Wenn du deine E-Mail angegeben hast, melden wir uns zurück.',
+    errorTitle: 'Bericht konnte nicht gesendet werden',
+    errorHint: 'Bitte prüfe deine Internetverbindung oder schick uns manuell eine E-Mail:',
+    copyBtn: 'E-Mail kopieren',
+    copied: 'Kopiert!',
+    closeBtn: 'Schließen',
+    cancelBtn: 'Abbrechen',
+    body: 'Einen Fehler gefunden oder einen Vorschlag?\nBitte sende eine E-Mail an:',
+    btn: 'E-Mail kopieren'
+  },
   fr: { title: 'Signaler un bug', body: 'Vous avez trouv\u00e9 un bug ou une suggestion ?\nVeuillez envoyer un e-mail \u00e0 :', btn: 'Copier l\u2019e-mail', copied: 'Copi\u00e9 !' },
   es: { title: 'Reportar un error', body: '\u00bfEncontraste un error o tienes una sugerencia?\nEnv\u00eda un correo a:', btn: 'Copiar correo', copied: '\u00a1Copiado!' },
   pt: { title: 'Reportar um bug', body: 'Encontrou um bug ou tem uma sugest\u00e3o?\nEnvie um e-mail para:', btn: 'Copiar e-mail', copied: 'Copiado!' },
@@ -822,17 +868,39 @@ function toggleDesign() {
 // ═══════════════════════════════════════════════════════════════════
 
 const BUG_EMAIL = 'claudeai.desktop.linux@gmail.com';
+const WEB3FORMS_ACCESS_KEY = '269ca388-8c7d-41e9-9063-2b6429a81b6b';
+const WEB3FORMS_ENDPOINT = 'https://api.web3forms.com/submit';
+
+function getAppMode() {
+  if (process.env.APPIMAGE) return 'AppImage';
+  if (process.env.SNAP) return 'Snap';
+  if (!app.isPackaged) return 'Development';
+  return 'Packaged';
+}
 
 function showBugReportDialog() {
-  const s = bugReportStrings[sysLang] || bugReportStrings.en;
+  const s = { ...bugReportStrings.en, ...(bugReportStrings[sysLang] || {}) };
   const dark = isDarkMode;
   const bg = dark ? '#1a1a18' : '#faf8f6';
   const fg = dark ? '#e8e0d8' : '#2a2420';
   const sub = dark ? '#9a9a96' : '#8a7e72';
+  const inputBg = dark ? '#252522' : '#ffffff';
+  const inputBorder = dark ? '#3a3a36' : '#d8d0c8';
+  const inputFocus = '#E8524F';
   const btnBg = '#E8524F';
+  const btnHover = '#F0635C';
+  const btnDisabled = dark ? '#3a3a36' : '#c8bfb6';
+  const successColor = '#3da66a';
 
-  const brSize = { width: 420, height: 260 };
-  const brPos = centerOnMainDisplay(brSize.width, brSize.height);
+  const meta = {
+    version: app.getVersion(),
+    os: `${process.platform} ${process.arch} (${require('os').release()})`,
+    locale: app.getLocale() || sysLang || 'unknown',
+    mode: getAppMode()
+  };
+
+  const brSize = { width: 500, height: 660 };
+  const brPos = centerOnMainWindow(brSize.width, brSize.height);
   const win = new BrowserWindow({
     ...brSize, ...brPos, resizable: false,
     parent: mainWindow, modal: true,
@@ -842,23 +910,206 @@ function showBugReportDialog() {
   });
   win.setMenuBarVisibility(false);
 
+  const cfg = JSON.stringify({
+    accessKey: WEB3FORMS_ACCESS_KEY,
+    endpoint: WEB3FORMS_ENDPOINT,
+    bugEmail: BUG_EMAIL,
+    meta,
+    strings: s
+  });
+
   const html = `<!DOCTYPE html><html><head>
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src https://api.web3forms.com;">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:${bg};color:${fg};font-family:system-ui,sans-serif;display:flex;flex-direction:column;
-  align-items:center;justify-content:center;height:100vh;padding:24px;text-align:center}
-h2{font-size:18px;font-weight:600;margin-bottom:12px}
-p{color:${sub};font-size:13px;line-height:1.6;white-space:pre-line;margin-bottom:16px}
-.email{font-size:15px;font-weight:600;color:${fg};margin-bottom:20px;word-break:break-all}
-button{background:${btnBg};color:#fff;border:none;padding:10px 28px;border-radius:10px;
-  font-size:14px;cursor:pointer;font-weight:500;transition:background .15s}
-button:hover{background:#F0635C}
+body{background:${bg};color:${fg};font-family:system-ui,-apple-system,sans-serif;font-size:14px;
+  display:flex;flex-direction:column;height:100vh;padding:24px;overflow:hidden}
+h2{font-size:18px;font-weight:600;margin-bottom:8px}
+.intro{color:${sub};font-size:13px;line-height:1.5;margin-bottom:18px}
+.field{margin-bottom:14px;display:flex;flex-direction:column}
+label{font-size:12px;font-weight:500;color:${sub};margin-bottom:6px;letter-spacing:.02em}
+textarea,input[type=email]{background:${inputBg};color:${fg};border:1px solid ${inputBorder};
+  border-radius:8px;padding:10px 12px;font-size:13.5px;font-family:inherit;outline:none;
+  transition:border-color .15s,box-shadow .15s;resize:none}
+textarea:focus,input[type=email]:focus{border-color:${inputFocus};box-shadow:0 0 0 3px ${inputFocus}22}
+textarea.desc{min-height:110px;line-height:1.5}
+textarea.errcodes{min-height:70px;line-height:1.45;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px}
+.auto-info-row{display:flex;align-items:flex-start;gap:10px;margin:6px 0 14px;
+  padding:10px 12px;background:${inputBg};border:1px solid ${inputBorder};border-radius:8px;cursor:pointer;
+  user-select:none;transition:border-color .15s}
+.auto-info-row:hover{border-color:${inputFocus}}
+.auto-info-row input[type=checkbox]{margin-top:2px;accent-color:${inputFocus};cursor:pointer;flex-shrink:0}
+.auto-info-row .text{display:flex;flex-direction:column;gap:2px}
+.auto-info-row .label{font-size:13px;color:${fg};font-weight:500}
+.auto-info-row .hint{font-size:11.5px;color:${sub};line-height:1.4}
+.actions{display:flex;gap:10px;justify-content:flex-end;margin-top:auto;padding-top:8px}
+button{border:none;padding:10px 20px;border-radius:9px;font-size:13.5px;cursor:pointer;
+  font-weight:500;font-family:inherit;transition:background .15s,opacity .15s}
+button.primary{background:${btnBg};color:#fff}
+button.primary:hover:not(:disabled){background:${btnHover}}
+button.primary:disabled{background:${btnDisabled};cursor:not-allowed}
+button.secondary{background:transparent;color:${sub};border:1px solid ${inputBorder}}
+button.secondary:hover{background:${inputBg};color:${fg}}
+.honeypot{position:absolute;left:-9999px;width:1px;height:1px;opacity:0}
+.status{display:none;flex-direction:column;align-items:center;justify-content:center;
+  height:100%;text-align:center;padding:20px}
+.status.visible{display:flex}
+.status .icon{font-size:42px;margin-bottom:14px;line-height:1}
+.status h3{font-size:17px;font-weight:600;margin-bottom:8px}
+.status p{color:${sub};font-size:13px;line-height:1.5;margin-bottom:18px;max-width:380px}
+.status.success .icon{color:${successColor}}
+.status .email{font-size:14px;font-weight:600;color:${fg};margin-bottom:14px;word-break:break-all;
+  background:${inputBg};padding:8px 14px;border-radius:6px;border:1px solid ${inputBorder}}
+.error-row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
 </style></head><body>
-<h2>${s.title}</h2>
-<p>${s.body}</p>
-<div class="email">${BUG_EMAIL}</div>
-<button onclick="navigator.clipboard.writeText('${BUG_EMAIL}').then(()=>{this.textContent='${s.copied}';setTimeout(()=>this.textContent='${s.btn}',1500)})">${s.btn}</button>
+
+<div id="form-view">
+  <h2>${s.title}</h2>
+  <p class="intro">${s.intro}</p>
+
+  <form id="bugform" novalidate>
+    <div class="field">
+      <label for="desc">${s.descLabel}</label>
+      <textarea id="desc" class="desc" required placeholder="${s.descPlaceholder}"></textarea>
+    </div>
+    <div class="field">
+      <label for="errcodes">${s.errorLabel}</label>
+      <textarea id="errcodes" class="errcodes" placeholder="${s.errorPlaceholder}"></textarea>
+    </div>
+    <div class="field">
+      <label for="email">${s.emailLabel}</label>
+      <input type="email" id="email" placeholder="${s.emailPlaceholder}" autocomplete="email">
+    </div>
+
+    <label class="auto-info-row" for="autoinfo">
+      <input type="checkbox" id="autoinfo" checked>
+      <span class="text">
+        <span class="label">${s.autoInfoLabel}</span>
+        <span class="hint">${s.autoInfoHint}</span>
+      </span>
+    </label>
+
+    <input type="text" name="botcheck" id="botcheck" class="honeypot" tabindex="-1" autocomplete="off">
+
+    <div class="actions">
+      <button type="button" class="secondary" id="cancel-btn">${s.cancelBtn}</button>
+      <button type="submit" class="primary" id="send-btn">${s.sendBtn}</button>
+    </div>
+  </form>
+</div>
+
+<div class="status success" id="success-view">
+  <div class="icon">✓</div>
+  <h3>${s.successTitle}</h3>
+  <p>${s.successMsg}</p>
+  <button class="primary" onclick="window.close()">${s.closeBtn}</button>
+</div>
+
+<div class="status" id="error-view">
+  <div class="icon" style="color:${btnBg}">✕</div>
+  <h3>${s.errorTitle}</h3>
+  <p>${s.errorHint}</p>
+  <div class="email" id="err-email"></div>
+  <div class="error-row">
+    <button class="secondary" onclick="window.close()">${s.closeBtn}</button>
+    <button class="primary" id="copy-btn"></button>
+  </div>
+</div>
+
+<script>
+(function(){
+  const cfg = ${cfg};
+  const formView = document.getElementById('form-view');
+  const successView = document.getElementById('success-view');
+  const errorView = document.getElementById('error-view');
+  const form = document.getElementById('bugform');
+  const sendBtn = document.getElementById('send-btn');
+  const cancelBtn = document.getElementById('cancel-btn');
+  const desc = document.getElementById('desc');
+  const errcodes = document.getElementById('errcodes');
+  const emailInput = document.getElementById('email');
+  const autoInfoCheckbox = document.getElementById('autoinfo');
+  const botcheck = document.getElementById('botcheck');
+  const errEmail = document.getElementById('err-email');
+  const copyBtn = document.getElementById('copy-btn');
+
+  errEmail.textContent = cfg.bugEmail;
+  copyBtn.textContent = cfg.strings.copyBtn;
+  copyBtn.addEventListener('click', () => {
+    navigator.clipboard.writeText(cfg.bugEmail).then(() => {
+      copyBtn.textContent = cfg.strings.copied;
+      setTimeout(() => { copyBtn.textContent = cfg.strings.copyBtn; }, 1500);
+    });
+  });
+
+  cancelBtn.addEventListener('click', () => window.close());
+
+  function showView(which) {
+    formView.style.display = which === 'form' ? '' : 'none';
+    successView.classList.toggle('visible', which === 'success');
+    errorView.classList.toggle('visible', which === 'error');
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const description = desc.value.trim();
+    if (!description) { desc.focus(); return; }
+    if (botcheck.value) return;
+
+    const userEmail = emailInput.value.trim();
+    const errText = errcodes.value.trim();
+    const includeAutoInfo = !!autoInfoCheckbox.checked;
+    sendBtn.disabled = true;
+    sendBtn.textContent = cfg.strings.sendingBtn;
+
+    const meta = cfg.meta;
+    let bodyMessage = description;
+    if (errText) {
+      bodyMessage += '\\n\\n--- Error Codes / Messages ---\\n' + errText;
+    }
+    if (includeAutoInfo) {
+      bodyMessage +=
+        '\\n\\n--- App-Info ---' +
+        '\\nVersion: ' + meta.version +
+        '\\nOS: ' + meta.os +
+        '\\nLocale: ' + meta.locale +
+        '\\nMode: ' + meta.mode;
+    }
+    bodyMessage += (userEmail ? '\\n\\nUser-Email: ' + userEmail : '\\n\\nUser-Email: (not provided)');
+
+    const payload = {
+      access_key: cfg.accessKey,
+      subject: 'Claude Desktop Bug Report v' + meta.version,
+      from_name: 'Claude Desktop App',
+      message: bodyMessage,
+      botcheck: ''
+    };
+    if (userEmail) payload.email = userEmail;
+
+    try {
+      const res = await fetch(cfg.endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success) {
+        showView('success');
+      } else {
+        throw new Error(data.message || ('HTTP ' + res.status));
+      }
+    } catch (err) {
+      console.error('Bug-report submit failed:', err);
+      showView('error');
+    } finally {
+      sendBtn.disabled = false;
+      sendBtn.textContent = cfg.strings.sendBtn;
+    }
+  });
+
+  setTimeout(() => desc.focus(), 50);
+})();
+</script>
 </body></html>`;
 
   win.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html));
@@ -1030,6 +1281,21 @@ function centerOnMainDisplay(width, height) {
     };
   } catch {
     return {};
+  }
+}
+
+function centerOnMainWindow(width, height) {
+  try {
+    if (!mainWindow || mainWindow.isDestroyed() || !mainWindow.isVisible() || mainWindow.isMinimized()) {
+      return centerOnMainDisplay(width, height);
+    }
+    const b = mainWindow.getBounds();
+    return {
+      x: Math.round(b.x + (b.width - width) / 2),
+      y: Math.round(b.y + (b.height - height) / 2)
+    };
+  } catch {
+    return centerOnMainDisplay(width, height);
   }
 }
 
@@ -1301,7 +1567,7 @@ function openWhatsNewWindow() {
     return;
   }
   const size = { width: 520, height: 560 };
-  const pos = centerOnMainDisplay(size.width, size.height);
+  const pos = centerOnMainWindow(size.width, size.height);
   whatsNewWindow = new BrowserWindow({
     ...size, ...pos,
     parent: mainWindow && !mainWindow.isDestroyed() ? mainWindow : undefined,
@@ -1327,7 +1593,7 @@ function openSettingsWindow() {
     return;
   }
   const swSize = { width: 540, height: 440 };
-  const swPos = centerOnMainDisplay(swSize.width, swSize.height);
+  const swPos = centerOnMainWindow(swSize.width, swSize.height);
   settingsWindow = new BrowserWindow({
     ...swSize, ...swPos,
     parent: mainWindow && !mainWindow.isDestroyed() ? mainWindow : undefined,
@@ -1374,7 +1640,7 @@ function showCustomMessageBox(opts) {
     };
 
     const size = { width: 480, height: detail ? 260 : 200 };
-    const pos = centerOnMainDisplay(size.width, size.height);
+    const pos = centerOnMainWindow(size.width, size.height);
     const parentWin = (mainWindow && !mainWindow.isDestroyed() && mainWindow.isVisible()) ? mainWindow : undefined;
 
     const win = new BrowserWindow({
@@ -1997,8 +2263,24 @@ app.on('web-contents-created', (_, wc) => {
   wc.on('will-attach-webview', (event) => event.preventDefault());
 });
 
+// Web3Forms blockiert Requests ohne Browser-Origin (data:-URLs senden Origin: null,
+// was Web3Forms als "Server-Side"-Aufruf einstuft und mit "Pro plan required" ablehnt).
+// Fix: für api.web3forms.com setzen wir Origin/Referer auf die im Dashboard registrierte Domain.
+function setupWeb3FormsHeaderRewrite() {
+  session.defaultSession.webRequest.onBeforeSendHeaders(
+    { urls: ['https://api.web3forms.com/*'] },
+    (details, cb) => {
+      const h = details.requestHeaders;
+      h['Origin'] = 'https://localhost';
+      h['Referer'] = 'https://localhost/';
+      cb({ requestHeaders: h });
+    }
+  );
+}
+
 app.whenReady().then(() => {
   setupSession();
+  setupWeb3FormsHeaderRewrite();
   createWindow();
   updateMenu(true);
   setupDownloadManager();
