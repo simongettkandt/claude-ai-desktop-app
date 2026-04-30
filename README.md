@@ -14,7 +14,7 @@ sudo snap install claude-ai-desktop
 
 [![claude-ai-desktop](https://snapcraft.io/claude-ai-desktop/badge.svg)](https://snapcraft.io/claude-ai-desktop)
 
-> **v1.3.1** – System Tray, Global Quick-Prompt Hotkey, App Settings, Autostart, Multi-Monitor Fixes
+> **v1.3.4** – In-App Bug Report Form, Sub-Window Centering, Snap Autostart Fix
 
 ---
 
@@ -74,7 +74,7 @@ cat > ~/.local/share/applications/claude-desktop.desktop << EOF
 [Desktop Entry]
 Name=Claude Desktop
 Comment=Claude AI Desktop App
-Exec=/path/to/Claude-Desktop-1.3.1.AppImage --no-sandbox
+Exec=/path/to/Claude-Desktop-1.3.4.AppImage --no-sandbox
 Icon=/path/to/icon.png
 Type=Application
 Categories=Utility;
@@ -157,6 +157,17 @@ The `--no-sandbox` flag is required for Electron AppImages on Linux because the 
 ---
 
 ## Changelog
+
+### v1.3.4 – Bug Report Form & Centering (2026-04-30)
+
+- **In-app bug report form** replaces the previous "copy email and send manually" dialog. Description, optional error codes, optional contact email; opt-in toggle to include app version, OS and language. Submits directly via a hosted form endpoint, with manual email-copy fallback on network failure.
+- **Sub-window centering** – bug report, app settings, what's-new and update dialogs now open centered on the main window (not on the display), so they appear over the app wherever you have it. Quick-Prompt stays display-centered (often triggered while the main app isn't visible).
+- **Snap autostart** works without manual setup. Replaced the `personal-files` plug with the snap-native `autostart:` directive, written to `$SNAP_USER_DATA/.config/autostart/`. Auto-Review by the Snap Store is now possible (no more privileged interfaces).
+
+### v1.3.3 – Artifact Previews & What's-New Refactor (2026-04-29)
+
+- **Artifact previews** (HTML, React, wireframes) render again – `claudeusercontent.com` was missing from the allowlist. claude.ai uses that separate origin to sandbox user-generated content; without it, the artifact panel stayed empty.
+- **What's-New shows skipped versions** – `getFilteredNotes()` now collects all release notes between `lastSeenVersion` and the current version, so a user who skips a release still sees what changed.
 
 ### v1.3.1 – Stability & Polish (2026-04-26)
 
