@@ -5,3 +5,8 @@ parts/
 prime/
 stage/
 snap/local/
+
+flatpak/
+build-flatpak.sh
+.flatpak-builder/
+.craft/
