@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.3.3] – 2026-04-29
+
+### Fixed
+- Artifact previews (HTML, React, wireframes) now render again — the app was blocking `claudeusercontent.com`, the separate origin claude.ai uses to sandbox user-generated content. Allowlist extended in `isAllowedDomain`.
+
+### Changed
+- What's-New popup now shows release notes for **all** versions a user skipped, not just the current one. Useful for Snap users who jump across versions due to background updates (e.g. 1.3.1 → 1.3.3 still surfaces the 1.3.2 Snap autostart setup hint).
+
+---
+
 ## [1.3.1] – 2026-04-26
 
 ### Added

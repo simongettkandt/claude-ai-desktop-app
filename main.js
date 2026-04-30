@@ -177,8 +177,56 @@ const RELEASE_NOTES = {
     { icon: 'check', title: 'Code-Tab in der Sidebar funktioniert', text: 'Der Klick auf \u201eCode\u201c in der Sidebar \u00f6ffnet die Seite jetzt korrekt in einem neuen Fenster, statt sich sofort wieder zu schlie\u00dfen.' },
     { icon: 'tray', title: 'Tray-Icon besser erkennbar', text: 'Das Symbol in der Systemleiste zeigt jetzt das Sparkle-Logo gr\u00f6\u00dfer und transparent \u2013 deutlich sichtbar auf hellen wie dunklen Tray-Hintergr\u00fcnden.' },
     { icon: 'bolt', title: 'Autostart beim Anmelden', text: 'Optional kann Claude jetzt automatisch beim Hochfahren des Systems starten \u2013 ein- und ausschaltbar in den App-Einstellungen.' }
+  ],
+  '1.3.2': [
+    {
+      icon: 'settings',
+      title: 'Autostart: einmaliger Setup-Schritt im Snap',
+      text: 'Damit der Autostart-Schalter funktioniert, einmalig im Terminal:<br><code>sudo snap connect claude-ai-desktop:dot-config-autostart</code><br>Die Snap-Sandbox blockiert sonst den Schreibzugriff auf den Autostart-Ordner. Sobald das automatische Verbinden im Snap Store genehmigt ist, f\u00e4llt der Schritt weg. Den Befehl findest du auch in den App-Einstellungen.',
+      if: 'snap'
+    }
+  ],
+  '1.3.3': [
+    { icon: 'check', title: 'Artifact-Vorschauen werden wieder angezeigt', text: 'HTML-, React- und Wireframe-Vorschauen aus Chats erscheinen jetzt wieder im Vorschau-Panel \u2013 vorher blieb es leer, weil die App den separaten Anzeige-Server (claudeusercontent.com) blockiert hat.' }
   ]
 };
+
+function compareVersions(a, b) {
+  const parse = v => {
+    const [main, pre] = String(v).split('-');
+    return { nums: main.split('.').map(n => parseInt(n, 10) || 0), pre: pre || null };
+  };
+  const A = parse(a), B = parse(b);
+  for (let i = 0; i < 3; i++) {
+    const da = A.nums[i] || 0, db = B.nums[i] || 0;
+    if (da !== db) return da - db;
+  }
+  if (A.pre && !B.pre) return -1;
+  if (!A.pre && B.pre) return 1;
+  if (A.pre && B.pre) return A.pre.localeCompare(B.pre);
+  return 0;
+}
+
+function getFilteredNotes(currentVersion, lastSeenVersion) {
+  const all = Object.keys(RELEASE_NOTES);
+  let versionsToShow;
+  if (!lastSeenVersion) {
+    versionsToShow = all.includes(currentVersion) ? [currentVersion] : [];
+  } else {
+    versionsToShow = all
+      .filter(v => compareVersions(v, lastSeenVersion) > 0 && compareVersions(v, currentVersion) <= 0)
+      .sort(compareVersions);
+  }
+  const notes = [];
+  for (const v of versionsToShow) {
+    for (const n of (RELEASE_NOTES[v] || [])) {
+      if (n.if === 'snap' && !isSnap) continue;
+      if (n.if === 'appimage' && isSnap) continue;
+      notes.push(n);
+    }
+  }
+  return notes;
+}
 
 function loadWindowState() {
   try {
@@ -258,8 +306,11 @@ const domainCache = new Map();
 function isAllowedDomain(url) {
   let r = domainCache.get(url);
   if (r !== undefined) return r;
-  try { const h = new URL(url).hostname; r = h === 'claude.ai' || h.endsWith('.claude.ai'); }
-  catch { r = false; }
+  try {
+    const h = new URL(url).hostname;
+    r = h === 'claude.ai' || h.endsWith('.claude.ai')
+      || h === 'claudeusercontent.com' || h.endsWith('.claudeusercontent.com');
+  } catch { r = false; }
   if (domainCache.size >= DOMAIN_CACHE_MAX) domainCache.delete(domainCache.keys().next().value);
   domainCache.set(url, r);
   return r;
@@ -1027,6 +1078,21 @@ function getSettingsHTML() {
     minimizeHint: t('Claude bleibt im Hintergrund erreichbar \u2013 \u00fcber das Tray-Symbol oder den Hotkey unten.', 'Claude stays reachable in the background \u2013 via the tray icon or the hotkey below.'),
     autostartLabel: t('Beim Anmelden automatisch starten', 'Start automatically at login'),
     autostartHint: t('Claude startet beim Hochfahren des Systems automatisch.', 'Claude launches automatically when the system starts.'),
+    snapNoticeTitle: t('Einmaliger Setup-Schritt für Snap', 'One-time setup step for Snap'),
+    snapNoticeBody: t(
+      'Die Snap-Sandbox erlaubt der App standardmäßig nicht, in den Autostart-Ordner zu schreiben. Bitte einmalig diesen Befehl im Terminal ausführen, danach den Schalter erneut aktivieren:',
+      'The Snap sandbox prevents the app from writing to the autostart folder by default. Please run this command once in a terminal, then toggle again:'
+    ),
+    snapNoticeFooter: t(
+      'Sobald der Snap Store das automatische Verbinden genehmigt hat, fällt dieser Schritt weg.',
+      'Once the Snap Store approves auto-connect, this step will no longer be needed.'
+    ),
+    snapDeniedBanner: t(
+      'Schreibzugriff verweigert — bitte den Befehl unten ausführen und es danach erneut versuchen.',
+      'Write access denied — please run the command below and try again.'
+    ),
+    copy: t('Kopieren', 'Copy'),
+    copied: t('Kopiert', 'Copied'),
     hotkeyLabel: t('Globaler Hotkey (neuer Chat)', 'Global hotkey (new chat)'),
     press: t('Klick hier und dr\u00fccke eine Tastenkombination', 'Click here and press a key combination'),
     pressing: t('Dr\u00fccke die gew\u00fcnschte Tastenkombination\u2026', 'Press your key combination\u2026'),
@@ -1052,6 +1118,16 @@ label{display:block;margin-bottom:6px;font-weight:500}
 .hotkey{display:flex;gap:8px;align-items:center}
 .capture{flex:1;padding:10px 12px;background:${th.bgHover};border:1px solid ${th.border};border-radius:6px;font-family:monospace;cursor:pointer;color:${th.textActive};outline:none;min-height:38px;display:flex;align-items:center}
 .capture.listening{border-color:${ac.from};background:${th.bgActive}}
+.notice{display:none;margin:8px 0 0 24px;padding:10px 12px;background:${th.bgHover};border:1px solid ${th.border};border-radius:6px;font-size:12px;line-height:1.5}
+.notice.show{display:block}
+.notice.warn{border-color:${ac.from}}
+.notice .ttl{font-weight:600;margin-bottom:6px;color:${th.textActive}}
+.notice .body{color:${th.text};margin-bottom:8px}
+.notice .ftr{color:${th.text};margin-top:8px;font-size:11px;opacity:.8}
+.notice .banner{color:${ac.from};font-weight:500;margin-bottom:8px}
+.cmdrow{display:flex;gap:6px;align-items:stretch}
+.cmd{flex:1;padding:7px 10px;background:${th.bg};border:1px solid ${th.border};border-radius:4px;font-family:monospace;font-size:11px;color:${th.textActive};user-select:text;overflow-x:auto;white-space:nowrap}
+.copybtn{padding:6px 10px;font-size:11px;border-radius:4px}
 button{background:linear-gradient(135deg,${ac.from},${ac.to});color:#fff;border:none;padding:9px 16px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:500}
 button.secondary{background:${th.bgHover};color:${th.textActive};border:1px solid ${th.border}}
 button:hover{filter:brightness(1.05)}
@@ -1069,6 +1145,16 @@ button:hover{filter:brightness(1.05)}
 <div class="row">
   <label class="chk"><input type="checkbox" id="as"><span>${i18n.autostartLabel}</span></label>
   <div class="hint">${i18n.autostartHint}</div>
+  <div class="notice" id="snapNotice">
+    <div class="banner" id="snapBanner" style="display:none">${i18n.snapDeniedBanner}</div>
+    <div class="ttl">${i18n.snapNoticeTitle}</div>
+    <div class="body">${i18n.snapNoticeBody}</div>
+    <div class="cmdrow">
+      <code class="cmd" id="snapCmd">sudo snap connect claude-ai-desktop:dot-config-autostart</code>
+      <button class="secondary copybtn" id="snapCopy">${i18n.copy}</button>
+    </div>
+    <div class="ftr">${i18n.snapNoticeFooter}</div>
+  </div>
 </div>
 
 <div class="row">
@@ -1102,14 +1188,47 @@ function resetCapture() {
   cap.textContent = currentDisplay;
 }
 
+const snapNotice = document.getElementById('snapNotice');
+const snapBanner = document.getElementById('snapBanner');
+const snapCmd = document.getElementById('snapCmd');
+const snapCopy = document.getElementById('snapCopy');
+
 api.get().then(s => {
   mc.checked = !!s.minimizeOnClose;
   as.checked = !!s.autostart;
   if (s.hotkey) { currentDisplay = s.hotkey; cap.textContent = s.hotkey; }
+  if (s.isSnap) snapNotice.classList.add('show');
 });
 
 mc.addEventListener('change', () => api.setMinimize(mc.checked));
-as.addEventListener('change', () => api.setAutostart(as.checked));
+as.addEventListener('change', async () => {
+  const want = as.checked;
+  as.disabled = true;
+  try {
+    const r = await api.setAutostart(want);
+    if (r === 'ok') {
+      snapBanner.style.display = 'none';
+      snapNotice.classList.remove('warn');
+    } else {
+      as.checked = !want;
+      if (r === 'denied') {
+        snapNotice.classList.add('show', 'warn');
+        snapBanner.style.display = 'block';
+      }
+    }
+  } finally {
+    as.disabled = false;
+  }
+});
+
+snapCopy.addEventListener('click', async () => {
+  try {
+    await navigator.clipboard.writeText(snapCmd.textContent);
+    const o = snapCopy.textContent;
+    snapCopy.textContent = I.copied;
+    setTimeout(() => { snapCopy.textContent = o; }, 1500);
+  } catch {}
+});
 
 cap.addEventListener('click', () => {
   listening = true;
@@ -1160,7 +1279,7 @@ closeBtn.addEventListener('click', () => api.close());
 function getWhatsNewHTML() {
   const th = theme();
   const ac = accent();
-  const notes = RELEASE_NOTES[version] || [];
+  const notes = getFilteredNotes(version, windowState.lastSeenVersion);
   const icons = {
     tray: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="12" cy="12" r="3"/></svg>',
     bolt: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="13 2 4 14 12 14 11 22 20 10 12 10 13 2"/></svg>',
@@ -1201,6 +1320,7 @@ h1{font-size:22px;font-weight:700;position:relative;z-index:1;margin-bottom:6px}
 .ic svg{width:18px;height:18px}
 .it{font-weight:600;font-size:14px;margin-bottom:2px}
 .ix{color:${th.text};font-size:12px;line-height:1.5}
+.ix code{display:inline-block;margin:4px 0;padding:3px 7px;background:${th.bgHover};border:1px solid ${th.border};border-radius:4px;font-family:monospace;font-size:11px;color:${th.textActive};user-select:text}
 .footer{padding:16px 28px 20px;display:flex;justify-content:space-between;align-items:center;gap:10px;border-top:1px solid ${th.border}}
 button{background:linear-gradient(135deg,${ac.from},${ac.to});color:#fff;border:none;padding:10px 22px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600}
 button.secondary{background:${th.bgHover};color:${th.textActive};border:1px solid ${th.border}}
@@ -1705,13 +1825,21 @@ function setupSession() {
 //  IPC-Handler
 // ═══════════════════════════════════════════════════════════════════
 
-// Linux: Electrons setLoginItemSettings ist hier ein No-op,
-// daher schreiben wir selbst eine .desktop-Datei in ~/.config/autostart/.
-const AUTOSTART_FILE = path.join(app.getPath('home'), '.config', 'autostart', 'claude-ai-desktop.desktop');
+// Linux Autostart: schreibt eine .desktop-Datei in ~/.config/autostart/.
+// Im Snap-Sandbox wird der echte Pfad nur über den personal-files-Plug
+// 'dot-config-autostart' beschreibbar — Plug muss vom User per
+// 'sudo snap connect claude-ai-desktop:dot-config-autostart' aktiviert werden,
+// solange Auto-Connect nicht vom Snap Store genehmigt ist.
+const isSnap = !!(process.env.SNAP_NAME || process.env.SNAP);
+// Im Snap-Sandbox ist $HOME auf $SNAP_USER_DATA gemappt — wir brauchen den
+// echten Nutzer-Home, damit die Datei in das via personal-files freigegebene
+// /home/<user>/.config/autostart/ landet.
+const REAL_HOME = (isSnap && process.env.SNAP_REAL_HOME) ? process.env.SNAP_REAL_HOME : app.getPath('home');
+const AUTOSTART_FILE = path.join(REAL_HOME, '.config', 'autostart', 'claude-ai-desktop.desktop');
 
 function getAutostartExec() {
   if (process.env.APPIMAGE) return `"${process.env.APPIMAGE}" --no-sandbox`;
-  if (process.env.SNAP_NAME || process.env.SNAP) return 'claude-ai-desktop';
+  if (isSnap) return '/snap/bin/claude-ai-desktop';
   return null;
 }
 
@@ -1722,15 +1850,20 @@ function getAutostart() {
   try { return fs.existsSync(AUTOSTART_FILE); } catch { return false; }
 }
 
+// Liefert eine der Konstanten:
+//   'ok'       — Autostart-Status erfolgreich gesetzt
+//   'denied'   — Schreibzugriff verweigert (Snap-Plug nicht verbunden)
+//   'failed'   — sonstiger Fehler
 function setAutostart(enabled) {
+  enabled = !!enabled;
   if (process.platform !== 'linux') {
-    try { app.setLoginItemSettings({ openAtLogin: !!enabled }); return true; }
-    catch { return false; }
+    try { app.setLoginItemSettings({ openAtLogin: enabled }); return 'ok'; }
+    catch { return 'failed'; }
   }
   try {
     if (enabled) {
       const exec = getAutostartExec();
-      if (!exec) return false;
+      if (!exec) return 'failed';
       fs.mkdirSync(path.dirname(AUTOSTART_FILE), { recursive: true });
       fs.writeFileSync(AUTOSTART_FILE,
 `[Desktop Entry]
@@ -1746,14 +1879,18 @@ X-GNOME-Autostart-enabled=true
       try { fs.unlinkSync(AUTOSTART_FILE); }
       catch (e) { if (e.code !== 'ENOENT') throw e; }
     }
-    return true;
-  } catch { return false; }
+    return 'ok';
+  } catch (e) {
+    if (e && (e.code === 'EACCES' || e.code === 'EPERM' || e.code === 'EROFS')) return 'denied';
+    return 'failed';
+  }
 }
 
 ipcMain.handle('settings-get', () => ({
   minimizeOnClose,
   hotkey: currentHotkey,
-  autostart: getAutostart()
+  autostart: getAutostart(),
+  isSnap
 }));
 ipcMain.on('settings-minimize', (_, v) => {
   minimizeOnClose = v === true;
@@ -1923,7 +2060,7 @@ app.whenReady().then(() => {
   onlineCheckInterval = setInterval(() => handleOnlineChange(net.isOnline()), ONLINE_CHECK_MS);
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
 
-  if (mainWindow && windowState.lastSeenVersion !== version && RELEASE_NOTES[version]) {
+  if (mainWindow && windowState.lastSeenVersion !== version && getFilteredNotes(version, windowState.lastSeenVersion).length > 0) {
     const showWhatsNew = () => {
       if (!mainWindow || mainWindow.isDestroyed()) return;
       openWhatsNewWindow();
