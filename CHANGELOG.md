@@ -9,10 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.3.4] – 2026-04-30
 
+### Added
+- **In-app bug report form** replaces the previous "copy email and send manually" dialog. Has a description field, optional error-codes field, optional contact email, and an opt-in toggle to include app version, OS and language. Submits directly via a hosted form endpoint; on network failure the manual email-copy fallback is shown.
+
 ### Fixed
 - **Snap autostart** now works without any manual setup. Replaced the `personal-files` plug with the snap-native `autostart:` directive — the desktop file is written to `$SNAP_USER_DATA/.config/autostart/` and snapd-userd handles launching at login. Auto-Review by the Snap Store is now possible (no more privileged interfaces).
 
 ### Changed
+- **Sub-window centering**: bug report, app settings, What's-New popup and custom message dialogs now open centered on the main window (not on the display), so they appear over the app wherever you have it. Quick-Prompt stays display-centered (often triggered while the main app isn't visible).
 - AppImage path for autostart unchanged (`~/.config/autostart/claude-ai-desktop.desktop` with `Exec=$APPIMAGE --no-sandbox`).
 - Settings UI: removed the "manual `sudo snap connect`" notice — no longer needed.
 

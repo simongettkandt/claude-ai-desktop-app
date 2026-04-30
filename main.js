@@ -229,16 +229,20 @@ const RELEASE_NOTES = {
   ],
   '1.3.4': [
     {
+      icon: 'bolt',
+      title: 'Direkt aus der App Fehler melden',
+      text: 'Statt eine E-Mail zu schreiben kannst du jetzt einen kurzen Bericht direkt im Fenster ausf\u00fcllen \u2013 mit optionalen Fehlercodes und Kontakt-Mail. App-Version, OS und Sprache werden auf Wunsch automatisch mitgesendet.'
+    },
+    {
+      icon: 'settings',
+      title: 'Dialoge erscheinen \u00fcber der App',
+      text: 'App-Einstellungen, Bug-Report und Update-Hinweise zentrieren sich jetzt auf dem Hauptfenster \u2013 egal wo du die App auf dem Bildschirm hast.'
+    },
+    {
       icon: 'check',
       title: 'Autostart funktioniert jetzt automatisch',
       text: 'Der Autostart-Schalter in den App-Einstellungen funktioniert ab sofort ohne manuellen Setup-Schritt \u2013 einfach umlegen, fertig.',
       if: 'snap'
-    },
-    {
-      icon: 'check',
-      title: 'Kleines Wartungs-Update',
-      text: 'Diese Version ist ein Versions-Sync mit der Snap-Variante. Funktional \u00e4ndert sich f\u00fcr dich nichts \u2013 die App l\u00e4uft wie gewohnt.',
-      if: 'appimage'
     }
   ]
 };
