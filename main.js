@@ -1,4 +1,4 @@
-const { app, BrowserWindow, WebContentsView, shell, Menu, Tray, globalShortcut, nativeImage, nativeTheme, dialog, Notification, session, ipcMain, net, screen } = require('electron');
+const { app, BrowserWindow, WebContentsView, shell, Menu, Tray, globalShortcut, nativeImage, nativeTheme, dialog, Notification, session, ipcMain, net, screen, clipboard } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const fs = require('fs');
@@ -35,6 +35,7 @@ const DOMAIN_CACHE_MAX = 50;
 // ═══════════════════════════════════════════════════════════════════
 
 const BRAND_SCRIPT = fs.readFileSync(path.join(__dirname, 'inject', 'brand.js'), 'utf8');
+const NOTIFY_SCRIPT = fs.readFileSync(path.join(__dirname, 'inject', 'notify.js'), 'utf8');
 
 // ═══════════════════════════════════════════════════════════════════
 //  State
@@ -164,10 +165,79 @@ const bugReportStrings = {
     body: 'Einen Fehler gefunden oder einen Vorschlag?\nBitte sende eine E-Mail an:',
     btn: 'E-Mail kopieren'
   },
-  fr: { title: 'Signaler un bug', body: 'Vous avez trouv\u00e9 un bug ou une suggestion ?\nVeuillez envoyer un e-mail \u00e0 :', btn: 'Copier l\u2019e-mail', copied: 'Copi\u00e9 !' },
-  es: { title: 'Reportar un error', body: '\u00bfEncontraste un error o tienes una sugerencia?\nEnv\u00eda un correo a:', btn: 'Copiar correo', copied: '\u00a1Copiado!' },
+  fr: {
+    title: 'Signaler un bug',
+    intro: 'Vous avez trouv\u00e9 un bug ou une suggestion ? Envoyez-nous un message \u2014 vos retours nous aident \u00e0 am\u00e9liorer l\u2019application.',
+    descLabel: 'Description',
+    descPlaceholder: 'Que s\u2019est-il pass\u00e9 ? Qu\u2019attendiez-vous ?',
+    errorLabel: 'Codes d\u2019erreur / messages (facultatif)',
+    errorPlaceholder: 'p. ex. sortie console, num\u00e9ros d\u2019erreur, stack traces',
+    emailLabel: 'Votre e-mail (facultatif)',
+    emailPlaceholder: 'pour que nous puissions vous r\u00e9pondre',
+    autoInfoLabel: 'Inclure la version, l\u2019OS et la langue de l\u2019application',
+    autoInfoHint: 'Aide \u00e0 reproduire le probl\u00e8me \u2014 recommand\u00e9.',
+    sendBtn: 'Envoyer le rapport',
+    sendingBtn: 'Envoi\u2026',
+    successTitle: 'Rapport envoy\u00e9 \u2014 merci !',
+    successMsg: 'Nous vous r\u00e9pondrons si vous avez fourni votre e-mail.',
+    errorTitle: 'Impossible d\u2019envoyer le rapport',
+    errorHint: 'Veuillez v\u00e9rifier votre connexion internet ou envoyer un e-mail manuellement :',
+    copyBtn: 'Copier l\u2019e-mail',
+    copied: 'Copi\u00e9 !',
+    closeBtn: 'Fermer',
+    cancelBtn: 'Annuler',
+    body: 'Vous avez trouv\u00e9 un bug ou une suggestion ?\nVeuillez envoyer un e-mail \u00e0 :',
+    btn: 'Copier l\u2019e-mail'
+  },
+  es: {
+    title: 'Reportar un error',
+    intro: '\u00bfHas encontrado un error o tienes una sugerencia? Env\u00edanos un mensaje \u2014 tu feedback ayuda a mejorar la app.',
+    descLabel: 'Descripci\u00f3n',
+    descPlaceholder: '\u00bfQu\u00e9 pas\u00f3? \u00bfQu\u00e9 esperabas?',
+    errorLabel: 'C\u00f3digos de error / mensajes (opcional)',
+    errorPlaceholder: 'p. ej. salida de consola, n\u00fameros de error, stack traces',
+    emailLabel: 'Tu correo (opcional)',
+    emailPlaceholder: 'para poder responderte',
+    autoInfoLabel: 'Incluir versi\u00f3n de la app, sistema operativo e idioma',
+    autoInfoHint: 'Nos ayuda a reproducir el problema \u2014 recomendado.',
+    sendBtn: 'Enviar reporte',
+    sendingBtn: 'Enviando\u2026',
+    successTitle: '\u00a1Reporte enviado \u2014 gracias!',
+    successMsg: 'Te responderemos si nos diste tu correo.',
+    errorTitle: 'No se pudo enviar el reporte',
+    errorHint: 'Comprueba tu conexi\u00f3n a internet o env\u00edanos un correo manualmente:',
+    copyBtn: 'Copiar correo',
+    copied: '\u00a1Copiado!',
+    closeBtn: 'Cerrar',
+    cancelBtn: 'Cancelar',
+    body: '\u00bfEncontraste un error o tienes una sugerencia?\nEnv\u00eda un correo a:',
+    btn: 'Copiar correo'
+  },
   pt: { title: 'Reportar um bug', body: 'Encontrou um bug ou tem uma sugest\u00e3o?\nEnvie um e-mail para:', btn: 'Copiar e-mail', copied: 'Copiado!' },
-  it: { title: 'Segnala un bug', body: 'Hai trovato un bug o un suggerimento?\nInvia un\u2019email a:', btn: 'Copia email', copied: 'Copiato!' },
+  it: {
+    title: 'Segnala un bug',
+    intro: 'Hai trovato un bug o hai un suggerimento? Inviaci un messaggio \u2014 il tuo feedback aiuta a migliorare l\u2019app.',
+    descLabel: 'Descrizione',
+    descPlaceholder: 'Cosa \u00e8 successo? Cosa ti aspettavi?',
+    errorLabel: 'Codici di errore / messaggi (facoltativo)',
+    errorPlaceholder: 'es. output console, numeri di errore, stack trace',
+    emailLabel: 'La tua email (facoltativa)',
+    emailPlaceholder: 'cos\u00ec possiamo risponderti',
+    autoInfoLabel: 'Includi versione dell\u2019app, sistema operativo e lingua',
+    autoInfoHint: 'Ci aiuta a riprodurre il problema \u2014 consigliato.',
+    sendBtn: 'Invia segnalazione',
+    sendingBtn: 'Invio\u2026',
+    successTitle: 'Segnalazione inviata \u2014 grazie!',
+    successMsg: 'Ti risponderemo se hai indicato la tua email.',
+    errorTitle: 'Impossibile inviare la segnalazione',
+    errorHint: 'Controlla la tua connessione internet o inviaci un\u2019email manualmente:',
+    copyBtn: 'Copia email',
+    copied: 'Copiato!',
+    closeBtn: 'Chiudi',
+    cancelBtn: 'Annulla',
+    body: 'Hai trovato un bug o un suggerimento?\nInvia un\u2019email a:',
+    btn: 'Copia email'
+  },
   nl: { title: 'Bug melden', body: 'Een bug gevonden of een suggestie?\nStuur een e-mail naar:', btn: 'E-mail kopi\u00ebren', copied: 'Gekopieerd!' },
   pl: { title: 'Zg\u0142o\u015b b\u0142\u0105d', body: 'Znalaz\u0142e\u015b b\u0142\u0105d lub masz sugesti\u0119?\nWy\u015blij e-mail na:', btn: 'Kopiuj e-mail', copied: 'Skopiowano!' },
   ru: { title: '\u0421\u043e\u043e\u0431\u0449\u0438\u0442\u044c \u043e\u0431 \u043e\u0448\u0438\u0431\u043a\u0435', body: '\u041d\u0430\u0448\u043b\u0438 \u043e\u0448\u0438\u0431\u043a\u0443 \u0438\u043b\u0438 \u0435\u0441\u0442\u044c \u043f\u0440\u0435\u0434\u043b\u043e\u0436\u0435\u043d\u0438\u0435?\n\u041e\u0442\u043f\u0440\u0430\u0432\u044c\u0442\u0435 \u043f\u0438\u0441\u044c\u043c\u043e \u043d\u0430:', btn: '\u041a\u043e\u043f\u0438\u0440\u043e\u0432\u0430\u0442\u044c', copied: '\u0421\u043a\u043e\u043f\u0438\u0440\u043e\u0432\u0430\u043d\u043e!' },
@@ -203,8 +273,14 @@ let isQuitting = false;
 let settingsWindow = null;
 let quickPromptWindow = null;
 let whatsNewWindow = null;
+let appMenuWindow = null;
+let appMenuJustClosedAt = 0;
 let minimizeOnClose = false;
 let currentHotkey = null;
+let currentClipboardHotkey = null;
+let promptTemplates = [];      // [{ id, name, prefix }]
+let bgNotificationsEnabled = false;
+let lastActiveTabIndex = -1;   // für Background-Notifications
 let updateCheckInterval = null;
 let onlineCheckInterval = null;
 let waitForFirstTabInterval = null;
@@ -243,6 +319,44 @@ const RELEASE_NOTES = {
       title: 'Autostart funktioniert jetzt automatisch',
       text: 'Der Autostart-Schalter in den App-Einstellungen funktioniert ab sofort ohne manuellen Setup-Schritt \u2013 einfach umlegen, fertig.',
       if: 'snap'
+    }
+  ],
+  '1.3.5': [
+    {
+      icon: 'settings',
+      title: 'Neue Tab-Leiste mit App-Men\u00fc',
+      text: 'Das Men\u00fc-Icon ganz links (\u2261) \u00f6ffnet ein eigenes App-Men\u00fc mit allen wichtigen Funktionen. Zus\u00e4tzlich hat die Tab-Leiste jetzt direkten Zugriff auf Konversations-Export und Bug-Report.'
+    },
+    {
+      icon: 'bolt',
+      title: 'Konversation als Markdown exportieren',
+      text: 'Mit Strg+Shift+E (oder \u00fcber das Men\u00fc) speicherst du den aktuellen Chat als .md-Datei \u2013 inklusive Code-Bl\u00f6cken, Listen und \u00dcberschriften.'
+    },
+    {
+      icon: 'bolt',
+      title: 'Prompt-Templates f\u00fcr den Quick-Prompt',
+      text: 'In den App-Einstellungen legst du eigene Prefix-Texte an (z.B. \u201e\u00dcbersetze ins Englische:"). Im Quick-Prompt-Fenster w\u00e4hlst du sie per Tab aus und tippst nur noch deinen Inhalt.'
+    },
+    {
+      icon: 'tray',
+      title: 'Benachrichtigung f\u00fcr Hintergrund-Tabs',
+      text: 'Optional schickt Claude eine native Notification, sobald die Antwort in einem nicht aktiven Tab fertig ist. Aktivierbar in den App-Einstellungen.'
+    },
+    {
+      icon: 'bolt',
+      title: 'Zwischenablage als neuer Chat',
+      text: 'Ein eigener globaler Hotkey \u00f6ffnet einen frischen Chat und f\u00fcgt automatisch den Text aus der Zwischenablage als Prompt ein.'
+    },
+    {
+      icon: 'check',
+      title: 'Copy & Paste im Snap funktioniert wieder',
+      text: 'Auf Wayland-Sessions konnte die Snap-Version Inhalte nicht zuverl\u00e4ssig zwischen Apps kopieren. Mit dem neuen Launch-Pfad (native Wayland-Clipboard) klappt Kopieren und Einf\u00fcgen jetzt sauber.',
+      if: 'snap'
+    },
+    {
+      icon: 'heart',
+      title: 'Danke f\u00fcrs Nutzen!',
+      text: 'St\u00f6\u00dft du auf einen Fehler? Bitte \u00fcber das K\u00e4fer-Symbol oben in der Tab-Leiste melden \u2013 jeder Bericht hilft mir, die App zu verbessern. Vielen Dank f\u00fcr deinen Support.'
     }
   ]
 };
@@ -292,6 +406,11 @@ function loadWindowState() {
   if (windowState.isDarkMode !== undefined) isDarkMode = windowState.isDarkMode;
   minimizeOnClose = windowState.minimizeOnClose === true;
   currentHotkey = typeof windowState.hotkey === 'string' && windowState.hotkey.length > 0 ? windowState.hotkey : null;
+  currentClipboardHotkey = typeof windowState.clipboardHotkey === 'string' && windowState.clipboardHotkey.length > 0 ? windowState.clipboardHotkey : null;
+  promptTemplates = Array.isArray(windowState.promptTemplates) ? windowState.promptTemplates.filter(tpl =>
+    tpl && typeof tpl.name === 'string' && typeof tpl.prefix === 'string'
+  ).slice(0, 50) : [];
+  bgNotificationsEnabled = windowState.bgNotificationsEnabled === true;
 
   const result = {
     width: windowState.width || 1200, height: windowState.height || 800,
@@ -322,6 +441,9 @@ function buildState() {
     customDesign, isDarkMode,
     minimizeOnClose,
     hotkey: currentHotkey,
+    clipboardHotkey: currentClipboardHotkey,
+    promptTemplates,
+    bgNotificationsEnabled,
     lastSeenVersion: windowState.lastSeenVersion || null
   };
   if (mainWindow && !mainWindow.isDestroyed()) {
@@ -398,10 +520,20 @@ const ACCENT = {
   original: { from: '#d4734c', to: '#d4734c' }
 };
 
+// Beta-Build erkennen — eigene Icons (BETA-Badge) zur visuellen Unterscheidung von Stable
+const isBeta = process.env.CLAUDE_BETA === '1'
+            || (process.env.APPIMAGE || '').toLowerCase().includes('beta');
+
 function theme()  { return isDarkMode ? THEME.dark : THEME.light; }
 function accent() { return customDesign ? ACCENT.custom : ACCENT.original; }
-function icon()   { return path.join(__dirname, customDesign ? 'icon.png' : 'icon-original.png'); }
-function trayIcon() { return path.join(__dirname, customDesign ? 'icon-tray.png' : 'icon-original-tray.png'); }
+function icon()   {
+  if (isBeta) return path.join(__dirname, customDesign ? 'icon-beta.png' : 'icon-original-beta.png');
+  return path.join(__dirname, customDesign ? 'icon.png' : 'icon-original.png');
+}
+function trayIcon() {
+  if (isBeta) return path.join(__dirname, customDesign ? 'icon-tray-beta.png' : 'icon-original-tray-beta.png');
+  return path.join(__dirname, customDesign ? 'icon-tray.png' : 'icon-original-tray.png');
+}
 
 const _iconDataUrlCache = {};
 function iconDataUrl() {
@@ -429,7 +561,7 @@ function getTabBarHTML() {
   const a = accent();
 
   _tabBarCache = `<!DOCTYPE html><html><head>
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:;">
 <style>
 :root{--bg:${th.bg};--bgh:${th.bgHover};--bga:${th.bgActive};--t:${th.text};--ta:${th.textActive};--bd:${th.border};
   --ac-from:${a.from};--ac-to:${a.to}}
@@ -437,8 +569,14 @@ function getTabBarHTML() {
 body{background:var(--bg);font:500 12px/1 -apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
   color:var(--t);overflow:hidden;user-select:none;-webkit-app-region:drag;
   height:${TAB_BAR_HEIGHT}px;display:flex;align-items:flex-end;border-bottom:1px solid var(--bd);contain:layout style}
-#tabs{display:flex;align-items:flex-end;height:100%;flex:1;padding:0 8px;gap:2px;
-  -webkit-app-region:no-drag;overflow-x:auto}
+.menu-btn{-webkit-app-region:no-drag;width:30px;height:30px;display:flex;align-items:center;justify-content:center;
+  cursor:pointer;color:var(--ta);border-radius:8px;margin:0 2px 6px 6px;flex-shrink:0;
+  transition:background .15s,color .15s,border-color .15s;border:1px solid transparent;opacity:.85}
+.menu-btn:hover{background:color-mix(in srgb,var(--ac-from) 12%,transparent);
+  border-color:color-mix(in srgb,var(--ac-from) 35%,transparent);color:var(--ac-from);opacity:1}
+.menu-btn svg{width:16px;height:16px}
+#tabs{display:flex;align-items:flex-end;height:100%;flex:1;padding:0 4px;gap:2px;
+  -webkit-app-region:no-drag;overflow-x:auto;min-width:0}
 #tabs::-webkit-scrollbar{height:0}
 .tab{display:flex;align-items:center;height:34px;padding:0 14px;border-radius:10px 10px 0 0;
   cursor:pointer;white-space:nowrap;max-width:220px;min-width:60px;gap:8px;
@@ -470,9 +608,15 @@ body{background:var(--bg);font:500 12px/1 -apple-system,BlinkMacSystemFont,'Sego
   border:1px solid var(--bd)}
 .design-pill:hover{background:linear-gradient(135deg,var(--ac-from),var(--ac-to));color:#fff;border-color:transparent}
 </style></head><body>
+<div class="menu-btn" id="app-menu" title="${t('Menü', 'Menu')}">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+</div>
 <div id="tabs"></div>
 <div class="controls">
   <div class="design-pill" id="design-toggle" title="${t('Design wechseln', 'Toggle design')}">${customDesign ? 'Modern' : 'Classic'}</div>
+  <div class="ctrl-btn" id="export-btn" title="${t('Konversation als Markdown exportieren', 'Export conversation as Markdown')}">
+    <svg viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </div>
   <div class="ctrl-btn" id="bug-report" title="${(bugReportStrings[sysLang] || bugReportStrings.en).title}">
     <svg viewBox="0 0 24 24" fill="none"><path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
   </div>
@@ -491,6 +635,11 @@ document.getElementById('new-tab').addEventListener('click',()=>window.tabAPI.ne
 document.getElementById('theme-toggle').addEventListener('click',()=>window.tabAPI.toggleTheme());
 document.getElementById('design-toggle').addEventListener('click',()=>window.tabAPI.toggleDesign());
 document.getElementById('bug-report').addEventListener('click',()=>window.tabAPI.bugReport());
+document.getElementById('export-btn').addEventListener('click',()=>window.tabAPI.exportConversation());
+document.getElementById('app-menu').addEventListener('click',(e)=>{
+  const r=e.currentTarget.getBoundingClientRect();
+  window.tabAPI.openAppMenu(Math.round(r.left),Math.round(r.bottom));
+});
 
 window.tabAPI.onDesignUpdate(custom=>{
   document.getElementById('design-toggle').textContent=custom?'Modern':'Classic';
@@ -528,7 +677,7 @@ window.tabAPI.onThemeUpdate(dark=>{
     r.setProperty('--bg','#f5f2ef');r.setProperty('--bgh','#ede9e4');r.setProperty('--bga','#faf8f6');
     r.setProperty('--t','#8a7e72');r.setProperty('--ta','#2a2420');r.setProperty('--bd','#e8e4de');
   }
-  document.body.style.background=dark?'#262624':'#f5f2ef';
+  document.body.style.background='';
   document.getElementById('theme-icon-dark').style.display=dark?'':'none';
   document.getElementById('theme-icon-light').style.display=dark?'none':'';
 });
@@ -563,14 +712,20 @@ function sendDesignUpdate() {
 function injectScripts(wc) {
   if (!alive(wc)) return;
   if (customDesign) wc.executeJavaScript(BRAND_SCRIPT).catch(() => {});
+  wc.executeJavaScript(NOTIFY_SCRIPT).catch(() => {});
 }
 
 function reinjectScripts(wc) {
   if (!alive(wc)) return;
-  if (!customDesign) return;
-  // Nur re-injizieren wenn Brand-Script nicht mehr aktiv ist (z.B. nach Full-Navigation)
-  wc.executeJavaScript('!!window._cdBrand').then(active => {
-    if (!active) injectScripts(wc);
+  // Brand-Script nur bei custom design re-injecten
+  if (customDesign) {
+    wc.executeJavaScript('!!window._cdBrand').then(active => {
+      if (!active) wc.executeJavaScript(BRAND_SCRIPT).catch(() => {});
+    }).catch(() => {});
+  }
+  // Notify-Script: idempotent, einfach prüfen
+  wc.executeJavaScript('!!window._cdNotify').then(active => {
+    if (!active) wc.executeJavaScript(NOTIFY_SCRIPT).catch(() => {});
   }).catch(() => {});
 }
 
@@ -688,6 +843,7 @@ function createContentView() {
       partition: 'persist:claude',
       backgroundThrottling: true,
       spellcheck: false,
+      preload: path.join(__dirname, 'preload-content.js')
     }
   });
   view.setBackgroundColor(theme().bg);
@@ -843,6 +999,21 @@ function toggleDesign() {
     } catch {}
   }
   try { fs.copyFileSync(icon(), path.join(app.getPath('home'), 'Apps', 'claude-desktop-icon.png')); } catch {}
+
+  // Pinned-Icon im Dock/Taskleiste mit-switchen (Linux: GNOME/Plasma lesen aus icon-theme)
+  // Beta-Build überschreibt nur claude-desktop-beta.png, nicht das Stable-Icon
+  if (process.platform === 'linux') {
+    const iconFile = isBeta ? 'claude-desktop-beta.png' : 'claude-desktop.png';
+    const sizes = ['512x512', '256x256', '128x128', '64x64', '48x48', '32x32', '16x16'];
+    for (const sz of sizes) {
+      const target = path.join(app.getPath('home'), '.local', 'share', 'icons', 'hicolor', sz, 'apps', iconFile);
+      try {
+        if (fs.existsSync(target)) fs.copyFileSync(icon(), target);
+      } catch {}
+    }
+    const { exec } = require('child_process');
+    exec('gtk-update-icon-cache -t -f ' + JSON.stringify(path.join(app.getPath('home'), '.local', 'share', 'icons', 'hicolor')), () => {});
+  }
 
   drainPool();
 
@@ -1146,9 +1317,14 @@ function getQuickPromptHTML() {
   const ac = accent();
   const i18n = {
     placeholder: t('Frage an Claude\u2026', 'Ask Claude\u2026'),
-    hint: t('Enter zum Senden \u00b7 Shift+Enter neue Zeile \u00b7 Esc abbrechen', 'Enter to send \u00b7 Shift+Enter new line \u00b7 Esc to cancel')
+    hint: t('Enter zum Senden \u00b7 Shift+Enter neue Zeile \u00b7 Esc abbrechen \u00b7 Tab Template', 'Enter to send \u00b7 Shift+Enter new line \u00b7 Esc to cancel \u00b7 Tab template'),
+    noTemplate: t('Kein Template', 'No template'),
+    templates: t('Template', 'Template')
   };
   const logoUrl = iconDataUrl();
+  // XSS-safe: </script> in Template-Namen würde sonst aus dem Script-Kontext brechen
+  const tpls = JSON.stringify(promptTemplates.map(t => ({ id: t.id, name: t.name, prefix: t.prefix })))
+    .replace(/<\//g, '<\\/');
   return `<!DOCTYPE html><html><head>
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:;">
 <style>
@@ -1160,33 +1336,67 @@ body{padding:10px}
   background:linear-gradient(135deg,${ac.from},${ac.to},${ac.from},${ac.to});
   background-size:300% 300%;
   animation:gradShift 6s ease-in-out infinite}
-.inner{height:100%;background:${th.bg};border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
-.wrap{flex:1;display:flex;align-items:flex-start;gap:12px}
+.inner{height:100%;background:${th.bg};border-radius:10px;padding:12px 16px 10px;display:flex;flex-direction:column;gap:8px}
+.wrap{flex:1;display:flex;align-items:flex-start;gap:12px;min-height:0}
 .logo{width:28px;height:28px;flex-shrink:0;border-radius:7px;margin-top:4px;object-fit:contain;
   box-shadow:0 2px 8px color-mix(in srgb,${ac.from} 40%,transparent)}
-textarea{flex:1;background:transparent;border:none;outline:none;resize:none;color:${th.textActive};font-family:inherit;font-size:15px;line-height:1.5;min-height:60px;padding:4px 0}
+textarea{flex:1;background:transparent;border:none;outline:none;resize:none;color:${th.textActive};font-family:inherit;font-size:15px;line-height:1.5;min-height:48px;padding:4px 0}
 textarea::placeholder{color:${th.text}}
-.hint{color:${th.text};font-size:11px;text-align:right}
+.bot{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.tpl-pick{display:flex;align-items:center;gap:6px;font-size:11.5px;color:${th.text}}
+.tpl-pick select{background:${th.bgHover};color:${th.textActive};border:1px solid ${th.border};border-radius:5px;padding:3px 8px;font-family:inherit;font-size:11.5px;outline:none;cursor:pointer;max-width:200px}
+.tpl-pick select:focus{border-color:${ac.from}}
+.tpl-pick.empty{display:none}
+.hint{color:${th.text};font-size:11px;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 </style></head><body>
 <div class="frame"><div class="inner">
 <div class="wrap">
   <img class="logo" src="${logoUrl}" alt="Claude"/>
   <textarea id="q" placeholder="${i18n.placeholder}" autofocus></textarea>
 </div>
-<div class="hint">${i18n.hint}</div>
+<div class="bot">
+  <div class="tpl-pick" id="tplwrap">
+    <span>${i18n.templates}:</span>
+    <select id="tpl"></select>
+  </div>
+  <div class="hint">${i18n.hint}</div>
+</div>
 </div></div>
 <script>
 const api = window.quickPromptAPI;
 const q = document.getElementById('q');
+const sel = document.getElementById('tpl');
+const tplwrap = document.getElementById('tplwrap');
+const TEMPLATES = ${tpls};
+const I = ${JSON.stringify(i18n)};
+
+function buildTplOptions() {
+  if (!TEMPLATES.length) { tplwrap.classList.add('empty'); return; }
+  const opt = document.createElement('option'); opt.value = ''; opt.textContent = I.noTemplate;
+  sel.appendChild(opt);
+  for (const t of TEMPLATES) {
+    const o = document.createElement('option'); o.value = t.id; o.textContent = t.name;
+    sel.appendChild(o);
+  }
+}
+buildTplOptions();
+
 q.focus();
 q.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') { e.preventDefault(); api.cancel(); return; }
+  if (e.key === 'Tab' && TEMPLATES.length) { e.preventDefault(); sel.focus(); return; }
   if (e.key === 'Enter' && !e.shiftKey) {
     e.preventDefault();
     const v = q.value.trim();
     if (v.length === 0) { api.cancel(); return; }
-    api.submit(v);
+    const tpl = TEMPLATES.find(t => t.id === sel.value);
+    const finalText = tpl ? (tpl.prefix.trimEnd() + ' ' + v) : v;
+    api.submit(finalText);
   }
+});
+sel.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') { e.preventDefault(); api.cancel(); }
+  if (e.key === 'Enter') { e.preventDefault(); q.focus(); }
 });
 </script>
 </body></html>`;
@@ -1332,80 +1542,305 @@ function updateTrayMenu() {
 }
 
 function registerHotkey(accel) {
+  if (typeof accel === 'string' && accel.length > 0 && accel === currentClipboardHotkey) return 'conflict';
   if (currentHotkey) {
     try { globalShortcut.unregister(currentHotkey); } catch {}
   }
   currentHotkey = null;
-  if (!accel || typeof accel !== 'string') return true;
+  if (!accel || typeof accel !== 'string') return 'ok';
   try {
-    const ok = globalShortcut.register(accel, openQuickPrompt);
-    if (ok) { currentHotkey = accel; return true; }
+    if (globalShortcut.register(accel, openQuickPrompt)) {
+      currentHotkey = accel;
+      return 'ok';
+    }
   } catch {}
-  return false;
+  return 'failed';
 }
+
+// ── Feature 6: Clipboard → Chat ──────────────────────────────────
+function openClipboardChat() {
+  let text = '';
+  try { text = clipboard.readText() || ''; } catch {}
+  text = text.trim();
+  if (!text) {
+    new Notification({
+      title: 'Claude',
+      body: t('Zwischenablage ist leer.', 'Clipboard is empty.')
+    }).show();
+    return;
+  }
+  if (text.length > 8000) text = text.slice(0, 8000);
+  submitQuickPrompt(text);
+}
+
+function registerClipboardHotkey(accel) {
+  if (typeof accel === 'string' && accel.length > 0 && accel === currentHotkey) return 'conflict';
+  if (currentClipboardHotkey) {
+    try { globalShortcut.unregister(currentClipboardHotkey); } catch {}
+  }
+  currentClipboardHotkey = null;
+  if (!accel || typeof accel !== 'string') return 'ok';
+  try {
+    if (globalShortcut.register(accel, openClipboardChat)) {
+      currentClipboardHotkey = accel;
+      return 'ok';
+    }
+  } catch {}
+  return 'failed';
+}
+
+// ── Feature 4: Markdown-Export ───────────────────────────────────
+async function exportActiveConversation() {
+  const tab = tabs[activeTabIndex];
+  if (!tab || !alive(tab.view)) return;
+  const wc = tab.view.webContents;
+  const url = wc.getURL();
+  if (!/^https:\/\/(?:[a-z0-9-]+\.)?claude\.ai\//i.test(url)) {
+    showCustomMessageBox({
+      type: 'info', title: 'Claude',
+      message: t('Export nur in claude.ai-Tabs verfügbar.', 'Export only available in claude.ai tabs.')
+    });
+    return;
+  }
+
+  let payload = null;
+  try {
+    payload = await wc.executeJavaScript(`(function(){
+      function clean(s){ return (s||'').replace(/\\u00a0/g,' ').replace(/\\s+\\n/g,'\\n').trim(); }
+      function nodeToMarkdown(root){
+        if(!root) return '';
+        const walk = (node) => {
+          if(node.nodeType === 3) return node.textContent;
+          if(node.nodeType !== 1) return '';
+          const tag = node.tagName.toLowerCase();
+          const inner = Array.from(node.childNodes).map(walk).join('');
+          if(tag === 'br') return '\\n';
+          if(tag === 'strong' || tag === 'b') return '**' + inner + '**';
+          if(tag === 'em' || tag === 'i') return '*' + inner + '*';
+          if(tag === 'code' && node.parentElement && node.parentElement.tagName.toLowerCase() !== 'pre') return '\`' + inner + '\`';
+          if(tag === 'pre'){
+            const code = node.querySelector('code');
+            const lang = code && code.className ? (code.className.match(/language-([\\w-]+)/) || [])[1] || '' : '';
+            return '\\n\\n\`\`\`' + lang + '\\n' + (code ? code.innerText : node.innerText) + '\\n\`\`\`\\n\\n';
+          }
+          if(tag === 'a'){
+            const href = node.getAttribute('href') || '';
+            return href ? '[' + inner + '](' + href + ')' : inner;
+          }
+          if(tag === 'li') return '- ' + inner.trim() + '\\n';
+          if(tag === 'ul' || tag === 'ol') return '\\n' + inner + '\\n';
+          if(tag === 'h1') return '\\n# ' + inner + '\\n\\n';
+          if(tag === 'h2') return '\\n## ' + inner + '\\n\\n';
+          if(tag === 'h3') return '\\n### ' + inner + '\\n\\n';
+          if(tag === 'h4') return '\\n#### ' + inner + '\\n\\n';
+          if(tag === 'blockquote') return inner.split('\\n').map(l=>'> '+l).join('\\n') + '\\n\\n';
+          if(tag === 'p' || tag === 'div') return inner + '\\n\\n';
+          return inner;
+        };
+        return clean(walk(root));
+      }
+      const title = (document.title || 'Claude Chat').replace(/\\s*[-\\u2013]\\s*Claude.*$/, '').trim() || 'Claude Chat';
+      const sels = [
+        '[data-testid="user-message"]',
+        '[data-testid="assistant-message"]',
+        '[data-test-render-count]',
+        'div.font-claude-message',
+        'div.font-user-message'
+      ];
+      const found = new Map();
+      for(const sel of sels){
+        document.querySelectorAll(sel).forEach(el => {
+          const r = el.getBoundingClientRect();
+          const key = Math.round(window.scrollY + r.top) + ':' + Math.round(r.left);
+          if(!found.has(key)) found.set(key, el);
+        });
+      }
+      const parts = Array.from(found.values()).sort((a,b) => {
+        const ar = a.getBoundingClientRect(), br = b.getBoundingClientRect();
+        return (ar.top + window.scrollY) - (br.top + window.scrollY);
+      });
+      const blocks = [];
+      for(const el of parts){
+        const isUser = !!(el.matches('[data-testid="user-message"]') || el.closest('[data-testid="user-message"]') || el.classList.contains('font-user-message'));
+        const role = isUser ? 'User' : 'Claude';
+        const md = nodeToMarkdown(el);
+        if(md) blocks.push({ role, md });
+      }
+      return { title, url: location.href, blocks };
+    })()`);
+  } catch (e) {
+    console.error('Export-Scrape fehlgeschlagen:', e);
+  }
+  if (!payload || !payload.blocks || !payload.blocks.length) {
+    showCustomMessageBox({
+      type: 'info', title: 'Claude',
+      message: t('Konnte keine Konversation finden.', 'Could not find a conversation on this page.'),
+      detail: t('Stelle sicher, dass du in einem Chat bist (nicht auf der Übersicht).', 'Make sure you are inside a chat (not on the overview).')
+    });
+    return;
+  }
+
+  const today = new Date().toISOString().slice(0, 10);
+  let md = `# ${payload.title}\n\n`;
+  md += `_${t('Quelle', 'Source')}: ${payload.url}_\n`;
+  md += `_${t('Exportiert', 'Exported')}: ${today}_\n\n---\n\n`;
+  for (const b of payload.blocks) {
+    md += `## ${b.role === 'User' ? t('Du', 'You') : 'Claude'}\n\n${b.md}\n\n---\n\n`;
+  }
+
+  const safeName = payload.title.replace(/[^\w\s.-]+/g, '_').slice(0, 80) || 'claude-chat';
+  const result = await dialog.showSaveDialog(mainWindow, {
+    defaultPath: path.join(app.getPath('documents'), `${safeName}-${today}.md`),
+    filters: [
+      { name: 'Markdown', extensions: ['md'] },
+      { name: t('Alle Dateien', 'All Files'), extensions: ['*'] }
+    ]
+  });
+  if (result.canceled || !result.filePath) return;
+  fs.writeFile(result.filePath, md, 'utf8', (err) => {
+    if (err) {
+      showCustomMessageBox({
+        type: 'error', title: t('Export fehlgeschlagen', 'Export failed'),
+        message: err.message || String(err)
+      });
+      return;
+    }
+    new Notification({
+      title: t('Konversation exportiert', 'Conversation exported'),
+      body: path.basename(result.filePath)
+    }).show();
+  });
+}
+
 
 function getSettingsHTML() {
   const th = theme();
   const ac = accent();
   const i18n = {
     title: t('Einstellungen', 'Settings'),
-    subtitle: t('Hintergrund-Modus und globaler Hotkey', 'Background mode and global hotkey'),
+    subtitle: t('Hintergrund, Hotkeys, Templates', 'Background, hotkeys, templates'),
+    secBackground: t('Hintergrund', 'Background'),
+    secHotkeys: t('Globale Hotkeys', 'Global hotkeys'),
+    secTemplates: t('Prompt-Templates', 'Prompt templates'),
     minimizeLabel: t('Beim Schlie\u00dfen in den Hintergrund minimieren', 'Minimize to tray on close'),
-    minimizeHint: t('Claude bleibt im Hintergrund erreichbar \u2013 \u00fcber das Tray-Symbol oder den Hotkey unten.', 'Claude stays reachable in the background \u2013 via the tray icon or the hotkey below.'),
+    minimizeHint: t('Claude bleibt im Hintergrund erreichbar \u2013 \u00fcber das Tray-Symbol oder die Hotkeys unten.', 'Claude stays reachable in the background \u2013 via the tray icon or the hotkeys below.'),
     autostartLabel: t('Beim Anmelden automatisch starten', 'Start automatically at login'),
     autostartHint: t('Claude startet beim Hochfahren des Systems automatisch.', 'Claude launches automatically when the system starts.'),
     autostartFailed: t('Autostart konnte nicht aktiviert werden.', 'Could not enable autostart.'),
-    hotkeyLabel: t('Globaler Hotkey (neuer Chat)', 'Global hotkey (new chat)'),
+    bgNotifLabel: t('Antwort-Benachrichtigung f\u00fcr Hintergrund-Tabs', 'Notify when a background tab finishes a response'),
+    bgNotifHint: t('Native Notification, sobald Claude in einem nicht aktiven Tab fertig geantwortet hat.', 'Native notification once Claude finishes a response in a tab you\u2019re not currently looking at.'),
+    hotkeyQp: t('Neuer Chat (Quick-Prompt)', 'New chat (Quick-Prompt)'),
+    hotkeyClip: t('Zwischenablage als Prompt einf\u00fcgen', 'Send clipboard text as new prompt'),
     press: t('Klick hier und dr\u00fccke eine Tastenkombination', 'Click here and press a key combination'),
     pressing: t('Dr\u00fccke die gew\u00fcnschte Tastenkombination\u2026', 'Press your key combination\u2026'),
     clear: t('L\u00f6schen', 'Clear'),
     close: t('Schlie\u00dfen', 'Close'),
     registered: t('Hotkey registriert.', 'Hotkey registered.'),
-    failed: t('Diese Kombination konnte nicht registriert werden (evtl. systemweit belegt).', 'Could not register this combination (may already be in use).'),
+    failed: t('Diese Kombination konnte nicht registriert werden – evtl. systemweit belegt.', 'Could not register this combination — likely already in use system-wide.'),
+    conflictQp: t('Diese Kombination ist bereits dem Quick-Prompt-Hotkey zugewiesen.', 'This combination is already assigned to the Quick-Prompt hotkey.'),
+    conflictClip: t('Diese Kombination ist bereits dem Clipboard-Hotkey zugewiesen.', 'This combination is already assigned to the Clipboard hotkey.'),
     removed: t('Hotkey entfernt.', 'Hotkey removed.'),
-    needMod: t('Bitte mindestens eine Modifikator-Taste (Strg/Alt/Shift) verwenden.', 'Please use at least one modifier key (Ctrl/Alt/Shift).')
+    needMod: t('Bitte mindestens eine Modifikator-Taste (Strg/Alt/Shift) verwenden.', 'Please use at least one modifier key (Ctrl/Alt/Shift).'),
+    tplEmpty: t('Noch keine Templates. F\u00fcgst du eines hinzu, erscheint es im Quick-Prompt-Fenster als Auswahl.', 'No templates yet. Once added, they appear as a picker in the Quick-Prompt window.'),
+    tplName: t('Name (z.B. \u201e\u00dcbersetze")', 'Name (e.g. \u201eTranslate")'),
+    tplPrefix: t('Prefix-Text (wird vor deinem Input eingef\u00fcgt)', 'Prefix text (prepended to your input)'),
+    tplAdd: t('Hinzuf\u00fcgen', 'Add'),
+    tplDelete: t('L\u00f6schen', 'Delete'),
+    tplLimit: t('Maximal 50 Templates.', 'Maximum 50 templates.'),
+    tplDup: t('Name existiert bereits.', 'A template with that name already exists.')
   };
   return `<!DOCTYPE html><html><head>
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline';">
 <style>
 *{box-sizing:border-box}
-body{margin:0;padding:22px;background:${th.bg};color:${th.textActive};font-family:system-ui,-apple-system,sans-serif;font-size:14px;user-select:none}
-h1{font-size:17px;margin:0 0 4px;font-weight:600}
-.sub{color:${th.text};font-size:12px;margin-bottom:18px}
-.row{margin:14px 0}
-label{display:block;margin-bottom:6px;font-weight:500}
+html,body{height:100%;margin:0}
+body{padding:0;background:${th.bg};color:${th.textActive};font-family:system-ui,-apple-system,sans-serif;font-size:13.5px;user-select:none;display:flex;flex-direction:column}
+.head{padding:18px 22px 12px;border-bottom:1px solid ${th.border}}
+h1{font-size:16px;margin:0 0 2px;font-weight:600}
+.sub{color:${th.text};font-size:12px}
+.scroll{flex:1;overflow-y:auto;padding:14px 22px 4px}
+.scroll::-webkit-scrollbar{width:8px}
+.scroll::-webkit-scrollbar-thumb{background:${th.border};border-radius:4px}
+.section{margin-bottom:18px}
+.section h2{font-size:11px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;color:${th.text};margin:0 0 10px}
+.row{margin:10px 0}
+label{display:block;margin-bottom:5px;font-weight:500}
 .chk{display:flex;align-items:flex-start;gap:8px;cursor:pointer;font-weight:500}
-.chk input{margin-top:2px;accent-color:${ac.from}}
-.hint{color:${th.text};font-size:12px;margin-top:4px;margin-left:24px;line-height:1.5}
-.hotkey{display:flex;gap:8px;align-items:center}
-.capture{flex:1;padding:10px 12px;background:${th.bgHover};border:1px solid ${th.border};border-radius:6px;font-family:monospace;cursor:pointer;color:${th.textActive};outline:none;min-height:38px;display:flex;align-items:center}
+.chk input{margin-top:2px;accent-color:${ac.from};cursor:pointer}
+.hint{color:${th.text};font-size:11.5px;margin-top:3px;margin-left:24px;line-height:1.5}
+.hotkey-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;margin:6px 0}
+.hotkey-row .lab{font-size:12px;color:${th.text};grid-column:1/-1;margin-bottom:-2px;font-weight:500}
+.capture{padding:8px 12px;background:${th.bgHover};border:1px solid ${th.border};border-radius:6px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;cursor:pointer;color:${th.textActive};outline:none;min-height:34px;display:flex;align-items:center}
 .capture.listening{border-color:${ac.from};background:${th.bgActive}}
-button{background:linear-gradient(135deg,${ac.from},${ac.to});color:#fff;border:none;padding:9px 16px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:500}
+button{background:linear-gradient(135deg,${ac.from},${ac.to});color:#fff;border:none;padding:7px 14px;border-radius:6px;cursor:pointer;font-size:12.5px;font-weight:500;font-family:inherit}
 button.secondary{background:${th.bgHover};color:${th.textActive};border:1px solid ${th.border}}
+button.danger{background:transparent;color:${th.text};border:1px solid ${th.border};padding:5px 10px;font-size:11.5px}
+button.danger:hover{color:#e05e3e;border-color:#e05e3e}
 button:hover{filter:brightness(1.05)}
-.actions{display:flex;gap:8px;justify-content:flex-end;margin-top:22px}
-.status{color:${th.text};font-size:12px;margin-top:6px;min-height:16px}
+button:disabled{opacity:.5;cursor:not-allowed}
+.tpl-add{display:grid;grid-template-columns:1fr auto;gap:8px;margin-bottom:10px}
+.tpl-add input,.tpl-add textarea{background:${th.bgHover};border:1px solid ${th.border};color:${th.textActive};border-radius:6px;padding:7px 10px;font-family:inherit;font-size:12.5px;outline:none;width:100%}
+.tpl-add textarea{resize:vertical;min-height:44px;line-height:1.4;grid-column:1/-1}
+.tpl-add input:focus,.tpl-add textarea:focus{border-color:${ac.from}}
+.tpl-list{display:flex;flex-direction:column;gap:6px}
+.tpl-empty{color:${th.text};font-size:11.5px;font-style:italic;padding:8px 0}
+.tpl-item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 12px;background:${th.bgHover};border:1px solid ${th.border};border-radius:6px}
+.tpl-info{flex:1;min-width:0}
+.tpl-name{font-weight:600;font-size:12.5px;margin-bottom:1px}
+.tpl-prefix{color:${th.text};font-size:11.5px;font-family:ui-monospace,Menlo,Consolas,monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.actions{padding:12px 22px;border-top:1px solid ${th.border};display:flex;gap:8px;justify-content:flex-end}
+.status{color:${th.text};font-size:11.5px;margin-top:5px;min-height:14px}
 </style></head><body>
-<h1>${i18n.title}</h1>
-<div class="sub">${i18n.subtitle}</div>
-
-<div class="row">
-  <label class="chk"><input type="checkbox" id="mc"><span>${i18n.minimizeLabel}</span></label>
-  <div class="hint">${i18n.minimizeHint}</div>
+<div class="head">
+  <h1>${i18n.title}</h1>
+  <div class="sub">${i18n.subtitle}</div>
 </div>
 
-<div class="row">
-  <label class="chk"><input type="checkbox" id="as"><span>${i18n.autostartLabel}</span></label>
-  <div class="hint">${i18n.autostartHint}</div>
-</div>
+<div class="scroll">
 
-<div class="row">
-  <label>${i18n.hotkeyLabel}</label>
-  <div class="hotkey">
-    <div class="capture" id="cap" tabindex="0">${i18n.press}</div>
-    <button class="secondary" id="clear">${i18n.clear}</button>
+  <div class="section">
+    <h2>${i18n.secBackground}</h2>
+    <div class="row">
+      <label class="chk"><input type="checkbox" id="mc"><span>${i18n.minimizeLabel}</span></label>
+      <div class="hint">${i18n.minimizeHint}</div>
+    </div>
+    <div class="row">
+      <label class="chk"><input type="checkbox" id="as"><span>${i18n.autostartLabel}</span></label>
+      <div class="hint">${i18n.autostartHint}</div>
+    </div>
+    <div class="row">
+      <label class="chk"><input type="checkbox" id="bn"><span>${i18n.bgNotifLabel}</span></label>
+      <div class="hint">${i18n.bgNotifHint}</div>
+    </div>
+    <div class="status" id="status-bg"></div>
   </div>
-  <div class="status" id="status"></div>
+
+  <div class="section">
+    <h2>${i18n.secHotkeys}</h2>
+    <div class="hotkey-row">
+      <div class="lab">${i18n.hotkeyQp}</div>
+      <div class="capture" data-key="qp" tabindex="0">${i18n.press}</div>
+      <button class="danger" data-clear="qp">${i18n.clear}</button>
+    </div>
+    <div class="hotkey-row">
+      <div class="lab">${i18n.hotkeyClip}</div>
+      <div class="capture" data-key="clip" tabindex="0">${i18n.press}</div>
+      <button class="danger" data-clear="clip">${i18n.clear}</button>
+    </div>
+    <div class="status" id="status-hk"></div>
+  </div>
+
+  <div class="section">
+    <h2>${i18n.secTemplates}</h2>
+    <div class="tpl-add">
+      <input type="text" id="tpl-name" maxlength="40" placeholder="${i18n.tplName}">
+      <button id="tpl-add">${i18n.tplAdd}</button>
+      <textarea id="tpl-prefix" maxlength="2000" placeholder="${i18n.tplPrefix}"></textarea>
+    </div>
+    <div class="tpl-list" id="tpl-list"></div>
+    <div class="status" id="status-tpl"></div>
+  </div>
+
 </div>
 
 <div class="actions">
@@ -1417,24 +1852,82 @@ const I = ${JSON.stringify(i18n)};
 const api = window.settingsAPI;
 const mc = document.getElementById('mc');
 const as = document.getElementById('as');
-const cap = document.getElementById('cap');
-const clearBtn = document.getElementById('clear');
+const bn = document.getElementById('bn');
 const closeBtn = document.getElementById('close');
-const status = document.getElementById('status');
-let listening = false;
-let currentDisplay = I.press;
+const statusBg = document.getElementById('status-bg');
+const statusHk = document.getElementById('status-hk');
+const statusTpl = document.getElementById('status-tpl');
 
-function resetCapture() {
-  listening = false;
-  cap.classList.remove('listening');
-  cap.textContent = currentDisplay;
+const captures = { qp: null, clip: null };
+const display = { qp: I.press, clip: I.press };
+let listeningKey = null;
+
+document.querySelectorAll('.capture').forEach(el => {
+  const key = el.dataset.key;
+  captures[key] = el;
+  el.addEventListener('click', () => startListening(key));
+  el.addEventListener('blur', () => { if (listeningKey === key) resetCapture(key); });
+  el.addEventListener('keydown', (e) => onKeydown(e, key));
+});
+document.querySelectorAll('button[data-clear]').forEach(btn => {
+  btn.addEventListener('click', () => clearHotkey(btn.dataset.clear));
+});
+
+function startListening(key) {
+  if (listeningKey && listeningKey !== key) resetCapture(listeningKey);
+  listeningKey = key;
+  captures[key].classList.add('listening');
+  captures[key].textContent = I.pressing;
+  statusHk.textContent = '';
+  captures[key].focus();
 }
 
-api.get().then(s => {
-  mc.checked = !!s.minimizeOnClose;
-  as.checked = !!s.autostart;
-  if (s.hotkey) { currentDisplay = s.hotkey; cap.textContent = s.hotkey; }
-});
+function resetCapture(key) {
+  if (listeningKey === key) listeningKey = null;
+  captures[key].classList.remove('listening');
+  captures[key].textContent = display[key];
+}
+
+function onKeydown(e, key) {
+  if (listeningKey !== key) return;
+  e.preventDefault();
+  const k = e.key;
+  if (k === 'Escape') { resetCapture(key); return; }
+  if (['Control','Shift','Alt','Meta','Dead','Unidentified'].includes(k)) return;
+  const parts = [];
+  if (e.ctrlKey || e.metaKey) parts.push('CommandOrControl');
+  if (e.altKey) parts.push('Alt');
+  if (e.shiftKey) parts.push('Shift');
+  if (parts.length === 0) { statusHk.textContent = I.needMod; return; }
+  let kk = k;
+  if (kk === ' ') kk = 'Space';
+  else if (kk.length === 1) kk = kk.toUpperCase();
+  parts.push(kk);
+  const accel = parts.join('+');
+  applyHotkey(key, accel).then(res => {
+    if (res === 'ok') statusHk.textContent = I.registered;
+    else if (res === 'conflict') statusHk.textContent = key === 'qp' ? I.conflictClip : I.conflictQp;
+    else statusHk.textContent = I.failed;
+    resetCapture(key);
+  });
+}
+
+function applyHotkey(key, accel) {
+  const fn = key === 'qp' ? api.setHotkey : key === 'clip' ? api.setClipboardHotkey : null;
+  if (!fn) return Promise.resolve('failed');
+  return fn(accel).then(res => {
+    if (res === 'ok') display[key] = accel;
+    return res;
+  });
+}
+
+function clearHotkey(key) {
+  applyHotkey(key, null).then(() => {
+    display[key] = I.press;
+    captures[key].textContent = I.press;
+    statusHk.textContent = I.removed;
+  });
+}
 
 mc.addEventListener('change', () => api.setMinimize(mc.checked));
 as.addEventListener('change', async () => {
@@ -1442,57 +1935,68 @@ as.addEventListener('change', async () => {
   as.disabled = true;
   try {
     const r = await api.setAutostart(want);
-    if (r !== 'ok') {
-      as.checked = !want;
-      status.textContent = I.autostartFailed;
-    }
-  } finally {
-    as.disabled = false;
+    if (r !== 'ok') { as.checked = !want; statusBg.textContent = I.autostartFailed; }
+    else statusBg.textContent = '';
+  } finally { as.disabled = false; }
+});
+bn.addEventListener('change', () => api.setBgNotifications(bn.checked));
+
+api.get().then(s => {
+  mc.checked = !!s.minimizeOnClose;
+  as.checked = !!s.autostart;
+  bn.checked = !!s.bgNotifications;
+  if (s.hotkey) { display.qp = s.hotkey; captures.qp.textContent = s.hotkey; }
+  if (s.clipboardHotkey) { display.clip = s.clipboardHotkey; captures.clip.textContent = s.clipboardHotkey; }
+  renderTemplates(s.templates || []);
+});
+
+const tplName = document.getElementById('tpl-name');
+const tplPrefix = document.getElementById('tpl-prefix');
+const tplAdd = document.getElementById('tpl-add');
+const tplList = document.getElementById('tpl-list');
+
+function renderTemplates(list) {
+  tplList.innerHTML = '';
+  if (!list.length) {
+    const e = document.createElement('div');
+    e.className = 'tpl-empty';
+    e.textContent = I.tplEmpty;
+    tplList.appendChild(e);
+    return;
   }
-});
+  for (const t of list) {
+    const item = document.createElement('div');
+    item.className = 'tpl-item';
+    const info = document.createElement('div'); info.className = 'tpl-info';
+    const n = document.createElement('div'); n.className = 'tpl-name'; n.textContent = t.name;
+    const p = document.createElement('div'); p.className = 'tpl-prefix'; p.textContent = t.prefix;
+    info.appendChild(n); info.appendChild(p);
+    const del = document.createElement('button'); del.className = 'danger'; del.textContent = I.tplDelete;
+    del.addEventListener('click', () => api.deleteTemplate(t.id).then(res => renderTemplates(res.templates)));
+    item.appendChild(info); item.appendChild(del);
+    tplList.appendChild(item);
+  }
+}
 
-cap.addEventListener('click', () => {
-  listening = true;
-  cap.classList.add('listening');
-  cap.textContent = I.pressing;
-  status.textContent = '';
-  cap.focus();
-});
-
-cap.addEventListener('blur', () => { if (listening) resetCapture(); });
-
-cap.addEventListener('keydown', (e) => {
-  if (!listening) return;
-  e.preventDefault();
-  const k = e.key;
-  if (k === 'Escape') { resetCapture(); return; }
-  if (['Control','Shift','Alt','Meta','Dead','Unidentified'].includes(k)) return;
-  const parts = [];
-  if (e.ctrlKey || e.metaKey) parts.push('CommandOrControl');
-  if (e.altKey) parts.push('Alt');
-  if (e.shiftKey) parts.push('Shift');
-  if (parts.length === 0) { status.textContent = I.needMod; return; }
-  let key = k;
-  if (key === ' ') key = 'Space';
-  else if (key.length === 1) key = key.toUpperCase();
-  parts.push(key);
-  const accel = parts.join('+');
-  api.setHotkey(accel).then(ok => {
-    if (ok) { currentDisplay = accel; status.textContent = I.registered; }
-    else { status.textContent = I.failed; }
-    resetCapture();
-  });
-});
-
-clearBtn.addEventListener('click', () => {
-  api.setHotkey(null).then(() => {
-    currentDisplay = I.press;
-    cap.textContent = I.press;
-    status.textContent = I.removed;
+tplAdd.addEventListener('click', () => {
+  const name = tplName.value.trim();
+  const prefix = tplPrefix.value;
+  if (!name || !prefix.trim()) return;
+  api.addTemplate({ name, prefix }).then(res => {
+    if (res && Array.isArray(res.templates)) {
+      tplName.value = '';
+      tplPrefix.value = '';
+      statusTpl.textContent = '';
+      renderTemplates(res.templates);
+    } else if (res && res.error === 'limit') statusTpl.textContent = I.tplLimit;
+    else if (res && res.error === 'dup') statusTpl.textContent = I.tplDup;
   });
 });
 
 closeBtn.addEventListener('click', () => api.close());
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !listeningKey && document.activeElement.tagName !== 'TEXTAREA' && document.activeElement.tagName !== 'INPUT') api.close();
+});
 </script>
 </body></html>`;
 }
@@ -1505,7 +2009,8 @@ function getWhatsNewHTML() {
     tray: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="12" cy="12" r="3"/></svg>',
     bolt: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="13 2 4 14 12 14 11 22 20 10 12 10 13 2"/></svg>',
     check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="8 12 11 15 16 9"/></svg>',
-    settings: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>'
+    settings: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
+    heart: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>'
   };
   const i18n = {
     header: t('Neu in Claude v' + version, 'New in Claude v' + version),
@@ -1615,6 +2120,194 @@ function openSettingsWindow() {
   settingsWindow.setMenu(null);
   settingsWindow.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(getSettingsHTML()));
   settingsWindow.on('closed', () => { settingsWindow = null; });
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  Custom App-Menü (HTML-Popup statt OS-nativ)
+// ═══════════════════════════════════════════════════════════════════
+
+function getAppMenuItems() {
+  const designLabel = `Design: ${customDesign ? 'Modern' : 'Classic'}`;
+  return [
+    { type: 'item', action: 'new-tab', label: t('Neuer Tab', 'New Tab'), accel: 'Ctrl+T', icon: 'plus' },
+    { type: 'item', action: 'close-tab', label: t('Tab schließen', 'Close Tab'), accel: 'Ctrl+W', icon: 'x' },
+    { type: 'sep' },
+    { type: 'item', action: 'export', label: t('Konversation exportieren…', 'Export conversation…'), accel: 'Ctrl+Shift+E', icon: 'download' },
+    { type: 'item', action: 'reload', label: t('Neu laden', 'Reload'), accel: 'Ctrl+R', icon: 'refresh' },
+    { type: 'sep' },
+    { type: 'item', action: 'design-toggle', label: designLabel, icon: 'palette' },
+    { type: 'item', action: 'settings', label: t('App-Einstellungen…', 'App Settings…'), accel: 'Ctrl+,', icon: 'cog' },
+    { type: 'sep' },
+    { type: 'item', action: 'check-updates', label: t('Nach Updates suchen…', 'Check for Updates…'), icon: 'refresh' },
+    { type: 'item', action: 'bug-report', label: (bugReportStrings[sysLang] || bugReportStrings.en).title, icon: 'bug' },
+    { type: 'sep' },
+    { type: 'item', action: 'quit', label: t('Beenden', 'Quit'), accel: 'Ctrl+Q', icon: 'power' }
+  ];
+}
+
+function getAppMenuHTML() {
+  const th = theme();
+  const ac = accent();
+  const dark = isDarkMode;
+  const items = getAppMenuItems();
+  const ICONS = {
+    plus:    '<path d="M12 5v14M5 12h14"/>',
+    x:       '<path d="M18 6L6 18M6 6l12 12"/>',
+    download:'<path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>',
+    refresh: '<path d="M3 12a9 9 0 0115-6.7L21 8M21 3v5h-5M21 12a9 9 0 01-15 6.7L3 16M3 21v-5h5"/>',
+    palette: '<circle cx="12" cy="12" r="9"/><circle cx="7.5" cy="10.5" r="1"/><circle cx="12" cy="7.5" r="1"/><circle cx="16.5" cy="10.5" r="1"/><circle cx="14.5" cy="15.5" r="1"/>',
+    cog:     '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.6 1.6 0 00-1.8-.3 1.6 1.6 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.6 1.6 0 00-1-1.5 1.6 1.6 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.6 1.6 0 00.3-1.8 1.6 1.6 0 00-1.5-1H3a2 2 0 110-4h.1a1.6 1.6 0 001.5-1 1.6 1.6 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.6 1.6 0 001.8.3h0a1.6 1.6 0 001-1.5V3a2 2 0 114 0v.1a1.6 1.6 0 001 1.5 1.6 1.6 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.6 1.6 0 00-.3 1.8v0a1.6 1.6 0 001.5 1H21a2 2 0 110 4h-.1a1.6 1.6 0 00-1.5 1z"/>',
+    bug:     '<path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>',
+    power:   '<path d="M18.36 6.64a9 9 0 11-12.73 0M12 2v10"/>'
+  };
+
+  const renderItem = (it, idx) => {
+    if (it.type === 'sep') return '<div class="sep"></div>';
+    const icon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONS[it.icon] || ''}</svg>`;
+    const accel = it.accel ? `<span class="accel">${it.accel}</span>` : '';
+    return `<button class="item" data-action="${it.action}" data-idx="${idx}"><span class="icon">${icon}</span><span class="label">${it.label}</span>${accel}</button>`;
+  };
+
+  return `<!DOCTYPE html><html><head>
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:;">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;background:transparent;color:${th.textActive};
+  font-family:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',system-ui,sans-serif;font-size:13px;
+  overflow:hidden;user-select:none}
+body{padding:8px}
+.card{background:${th.bg};border:1px solid ${th.border};border-radius:10px;
+  box-shadow:0 6px 24px ${dark ? 'rgba(0,0,0,.45)' : 'rgba(0,0,0,.18)'},
+    0 1px 3px ${dark ? 'rgba(0,0,0,.4)' : 'rgba(0,0,0,.08)'};
+  padding:5px;overflow:hidden}
+.head{display:flex;align-items:center;gap:11px;padding:8px 11px 9px;margin:-1px -1px 4px;
+  border-bottom:1px solid ${th.border};
+  background:linear-gradient(180deg,color-mix(in srgb,${ac.from} 6%,transparent),transparent)}
+.head .logo{width:28px;height:28px;flex-shrink:0;border-radius:7px;object-fit:contain;
+  filter:drop-shadow(0 1px 4px color-mix(in srgb,${ac.from} 40%,transparent))}
+.head .meta{display:flex;flex-direction:column;line-height:1.2;flex:1;min-width:0}
+.head .name{font-weight:700;font-size:14px;color:${th.textActive};letter-spacing:.2px}
+.head .ver{font-size:11px;color:${th.text};font-family:ui-monospace,Menlo,Consolas,monospace}
+.item{display:flex;align-items:center;gap:11px;width:100%;height:30px;padding:0 9px;
+  border:none;background:transparent;color:${th.textActive};
+  border-radius:6px;cursor:pointer;font:inherit;font-size:13px;
+  transition:background .08s ease,color .08s ease}
+.item:hover,.item.focused{background:${th.bgHover}}
+.item.focused{outline:none}
+.item:active{background:${th.bgActive}}
+.icon{display:flex;align-items:center;justify-content:center;width:16px;height:16px;color:${th.text};flex-shrink:0}
+.icon svg{width:16px;height:16px}
+.item:hover .icon,.item.focused .icon{color:${ac.from}}
+.label{flex:1;text-align:left;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.accel{color:${th.text};font-size:11.5px;font-weight:500;letter-spacing:.2px;flex-shrink:0;
+  font-family:ui-monospace,Menlo,Consolas,monospace}
+.item:hover .accel,.item.focused .accel{color:${th.textActive}}
+.sep{height:1px;background:${th.border};margin:5px 4px}
+</style></head><body>
+<div class="card" id="card">
+  <div class="head">
+    <img class="logo" src="${iconDataUrl()}" alt="Claude" draggable="false"/>
+    <div class="meta">
+      <div class="name">Claude</div>
+      <div class="ver">v${version}</div>
+    </div>
+  </div>
+  ${items.map(renderItem).join('')}
+</div>
+<script>
+const api = window.appMenuAPI;
+const card = document.getElementById('card');
+const buttons = Array.from(card.querySelectorAll('.item'));
+let focusIdx = -1;
+
+function focusItem(i) {
+  buttons.forEach(b => b.classList.remove('focused'));
+  if (i >= 0 && i < buttons.length) {
+    buttons[i].classList.add('focused');
+    focusIdx = i;
+  }
+}
+
+card.addEventListener('click', (e) => {
+  const btn = e.target.closest('.item');
+  if (!btn) return;
+  api.action(btn.dataset.action);
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') { e.preventDefault(); api.close(); return; }
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    focusItem((focusIdx + 1) % buttons.length);
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    focusItem((focusIdx - 1 + buttons.length) % buttons.length);
+  } else if (e.key === 'Enter' && focusIdx >= 0) {
+    e.preventDefault();
+    api.action(buttons[focusIdx].dataset.action);
+  }
+});
+
+window.addEventListener('blur', () => api.close());
+
+// Größe an Inhalt anpassen und an Main melden — Window resized auf Card-Höhe
+const observer = new ResizeObserver(() => {
+  const r = card.getBoundingClientRect();
+  document.body.dataset.height = String(Math.ceil(r.height + 16));
+});
+observer.observe(card);
+</script>
+</body></html>`;
+}
+
+function openAppMenuWindow(rendererX, rendererY) {
+  if (appMenuWindow && !appMenuWindow.isDestroyed()) {
+    appMenuWindow.close();
+    return;
+  }
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+
+  const items = getAppMenuItems();
+  // Höhe: Header ~52px + Items 30px + Separators 11px + 18px card-padding/border + 16px body-padding
+  const itemH = 30, sepH = 11, headerH = 52;
+  let height = 18 + 16 + headerH;
+  for (const it of items) height += (it.type === 'sep' ? sepH : itemH);
+  const width = 280;
+
+  const cb = mainWindow.getContentBounds();
+  const screenX = cb.x + (Number.isFinite(rendererX) ? Math.round(rendererX) : 0);
+  const screenY = cb.y + (Number.isFinite(rendererY) ? Math.round(rendererY) : TAB_BAR_HEIGHT);
+
+  appMenuWindow = new BrowserWindow({
+    width, height,
+    x: screenX, y: screenY,
+    frame: false, resizable: false, movable: false,
+    alwaysOnTop: true, skipTaskbar: true, show: false,
+    transparent: true, hasShadow: false,
+    backgroundColor: '#00000000',
+    webPreferences: {
+      preload: path.join(__dirname, 'preload-appmenu.js'),
+      nodeIntegration: false, contextIsolation: true, sandbox: true,
+      spellcheck: false
+    }
+  });
+  appMenuWindow.setMenu(null);
+  appMenuWindow.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(getAppMenuHTML()));
+  appMenuWindow.once('ready-to-show', () => {
+    if (!appMenuWindow || appMenuWindow.isDestroyed()) return;
+    appMenuWindow.show();
+    appMenuWindow.focus();
+  });
+  appMenuWindow.on('blur', () => {
+    if (appMenuWindow && !appMenuWindow.isDestroyed()) {
+      appMenuJustClosedAt = Date.now();
+      appMenuWindow.close();
+    }
+  });
+  appMenuWindow.on('closed', () => {
+    appMenuJustClosedAt = Date.now();
+    appMenuWindow = null;
+  });
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -1775,6 +2468,8 @@ function updateMenu(force = false) {
         { label: t('Neuer Tab', 'New Tab'), accelerator: 'CmdOrCtrl+T', click: () => createTab() },
         { label: t('Tab schlie\u00dfen', 'Close Tab'), accelerator: 'CmdOrCtrl+W', click: () => closeTab(activeTabIndex) },
         { type: 'separator' }, ...tabItems, { type: 'separator' },
+        { label: t('Konversation als Markdown exportieren\u2026', 'Export conversation as Markdown\u2026'), accelerator: 'CmdOrCtrl+Shift+E', click: () => exportActiveConversation() },
+        { type: 'separator' },
         { label: t('Einstellungen', 'Settings'), accelerator: 'CmdOrCtrl+,', click: () => {
           if (tabs[activeTabIndex] && alive(tabs[activeTabIndex].view))
             tabs[activeTabIndex].view.webContents.loadURL('https://claude.ai/settings');
@@ -1876,51 +2571,98 @@ function showOfflinePage() {
 // ═══════════════════════════════════════════════════════════════════
 
 function setupDownloadManager() {
-  // Lock-basierte Deduplizierung: ein Download pro fileName gleichzeitig,
-  // plus kurzer Cooldown nach Abschluss gegen Nach-Echo-Events.
-  const activeDownloads = new Set();     // fileName -> während Dialog offen / Download läuft
-  const cooldownUntil = new Map();       // fileName -> Ablaufzeit (ms)
+  // Echo-Schutz: claude.ai feuert manche Download-Links 2x. event.preventDefault()
+  // im will-download-Handler stoppt das Duplikat sauber, OHNE dass Chromiums
+  // Auto-Save-Dialog erscheint (item.cancel() würde den trotzdem öffnen).
+  const activeKeys = new Set();
+  const cooldownUntil = new Map();
   const COOLDOWN_MS = 3000;
 
-  session.fromPartition('persist:claude').on('will-download', (_, item) => {
+  function dropKey(key) {
+    activeKeys.delete(key);
+    cooldownUntil.set(key, Date.now() + COOLDOWN_MS);
+    setTimeout(() => {
+      const u = cooldownUntil.get(key);
+      if (u && Date.now() >= u) cooldownUntil.delete(key);
+    }, COOLDOWN_MS + 500);
+  }
+
+  session.fromPartition('persist:claude').on('will-download', (event, item) => {
     const fileName = item.getFilename();
+    const url = item.getURL();
+    const keys = [url, fileName].filter(Boolean);
     const now = Date.now();
 
-    // Cooldown: kürzlich abgeschlossener Download mit gleichem Namen → Echo droppen
-    const until = cooldownUntil.get(fileName);
-    if (until && now < until) { item.cancel(); return; }
-    if (until) cooldownUntil.delete(fileName);
+    // Echo-Filter: Duplikat → Temp-Pfad + cancel (Auto-Dialog wird unterdrückt)
+    for (const k of keys) {
+      const u = cooldownUntil.get(k);
+      if (u && now < u) {
+        try { item.setSavePath(path.join(app.getPath('temp'), '.cd-discard-' + now)); } catch {}
+        try { item.cancel(); } catch {}
+        return;
+      }
+      if (activeKeys.has(k)) {
+        try { item.setSavePath(path.join(app.getPath('temp'), '.cd-discard-' + now)); } catch {}
+        try { item.cancel(); } catch {}
+        return;
+      }
+    }
 
-    // Aktiver Download mit gleichem Namen → Duplikat droppen
-    if (activeDownloads.has(fileName)) { item.cancel(); return; }
-    activeDownloads.add(fileName);
+    keys.forEach(k => activeKeys.add(k));
 
+    // SYNCHRON: Temp-Pfad setzen — sonst öffnet Chromium parallel seinen eigenen Save-Dialog!
+    const safeName = fileName.replace(/[^\w.-]+/g, '_');
+    const tmpPath = path.join(app.getPath('temp'), '.cd-pending-' + now + '-' + safeName);
+    try { item.setSavePath(tmpPath); } catch {}
+
+    let chosenPath = null;
+    let dialogDone = false;
+    let downloadDone = false;
+    let downloadState = '';
+    let cancelledByDialog = false;
     let released = false;
-    const release = () => {
+
+    const finalize = () => {
+      if (!dialogDone || !downloadDone) return;
       if (released) return;
       released = true;
-      activeDownloads.delete(fileName);
-      cooldownUntil.set(fileName, Date.now() + COOLDOWN_MS);
-      setTimeout(() => {
-        const u = cooldownUntil.get(fileName);
-        if (u && Date.now() >= u) cooldownUntil.delete(fileName);
-      }, COOLDOWN_MS + 200);
+      if (downloadState === 'completed' && chosenPath) {
+        let ok = false;
+        try { fs.renameSync(tmpPath, chosenPath); ok = true; }
+        catch (_) {
+          try { fs.copyFileSync(tmpPath, chosenPath); fs.unlinkSync(tmpPath); ok = true; }
+          catch (e2) { console.error(`[DL] move failed: ${e2.message}`); }
+        }
+        new Notification({
+          title: ok ? t('Download fertig', 'Download complete') : t('Download fehlgeschlagen', 'Download failed'),
+          body: fileName
+        }).show();
+      } else {
+        try { fs.unlinkSync(tmpPath); } catch {}
+        if (!cancelledByDialog && downloadState !== 'cancelled' && downloadState !== '') {
+          new Notification({ title: t('Download fehlgeschlagen', 'Download failed'), body: fileName }).show();
+        }
+      }
+      keys.forEach(dropKey);
     };
 
-    // Async-Dialog (blockiert den Event-Loop nicht)
     dialog.showSaveDialog(mainWindow, {
       defaultPath: path.join(app.getPath('downloads'), fileName),
       filters: [{ name: t('Alle Dateien', 'All Files'), extensions: ['*'] }]
     }).then(result => {
+      dialogDone = true;
       if (result.canceled || !result.filePath) {
-        item.cancel();
-        release();
-        return;
+        cancelledByDialog = true;
+        try { item.cancel(); } catch {}
+      } else {
+        chosenPath = result.filePath;
       }
-      item.setSavePath(result.filePath);
+      finalize();
     }).catch(() => {
-      item.cancel();
-      release();
+      dialogDone = true;
+      cancelledByDialog = true;
+      try { item.cancel(); } catch {}
+      finalize();
     });
 
     item.on('updated', (_, state) => {
@@ -1936,9 +2678,9 @@ function setupDownloadManager() {
 
     item.once('done', (_, state) => {
       if (mainWindow && !mainWindow.isDestroyed()) { mainWindow.setProgressBar(-1); updateTitle(); }
-      if (state === 'completed') new Notification({ title: t('Download fertig', 'Download complete'), body: fileName }).show();
-      else if (state !== 'cancelled') new Notification({ title: t('Download fehlgeschlagen', 'Download failed'), body: fileName }).show();
-      release();
+      downloadDone = true;
+      downloadState = state;
+      finalize();
     });
   });
 }
@@ -1959,6 +2701,7 @@ function setupAutoUpdater() {
 
   autoUpdater.on('update-available', (info) => {
     failures = 0;
+    if (isQuitting) return;
     if (manualUpdateCheck) {
       manualUpdateCheck = false;
       showCustomMessageBox({ type: 'info', title: t('Update verf\u00fcgbar', 'Update available'), message: `v${info.version} ${t('wird heruntergeladen\u2026', 'is downloading\u2026')}` });
@@ -1969,6 +2712,7 @@ function setupAutoUpdater() {
 
   autoUpdater.on('update-not-available', (info) => {
     failures = 0;
+    if (isQuitting) return;
     if (manualUpdateCheck) {
       manualUpdateCheck = false;
       showCustomMessageBox({ type: 'info', title: t('Kein Update', 'No Update'), message: t('Du verwendest bereits die neueste Version.', 'You are already on the latest version.'), detail: `v${app.getVersion()}` });
@@ -1976,6 +2720,7 @@ function setupAutoUpdater() {
   });
 
   autoUpdater.on('download-progress', (p) => {
+    if (isQuitting) return;
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.setTitle(`Claude \u2013 Update ${Math.round(p.percent)}%`);
       mainWindow.setProgressBar(p.percent / 100);
@@ -1983,17 +2728,19 @@ function setupAutoUpdater() {
   });
 
   autoUpdater.on('update-downloaded', (info) => {
+    if (isQuitting) return;
     if (mainWindow && !mainWindow.isDestroyed()) { mainWindow.setTitle('Claude'); mainWindow.setProgressBar(-1); }
     showCustomMessageBox({
       type: 'info', title: t('Update bereit', 'Update ready'),
       message: `v${info.version} ${t('heruntergeladen. Jetzt neu starten?', 'downloaded. Restart now?')}`,
       buttons: [t('Neu starten', 'Restart'), t('Sp\u00e4ter', 'Later')], defaultId: 0, cancelId: 1
-    }).then(r => { if (r.response === 0) autoUpdater.quitAndInstall(); });
+    }).then(r => { if (!isQuitting && r.response === 0) autoUpdater.quitAndInstall(); });
   });
 
   autoUpdater.on('error', (err) => {
     failures++;
     if (isDev) console.error(`Update-Fehler (${failures}x):`, err.message);
+    if (isQuitting) return;
     if (manualUpdateCheck) {
       manualUpdateCheck = false;
       const short = (err.message || '').split('\n')[0].slice(0, 200);
@@ -2109,6 +2856,9 @@ X-GNOME-Autostart-enabled=true
 ipcMain.handle('settings-get', () => ({
   minimizeOnClose,
   hotkey: currentHotkey,
+  clipboardHotkey: currentClipboardHotkey,
+  bgNotifications: bgNotificationsEnabled,
+  templates: promptTemplates.map(t => ({ id: t.id, name: t.name, prefix: t.prefix })),
   autostart: getAutostart()
 }));
 ipcMain.on('settings-minimize', (_, v) => {
@@ -2118,17 +2868,75 @@ ipcMain.on('settings-minimize', (_, v) => {
 ipcMain.handle('settings-autostart', (_, v) => setAutostart(v === true));
 const HOTKEY_RE = /^(?:(?:Command|Cmd|Control|Ctrl|CommandOrControl|CmdOrCtrl|Alt|Option|AltGr|Shift|Super|Meta)\+)*[A-Za-z0-9]+$|^(?:(?:Command|Cmd|Control|Ctrl|CommandOrControl|CmdOrCtrl|Alt|Option|AltGr|Shift|Super|Meta)\+)*(?:F1[0-9]?|F20|F[1-9]|Plus|Space|Tab|Backspace|Delete|Insert|Return|Enter|Up|Down|Left|Right|Home|End|PageUp|PageDown|Escape|Esc|VolumeUp|VolumeDown|VolumeMute|MediaPlayPause|PrintScreen|numdec|numadd|numsub|nummult|numdiv|num[0-9])$/;
 
+function validateAccelerator(accel) {
+  if (typeof accel !== 'string' || accel.length === 0 || accel.length >= 64) return null;
+  return HOTKEY_RE.test(accel) ? accel : null;
+}
+
 ipcMain.handle('settings-hotkey', (_, accel) => {
-  let value = null;
-  if (typeof accel === 'string' && accel.length > 0 && accel.length < 64 && HOTKEY_RE.test(accel)) {
-    value = accel;
-  }
-  const ok = registerHotkey(value);
-  saveWindowState();
-  return ok;
+  const value = validateAccelerator(accel);
+  const res = registerHotkey(value);
+  if (res === 'ok') saveWindowState();
+  return res;
 });
+ipcMain.handle('settings-clipboard-hotkey', (_, accel) => {
+  const value = validateAccelerator(accel);
+  const res = registerClipboardHotkey(value);
+  if (res === 'ok') saveWindowState();
+  return res;
+});
+ipcMain.on('settings-bg-notifications', (_, v) => {
+  bgNotificationsEnabled = v === true;
+  saveWindowState();
+});
+
+ipcMain.handle('settings-add-template', (_, tpl) => {
+  if (!tpl || typeof tpl.name !== 'string' || typeof tpl.prefix !== 'string') return { error: 'invalid' };
+  const name = tpl.name.trim().slice(0, 40);
+  const prefix = tpl.prefix.slice(0, 2000);
+  if (!name || !prefix.trim()) return { error: 'invalid' };
+  if (promptTemplates.length >= 50) return { error: 'limit' };
+  if (promptTemplates.some(t => t.name.toLowerCase() === name.toLowerCase())) return { error: 'dup' };
+  const id = 'tpl_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  promptTemplates.push({ id, name, prefix });
+  saveWindowState();
+  return { templates: promptTemplates.slice() };
+});
+ipcMain.handle('settings-delete-template', (_, id) => {
+  if (typeof id === 'string') {
+    promptTemplates = promptTemplates.filter(t => t.id !== id);
+    saveWindowState();
+  }
+  return { templates: promptTemplates.slice() };
+});
+
 ipcMain.on('settings-close', () => {
   if (settingsWindow && !settingsWindow.isDestroyed()) settingsWindow.close();
+});
+
+// Background-Notification von der claude.ai-Seite (via preload-content.js)
+ipcMain.on('claude-response-done', (event, payload) => {
+  if (!bgNotificationsEnabled) return;
+  // Senderview ermitteln
+  const senderWc = event.sender;
+  const idx = tabs.findIndex(tb => tb.view && tb.view.webContents === senderWc);
+  if (idx < 0) return;
+  // Nur Notification, wenn Tab nicht aktiv ODER Hauptfenster nicht sichtbar/fokussiert
+  const mainVisible = mainWindow && !mainWindow.isDestroyed() && mainWindow.isVisible() && mainWindow.isFocused() && !mainWindow.isMinimized();
+  if (idx === activeTabIndex && mainVisible) return;
+  const tab = tabs[idx];
+  const title = (tab.title || 'Claude').slice(0, 80);
+  const body = typeof payload === 'object' && payload && typeof payload.preview === 'string'
+    ? payload.preview.slice(0, 140)
+    : t('Antwort fertig', 'Response ready');
+  try {
+    const n = new Notification({ title, body, silent: false });
+    n.on('click', () => {
+      showMainWindow();
+      if (idx >= 0 && idx < tabs.length) switchToTab(idx);
+    });
+    n.show();
+  } catch {}
 });
 
 ipcMain.on('quickprompt-submit', (event, text) => {
@@ -2159,6 +2967,41 @@ ipcMain.on('tab-close', (_, i) => {
 });
 ipcMain.on('design-toggle', toggleDesign);
 ipcMain.on('bug-report', showBugReportDialog);
+ipcMain.on('export-conversation', () => exportActiveConversation());
+ipcMain.on('app-menu-popup', (_event, x, y) => {
+  if (Date.now() - appMenuJustClosedAt < 250) return;
+  openAppMenuWindow(x, y);
+});
+ipcMain.on('appmenu-action', (event, name) => {
+  if (appMenuWindow && !appMenuWindow.isDestroyed() && event.sender === appMenuWindow.webContents) {
+    appMenuWindow.close();
+  }
+  switch (name) {
+    case 'new-tab': createTab(); break;
+    case 'close-tab': closeTab(activeTabIndex); break;
+    case 'export': exportActiveConversation(); break;
+    case 'reload':
+      if (tabs[activeTabIndex] && alive(tabs[activeTabIndex].view)) tabs[activeTabIndex].view.webContents.reload();
+      break;
+    case 'design-toggle': toggleDesign(); break;
+    case 'settings': openSettingsWindow(); break;
+    case 'check-updates':
+      if (isDev) {
+        showCustomMessageBox({ type: 'info', title: 'Claude', message: t('Updates sind im Entwicklungsmodus deaktiviert.', 'Updates are disabled in development mode.') });
+      } else {
+        manualUpdateCheck = true;
+        autoUpdater.checkForUpdates().catch(() => {});
+      }
+      break;
+    case 'bug-report': showBugReportDialog(); break;
+    case 'quit': isQuitting = true; app.quit(); break;
+  }
+});
+ipcMain.on('appmenu-close', (event) => {
+  if (appMenuWindow && !appMenuWindow.isDestroyed() && event.sender === appMenuWindow.webContents) {
+    appMenuWindow.close();
+  }
+});
 ipcMain.on('theme-toggle', () => {
   isDarkMode = !isDarkMode;
   drainPool();
@@ -2191,6 +3034,7 @@ function createWindow() {
     minWidth: 480, minHeight: 600, title: `Claude v${version}`,
     icon: icon(),
     backgroundColor: theme().bg,
+    autoHideMenuBar: true,
     show: false,
     webPreferences: {
       nodeIntegration: false, contextIsolation: true, sandbox: true,
@@ -2199,6 +3043,7 @@ function createWindow() {
       spellcheck: false,
     }
   });
+  mainWindow.setMenuBarVisibility(false);
 
   if (state.isMaximized) mainWindow.maximize();
 
@@ -2291,6 +3136,7 @@ app.whenReady().then(() => {
   setupAutoUpdater();
   setupTray();
   if (currentHotkey) registerHotkey(currentHotkey);
+  if (currentClipboardHotkey) registerClipboardHotkey(currentClipboardHotkey);
   handleOnlineChange(net.isOnline());
   onlineCheckInterval = setInterval(() => handleOnlineChange(net.isOnline()), ONLINE_CHECK_MS);
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });

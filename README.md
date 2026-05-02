@@ -14,22 +14,28 @@ sudo snap install claude-ai-desktop
 
 [![claude-ai-desktop](https://snapcraft.io/claude-ai-desktop/badge.svg)](https://snapcraft.io/claude-ai-desktop)
 
-> **v1.3.4** – In-App Bug Report Form, Sub-Window Centering, Snap Autostart Fix
+> **v1.3.5** – Custom Menu, Markdown Export, Prompt Templates, Background Notifications, Snap Copy & Paste Fix
 
 ---
 
 ## Features
 
+- **Custom App Menu (Hamburger)** – In-app menu with keyboard navigation, replaces the native menu bar; quick access to all actions including new tab, export, settings, updates and bug report
+- **Tab System** – Multiple chats side by side with a visual tab bar (Ctrl+T, Ctrl+W, Ctrl+Tab); direct buttons in the tab bar for Markdown export and bug report
+- **Markdown Export** – Save the active conversation as a `.md` file via `Ctrl+Shift+E`, including code blocks, lists, headings and links
 - **System Tray** – Optional minimize-to-tray, keeps Claude one click away in the background
 - **Global Quick-Prompt Hotkey** – Configurable hotkey opens a frameless prompt window that injects your text into a new chat
-- **App Settings Window** – Configure hotkey, minimize-to-tray, and autostart from `Claude → App Settings…`
-- **Autostart** – Optional launch on system boot (Linux: writes a `.desktop` file to `~/.config/autostart/`)
-- **Tab System** – Multiple chats side by side with a visual tab bar (Ctrl+T, Ctrl+W, Ctrl+Tab)
+- **Prompt Templates** – Define named prefixes (e.g. "Translate to English:"), pick them with Tab in the Quick-Prompt window
+- **Clipboard Hotkey** – Separate global hotkey that opens a new chat with your clipboard text already inserted
+- **Background-Tab Response Notifications** – Optional native notification when Claude finishes a response in a tab you're not currently viewing
+- **In-App Bug Report** – Description, optional error codes, optional contact email; auto-includes app/OS info on opt-in. Localized in DE, EN, FR, ES, IT
+- **App Settings Window** – Configure hotkeys, minimize-to-tray, autostart, background notifications and templates from `Claude → App Settings…`
+- **Autostart** – Optional launch on system boot (Linux: writes a `.desktop` file to `~/.config/autostart/`; Snap: native autostart directive)
 - **Custom Design System** – Modern gradient theme or Classic mode toggle
 - **Dark/Light Mode Toggle** – Moon/Sun button in the tab bar, seamless theme switching
 - **Auto-Update** – Automatically updates via GitHub Releases (AppImage) or `snapd` (Snap)
-- **Manual Update Check** – `Claude → Check for Updates…` shows a dialog with the result
-- **What's-New Popup** – Shows the changelog once after each version upgrade
+- **Manual Update Check** – Menu entry shows a dialog with the result
+- **What's-New Popup** – Shows the changelog once after each version upgrade, including notes for skipped versions
 - **Google OAuth** – Google login works out of the box
 - **In-App OAuth Popups** – GitHub, Google Drive, GitLab, Bitbucket, Microsoft
 - **Multilingual UI** – Automatic language detection (25 languages, system fallback to English)
@@ -74,7 +80,7 @@ cat > ~/.local/share/applications/claude-desktop.desktop << EOF
 [Desktop Entry]
 Name=Claude Desktop
 Comment=Claude AI Desktop App
-Exec=/path/to/Claude-Desktop-1.3.4.AppImage --no-sandbox
+Exec=/path/to/Claude-Desktop-1.3.5.AppImage --no-sandbox
 Icon=/path/to/icon.png
 Type=Application
 Categories=Utility;
@@ -157,6 +163,19 @@ The `--no-sandbox` flag is required for Electron AppImages on Linux because the 
 ---
 
 ## Changelog
+
+### v1.3.5 – Custom Menu, Markdown Export, Templates, Snap Clipboard Fix (2026-05-02)
+
+- **Custom in-app menu (hamburger)** replaces the OS-native menu bar – keyboard navigation, click-outside-to-close, click-to-toggle. Direct tab-bar buttons for Markdown export and bug report.
+- **Markdown export** of the active conversation via `Ctrl+Shift+E`.
+- **Prompt templates** for the Quick-Prompt window – up to 50 named prefixes, picker via Tab.
+- **Background-tab response notifications** – optional native notification when a non-active tab finishes responding.
+- **Clipboard hotkey** – new global hotkey that opens a chat with your clipboard text inserted.
+- **Snap copy & paste fix** – on Wayland sessions, the Snap version now uses native Wayland clipboard via `--ozone-platform-hint=auto` and `--enable-wayland-ime` instead of the broken XWayland path.
+- **Bug report form localized** to French, Spanish and Italian.
+- **Hotkey conflict messages** – specific status lines tell you which other hotkey owns the combo, instead of a generic failure.
+- Hotkey persistence and auto-updater hardening (state only saved on success; update dialogs skipped during quit).
+- Removed the unreliable Screenshot hotkey before stable release.
 
 ### v1.3.4 – Bug Report Form & Centering (2026-04-30)
 

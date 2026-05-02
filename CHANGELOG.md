@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.3.5] – 2026-05-02
+
+### Added
+- **Custom in-app menu (hamburger icon)** in the tab bar replaces the OS-native menu bar. Keyboard navigation (arrows, Enter, Esc), click-outside-to-close, and re-clicking the icon now toggles the menu instead of reopening it.
+- **Direct buttons in the tab bar** for Markdown export and bug report — no menu detour needed for the most-used actions.
+- **Markdown export** of the active conversation via `Ctrl+Shift+E` or the menu. Captures user/assistant turns including code blocks, lists, headings, blockquotes and links.
+- **Prompt templates** for the global Quick-Prompt window. Define named prefixes in App Settings (e.g. "Translate to English:"); pick them with Tab in the Quick-Prompt window. Up to 50 templates, 40-char names, 2000-char prefixes.
+- **Background-tab response notifications**: optional native notification when Claude finishes a response in a tab you're not currently looking at. Toggleable in App Settings.
+- **Clipboard hotkey**: a separate global hotkey that opens a new chat and inserts the current clipboard text as the prompt.
+- **Bug report form localized** to French, Spanish and Italian (previously only DE/EN had the full form).
+- **Heart-icon thank-you note** in the What's-New popup with a friendly nudge to send bug reports via the in-app form.
+- **Specific hotkey conflict messages** — when assigning a Quick-Prompt or Clipboard hotkey to a combination already used by the other hotkey, the status line now names the conflict instead of showing a generic "registration failed".
+
+### Fixed
+- **Snap copy & paste on Wayland sessions** — the Snap version now launches with `--ozone-platform-hint=auto` and `--enable-wayland-ime` on Wayland (and explicit `--ozone-platform=x11` on X11 sessions), so the native session clipboard is used instead of the broken XWayland path.
+- **Hamburger menu re-click toggle** — clicking the menu icon while the menu is already open now closes it instead of immediately reopening due to the blur-then-reopen race.
+- **Settings template placeholder** broke the `placeholder="…"` HTML attribute in the EN locale because of unescaped ASCII double quotes. Replaced with typographic quotes.
+- **Hotkey persistence on conflict** — registering a hotkey that conflicts with the other one no longer clears the previously active hotkey. State is only persisted on successful registration.
+- **Auto-updater during quit** — update-related dialogs (downloaded / not-available / error) are now skipped while the app is shutting down, so no prompt appears on a window about to be destroyed.
+- **Quick-Prompt length limit consistency** — preload now drops submissions over 8000 chars (matches main-process limit). Was 10000 in preload, silently dropped in main.
+
+### Changed
+- **Snap launch script**: `XDG_CURRENT_DESKTOP=Unity` is scoped to the claude-desktop process only (via `env`) instead of being exported globally. Prevents leakage into `shell.openExternal` subprocesses like `xdg-open`.
+- **Template IPC return schema** unified: both `addTemplate` and `deleteTemplate` now return `{ templates: [...] }`. Previously `deleteTemplate` returned the array directly.
+
+### Removed
+- **Screenshot hotkey** (sending a tab screenshot to a new chat) — was unreliable on Linux clipboard and dropped before stable release.
+
+---
+
 ## [1.3.4] – 2026-04-30
 
 ### Added
