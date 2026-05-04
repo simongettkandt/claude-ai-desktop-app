@@ -36,6 +36,7 @@ apps:
     extensions: [gnome]
     autostart: claude-ai-desktop.desktop
     plugs:
+      - browser-support
       - network
       - audio-playback
       - audio-record
