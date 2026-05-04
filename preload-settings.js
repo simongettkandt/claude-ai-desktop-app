@@ -7,6 +7,10 @@ contextBridge.exposeInMainWorld('settingsAPI', {
   setClipboardHotkey: (a) => ipcRenderer.invoke('settings-clipboard-hotkey', typeof a === 'string' ? a : null),
   setAutostart: (v) => ipcRenderer.invoke('settings-autostart', v === true),
   setBgNotifications: (v) => ipcRenderer.send('settings-bg-notifications', v === true),
+  setMicrophone: (v) => ipcRenderer.send('settings-microphone', v === true),
+  resetMicrophoneConsent: () => ipcRenderer.send('settings-microphone-reset'),
+  openSnapPermissions: () => ipcRenderer.send('settings-open-snap-permissions'),
+  copySnapCmd: () => ipcRenderer.send('settings-copy-snap-cmd'),
   addTemplate: (tpl) => ipcRenderer.invoke('settings-add-template', tpl),
   deleteTemplate: (id) => ipcRenderer.invoke('settings-delete-template', typeof id === 'string' ? id : null),
   close: () => ipcRenderer.send('settings-close')

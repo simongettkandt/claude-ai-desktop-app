@@ -30,6 +30,13 @@ const ONLINE_CHECK_MS = 60_000;
 const UPDATE_CHECK_MS = 3_600_000;
 const DOMAIN_CACHE_MAX = 50;
 
+// Live-Notification-System (GitHub-hosted JSON)
+const NOTIFICATIONS_URL = 'https://raw.githubusercontent.com/simonlinuxcraft/claude-ai-desktop-app/main/notifications.json';
+const NOTIFICATIONS_FETCH_MS = 6 * 60 * 60 * 1000;        // alle 6h
+const NOTIFICATIONS_FIRST_FETCH_DELAY_MS = 8 * 1000;       // nach App-Start 8s warten
+const NOTIFICATION_BANNER_HEIGHT = 38;
+const MAX_NOTIFICATIONS_VISIBLE = 1;                        // ein Banner gleichzeitig
+
 // ═══════════════════════════════════════════════════════════════════
 //  Injected Scripts (aus Dateien geladen)
 // ═══════════════════════════════════════════════════════════════════
@@ -280,10 +287,15 @@ let currentHotkey = null;
 let currentClipboardHotkey = null;
 let promptTemplates = [];      // [{ id, name, prefix }]
 let bgNotificationsEnabled = false;
+let microphoneEnabled = false;
+let microphoneConsentAsked = false;
 let lastActiveTabIndex = -1;   // für Background-Notifications
 let updateCheckInterval = null;
 let onlineCheckInterval = null;
 let waitForFirstTabInterval = null;
+let notificationsFetchInterval = null;
+let activeNotifications = [];                    // gefilterte, aktuell sichtbare Notifications
+let dismissedNotificationIds = [];                // persistiert in windowState
 
 const RELEASE_NOTES = {
   '1.3.0': [
@@ -358,6 +370,24 @@ const RELEASE_NOTES = {
       title: 'Danke f\u00fcrs Nutzen!',
       text: 'St\u00f6\u00dft du auf einen Fehler? Bitte \u00fcber das K\u00e4fer-Symbol oben in der Tab-Leiste melden \u2013 jeder Bericht hilft mir, die App zu verbessern. Vielen Dank f\u00fcr deinen Support.'
     }
+  ],
+  '1.3.6': [
+    {
+      icon: 'bolt',
+      title: 'Spracheingabe per Mikrofon',
+      text: 'Beim ersten Klick auf das Mikrofon-Symbol in claude.ai fragt die App einmal um Erlaubnis. Du kannst die Berechtigung jederzeit in den App-Einstellungen unter \u201eMikrofon" wieder ausschalten.'
+    },
+    {
+      icon: 'settings',
+      title: 'Snap: Mikrofon mit einem Klick freigeben',
+      text: 'Im Hinweis-Dialog zeigt dir die App den Snap-Berechtigungs-Status live. \u201eIm Snap-Store \u00f6ffnen" springt direkt in den Store \u2013 oder du kopierst den Terminal-Befehl mit einem Klick. Der Dialog erkennt die Aktivierung automatisch, egal welchen Weg du nimmst.',
+      if: 'snap'
+    },
+    {
+      icon: 'bolt',
+      title: 'Live-Hinweise direkt in der App',
+      text: 'Wichtige Hinweise (z.B. zu bekannten Problemen oder Updates) erscheinen jetzt als Banner \u00fcber der Tab-Leiste. Sie kommen direkt vom Projekt-Repo und k\u00f6nnen jederzeit per Klick auf das \u00d7 weggeschoben werden.'
+    }
   ]
 };
 
@@ -411,6 +441,11 @@ function loadWindowState() {
     tpl && typeof tpl.name === 'string' && typeof tpl.prefix === 'string'
   ).slice(0, 50) : [];
   bgNotificationsEnabled = windowState.bgNotificationsEnabled === true;
+  microphoneEnabled = windowState.microphoneEnabled === true;
+  microphoneConsentAsked = windowState.microphoneConsentAsked === true;
+  dismissedNotificationIds = Array.isArray(windowState.dismissedNotificationIds)
+    ? windowState.dismissedNotificationIds.filter(id => typeof id === 'string').slice(0, 200)
+    : [];
 
   const result = {
     width: windowState.width || 1200, height: windowState.height || 800,
@@ -444,6 +479,9 @@ function buildState() {
     clipboardHotkey: currentClipboardHotkey,
     promptTemplates,
     bgNotificationsEnabled,
+    microphoneEnabled,
+    microphoneConsentAsked,
+    dismissedNotificationIds: dismissedNotificationIds.slice(0, 200),
     lastSeenVersion: windowState.lastSeenVersion || null
   };
   if (mainWindow && !mainWindow.isDestroyed()) {
@@ -566,9 +604,29 @@ function getTabBarHTML() {
 :root{--bg:${th.bg};--bgh:${th.bgHover};--bga:${th.bgActive};--t:${th.text};--ta:${th.textActive};--bd:${th.border};
   --ac-from:${a.from};--ac-to:${a.to}}
 *{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
 body{background:var(--bg);font:500 12px/1 -apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
-  color:var(--t);overflow:hidden;user-select:none;-webkit-app-region:drag;
-  height:${TAB_BAR_HEIGHT}px;display:flex;align-items:flex-end;border-bottom:1px solid var(--bd);contain:layout style}
+  color:var(--t);overflow:hidden;user-select:none;
+  display:flex;flex-direction:column;contain:layout style}
+#notif-bar{display:flex;flex-direction:column;flex-shrink:0;-webkit-app-region:no-drag}
+#notif-bar:empty{display:none}
+.notif{display:flex;align-items:center;gap:10px;height:${NOTIFICATION_BANNER_HEIGHT}px;padding:0 12px;font-size:12px;line-height:1.3;color:var(--ta);border-bottom:1px solid var(--bd);background:var(--bgh)}
+.notif[data-sev="info"]{background:linear-gradient(90deg,color-mix(in srgb,var(--ac-from) 14%,var(--bgh)),var(--bgh))}
+.notif[data-sev="warn"]{background:linear-gradient(90deg,color-mix(in srgb,#e0a93e 22%,var(--bgh)),var(--bgh))}
+.notif[data-sev="critical"]{background:linear-gradient(90deg,color-mix(in srgb,#e05e3e 28%,var(--bgh)),var(--bgh))}
+.notif[data-sev="success"]{background:linear-gradient(90deg,color-mix(in srgb,#3fb96e 22%,var(--bgh)),var(--bgh))}
+.notif-dot{width:8px;height:8px;border-radius:50%;background:var(--ac-from);flex:0 0 auto}
+.notif[data-sev="warn"] .notif-dot{background:#e0a93e}
+.notif[data-sev="critical"] .notif-dot{background:#e05e3e}
+.notif[data-sev="success"] .notif-dot{background:#3fb96e}
+.notif-text{flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.notif-text strong{font-weight:600;color:var(--ta);margin-right:6px}
+.notif-text span{color:var(--t);font-weight:400}
+.notif-link{flex:0 0 auto;background:transparent;color:var(--ac-from);border:1px solid color-mix(in srgb,var(--ac-from) 35%,transparent);border-radius:5px;padding:3px 9px;font-size:11.5px;font-family:inherit;font-weight:500;cursor:pointer}
+.notif-link:hover{background:color-mix(in srgb,var(--ac-from) 12%,transparent)}
+.notif-x{flex:0 0 auto;width:22px;height:22px;border-radius:5px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t);font-size:15px;line-height:1;border:none;background:transparent;font-family:inherit}
+.notif-x:hover{background:var(--bga);color:var(--ta)}
+#tab-row{display:flex;align-items:flex-end;height:${TAB_BAR_HEIGHT}px;flex:0 0 ${TAB_BAR_HEIGHT}px;border-bottom:1px solid var(--bd);-webkit-app-region:drag}
 .menu-btn{-webkit-app-region:no-drag;width:30px;height:30px;display:flex;align-items:center;justify-content:center;
   cursor:pointer;color:var(--ta);border-radius:8px;margin:0 2px 6px 6px;flex-shrink:0;
   transition:background .15s,color .15s,border-color .15s;border:1px solid transparent;opacity:.85}
@@ -608,6 +666,8 @@ body{background:var(--bg);font:500 12px/1 -apple-system,BlinkMacSystemFont,'Sego
   border:1px solid var(--bd)}
 .design-pill:hover{background:linear-gradient(135deg,var(--ac-from),var(--ac-to));color:#fff;border-color:transparent}
 </style></head><body>
+<div id="notif-bar"></div>
+<div id="tab-row">
 <div class="menu-btn" id="app-menu" title="${t('Menü', 'Menu')}">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
 </div>
@@ -627,6 +687,7 @@ body{background:var(--bg);font:500 12px/1 -apple-system,BlinkMacSystemFont,'Sego
   <div class="ctrl-btn" id="new-tab" title="${t('Neuer Tab', 'New Tab')} (Ctrl+T)">
     <svg viewBox="0 0 16 16"><path d="M8 2v12M2 8h12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"/></svg>
   </div>
+</div>
 </div>
 <script>
 const tabsEl=document.getElementById('tabs');
@@ -681,6 +742,30 @@ window.tabAPI.onThemeUpdate(dark=>{
   document.getElementById('theme-icon-dark').style.display=dark?'':'none';
   document.getElementById('theme-icon-light').style.display=dark?'none':'';
 });
+
+const notifBar=document.getElementById('notif-bar');
+function escTxt(s){return String(s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
+window.tabAPI.onNotificationsUpdate(list=>{
+  notifBar.innerHTML='';
+  if(!Array.isArray(list)||list.length===0)return;
+  for(const n of list){
+    const row=document.createElement('div');
+    row.className='notif';row.dataset.sev=n.severity||'info';
+    row.innerHTML=
+      '<span class="notif-dot"></span>'+
+      '<div class="notif-text"><strong>'+escTxt(n.title)+'</strong>'+
+        (n.body?'<span>'+escTxt(n.body)+'</span>':'')+'</div>'+
+      (n.link?'<button class="notif-link" data-act="link">'+escTxt(n.linkLabel||'Mehr')+'</button>':'')+
+      (n.dismissible!==false?'<button class="notif-x" data-act="dismiss" title="Schließen">×</button>':'');
+    row.addEventListener('click',e=>{
+      const a=e.target&&e.target.dataset?e.target.dataset.act:null;
+      if(a==='link'&&n.link)window.tabAPI.openNotificationLink(n.id,n.link);
+      else if(a==='dismiss')window.tabAPI.dismissNotification(n.id);
+    });
+    notifBar.appendChild(row);
+  }
+});
+window.tabAPI.requestNotifications();
 </script></body></html>`;
   return _tabBarCache;
 }
@@ -916,10 +1001,12 @@ function throttleActiveView(throttleOn) {
 const resizeActiveView = throttle(() => {
   if (!mainWindow || mainWindow.isDestroyed() || !tabs[activeTabIndex]) return;
   const b = mainWindow.getContentBounds();
-  const key = `${b.width}:${b.height}`;
+  const nh = getNotificationBarHeight();
+  const topInset = TAB_BAR_HEIGHT + nh;
+  const key = `${b.width}:${b.height}:${nh}`;
   if (key === lastViewBounds) return;
   lastViewBounds = key;
-  tabs[activeTabIndex].view.setBounds({ x: 0, y: TAB_BAR_HEIGHT, width: b.width, height: b.height - TAB_BAR_HEIGHT });
+  tabs[activeTabIndex].view.setBounds({ x: 0, y: topInset, width: b.width, height: Math.max(0, b.height - topInset) });
 }, 16);
 
 function switchToTab(index) {
@@ -1368,7 +1455,7 @@ const q = document.getElementById('q');
 const sel = document.getElementById('tpl');
 const tplwrap = document.getElementById('tplwrap');
 const TEMPLATES = ${tpls};
-const I = ${JSON.stringify(i18n)};
+const I = ${safeJson(i18n)};
 
 function buildTplOptions() {
   if (!TEMPLATES.length) { tplwrap.classList.add('empty'); return; }
@@ -1720,6 +1807,7 @@ function getSettingsHTML() {
     title: t('Einstellungen', 'Settings'),
     subtitle: t('Hintergrund, Hotkeys, Templates', 'Background, hotkeys, templates'),
     secBackground: t('Hintergrund', 'Background'),
+    secMicrophone: t('Mikrofon', 'Microphone'),
     secHotkeys: t('Globale Hotkeys', 'Global hotkeys'),
     secTemplates: t('Prompt-Templates', 'Prompt templates'),
     minimizeLabel: t('Beim Schlie\u00dfen in den Hintergrund minimieren', 'Minimize to tray on close'),
@@ -1729,6 +1817,16 @@ function getSettingsHTML() {
     autostartFailed: t('Autostart konnte nicht aktiviert werden.', 'Could not enable autostart.'),
     bgNotifLabel: t('Antwort-Benachrichtigung f\u00fcr Hintergrund-Tabs', 'Notify when a background tab finishes a response'),
     bgNotifHint: t('Native Notification, sobald Claude in einem nicht aktiven Tab fertig geantwortet hat.', 'Native notification once Claude finishes a response in a tab you\u2019re not currently looking at.'),
+    micLabel: t('Mikrofon-Zugriff erlauben', 'Allow microphone access'),
+    micHint: t('Erlaubt Claude, dein Mikrofon f\u00fcr Spracheingaben zu nutzen. Beim ersten Klick auf das Mikrofon-Symbol fragt die App einmal nach \u2013 die Auswahl kannst du hier jederzeit \u00e4ndern.', 'Lets Claude use your microphone for voice input. The app asks once the first time you click the microphone icon \u2013 you can change your choice here at any time.'),
+    micSnapHint: t('Auf Snap muss das Mikrofon einmalig freigegeben werden. Entweder im Snap-Store \u00f6ffnen und \u201eAudio Record" aktivieren \u2013 oder den Befehl unten im Terminal ausf\u00fchren.', 'On Snap the microphone must be enabled once. Either open the Snap Store and enable \u201cAudio Record\u201d \u2013 or run the command below in a terminal.'),
+    micSnapButton: t('Im Snap-Store \u00f6ffnen', 'Open in Snap Store'),
+    micSnapCmdLabel: t('Oder im Terminal:', 'Or in a terminal:'),
+    micSnapCmdCopy: t('Befehl kopieren', 'Copy command'),
+    micSnapCmdCopied: t('Kopiert \u2713', 'Copied \u2713'),
+    micResetLabel: t('Erneut fragen beim n\u00e4chsten Mikrofon-Klick', 'Ask again on next microphone click'),
+    micResetDone: t('Erledigt \u2013 Dialog erscheint beim n\u00e4chsten Mikrofon-Klick wieder.', 'Done \u2013 dialog will appear again on next microphone click.'),
+    micResetHint: t('Verwirft die letzte Auswahl, sodass der Hinweis-Dialog beim n\u00e4chsten Mikrofon-Zugriff wieder erscheint.', 'Discards the last choice so the consent dialog appears again on the next microphone request.'),
     hotkeyQp: t('Neuer Chat (Quick-Prompt)', 'New chat (Quick-Prompt)'),
     hotkeyClip: t('Zwischenablage als Prompt einf\u00fcgen', 'Send clipboard text as new prompt'),
     press: t('Klick hier und dr\u00fccke eine Tastenkombination', 'Click here and press a key combination'),
@@ -1790,6 +1888,12 @@ button:disabled{opacity:.5;cursor:not-allowed}
 .tpl-prefix{color:${th.text};font-size:11.5px;font-family:ui-monospace,Menlo,Consolas,monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .actions{padding:12px 22px;border-top:1px solid ${th.border};display:flex;gap:8px;justify-content:flex-end}
 .status{color:${th.text};font-size:11.5px;margin-top:5px;min-height:14px}
+.snap-actions{margin-top:8px;margin-left:24px;display:flex;flex-direction:column;gap:6px}
+.snap-cmd-label{color:${th.text};font-size:11.5px;margin-top:4px}
+.snap-cmd-row{display:flex;gap:6px;align-items:center}
+.snap-cmd-text{flex:1;background:${th.bgHover};border:1px solid ${th.border};border-radius:6px;padding:6px 9px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px;color:${th.textActive};user-select:text;-webkit-user-select:text;overflow-x:auto;white-space:nowrap}
+.snap-cmd-copy-btn{padding:6px 10px!important;font-size:11.5px}
+.hint-block{margin-left:0;margin-top:6px}
 </style></head><body>
 <div class="head">
   <h1>${i18n.title}</h1>
@@ -1813,6 +1917,28 @@ button:disabled{opacity:.5;cursor:not-allowed}
       <div class="hint">${i18n.bgNotifHint}</div>
     </div>
     <div class="status" id="status-bg"></div>
+  </div>
+
+  <div class="section">
+    <h2>${i18n.secMicrophone}</h2>
+    <div class="row">
+      <label class="chk"><input type="checkbox" id="mic"><span>${i18n.micLabel}</span></label>
+      <div class="hint">${i18n.micHint}</div>
+      <div class="hint" id="mic-snap-hint" style="display:none">${i18n.micSnapHint}</div>
+      <div id="mic-snap-actions" class="snap-actions" style="display:none">
+        <button class="secondary" id="mic-snap-open">${i18n.micSnapButton}</button>
+        <div class="snap-cmd-label">${i18n.micSnapCmdLabel}</div>
+        <div class="snap-cmd-row">
+          <code class="snap-cmd-text" id="mic-snap-cmd">sudo snap connect claude-ai-desktop:audio-record</code>
+          <button class="secondary snap-cmd-copy-btn" id="mic-snap-copy">${i18n.micSnapCmdCopy}</button>
+        </div>
+      </div>
+    </div>
+    <div class="row">
+      <button class="secondary" id="mic-reset">${i18n.micResetLabel}</button>
+      <div class="hint hint-block">${i18n.micResetHint}</div>
+    </div>
+    <div class="status" id="status-mic"></div>
   </div>
 
   <div class="section">
@@ -1848,15 +1974,24 @@ button:disabled{opacity:.5;cursor:not-allowed}
 </div>
 
 <script>
-const I = ${JSON.stringify(i18n)};
+const I = ${safeJson(i18n)};
 const api = window.settingsAPI;
 const mc = document.getElementById('mc');
 const as = document.getElementById('as');
 const bn = document.getElementById('bn');
+const mic = document.getElementById('mic');
+const micReset = document.getElementById('mic-reset');
+const micSnapHint = document.getElementById('mic-snap-hint');
+const micSnapActions = document.getElementById('mic-snap-actions');
+const micSnapOpen = document.getElementById('mic-snap-open');
+const micSnapCopy = document.getElementById('mic-snap-copy');
+let micSnapCopyTimer = null;
 const closeBtn = document.getElementById('close');
 const statusBg = document.getElementById('status-bg');
 const statusHk = document.getElementById('status-hk');
 const statusTpl = document.getElementById('status-tpl');
+const statusMic = document.getElementById('status-mic');
+let statusMicTimer = null;
 
 const captures = { qp: null, clip: null };
 const display = { qp: I.press, clip: I.press };
@@ -1940,11 +2075,31 @@ as.addEventListener('change', async () => {
   } finally { as.disabled = false; }
 });
 bn.addEventListener('change', () => api.setBgNotifications(bn.checked));
+mic.addEventListener('change', () => api.setMicrophone(mic.checked));
+micReset.addEventListener('click', () => {
+  api.resetMicrophoneConsent();
+  mic.checked = false;
+  statusMic.textContent = I.micResetDone;
+  if (statusMicTimer) clearTimeout(statusMicTimer);
+  statusMicTimer = setTimeout(() => { statusMic.textContent = ''; }, 2500);
+});
+micSnapOpen.addEventListener('click', () => api.openSnapPermissions());
+micSnapCopy.addEventListener('click', () => {
+  api.copySnapCmd();
+  micSnapCopy.textContent = I.micSnapCmdCopied;
+  if (micSnapCopyTimer) clearTimeout(micSnapCopyTimer);
+  micSnapCopyTimer = setTimeout(() => { micSnapCopy.textContent = I.micSnapCmdCopy; }, 1800);
+});
 
 api.get().then(s => {
   mc.checked = !!s.minimizeOnClose;
   as.checked = !!s.autostart;
   bn.checked = !!s.bgNotifications;
+  mic.checked = !!s.microphoneEnabled;
+  if (s.isSnap) {
+    micSnapHint.style.display = '';
+    micSnapActions.style.display = '';
+  }
   if (s.hotkey) { display.qp = s.hotkey; captures.qp.textContent = s.hotkey; }
   if (s.clipboardHotkey) { display.clip = s.clipboardHotkey; captures.clip.textContent = s.clipboardHotkey; }
   renderTemplates(s.templates || []);
@@ -2101,7 +2256,7 @@ function openSettingsWindow() {
     settingsWindow.focus();
     return;
   }
-  const swSize = { width: 540, height: 440 };
+  const swSize = { width: 540, height: 480 };
   const swPos = centerOnMainWindow(swSize.width, swSize.height);
   settingsWindow = new BrowserWindow({
     ...swSize, ...swPos,
@@ -2389,9 +2544,7 @@ function getMessageBoxHTML({ type, title, message, detail, buttons, defaultId, c
 <meta charset="utf-8">
 <title>${esc(title)}</title>
 <style>
-  * { box-sizing: border-box; }
-  html, body { height: 100%; margin: 0; padding: 0; }
-  body { background: ${th.bg}; color: ${th.textActive}; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; font-size: 14px; user-select: none; -webkit-user-select: none; }
+  ${sharedDialogCSS()}
   .container { display: flex; flex-direction: column; height: 100%; padding: 22px; }
   .top { display: flex; gap: 16px; flex: 1; align-items: flex-start; min-height: 0; }
   .icon { color: ${iconColor}; flex: 0 0 auto; line-height: 0; }
@@ -2399,11 +2552,6 @@ function getMessageBoxHTML({ type, title, message, detail, buttons, defaultId, c
   .msg { font-weight: 500; margin: 0 0 8px; line-height: 1.4; word-wrap: break-word; }
   .detail { color: ${th.text}; font-size: 13px; line-height: 1.4; white-space: pre-wrap; word-wrap: break-word; max-height: 120px; overflow-y: auto; }
   .buttons { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; flex: 0 0 auto; }
-  .btn { background: ${th.bgHover}; color: ${th.textActive}; border: 1px solid ${th.border}; border-radius: 6px; padding: 7px 16px; font-size: 13px; cursor: pointer; font-family: inherit; min-width: 80px; }
-  .btn:hover { background: ${th.bgActive}; }
-  .btn.primary { background: linear-gradient(135deg, ${ac.from}, ${ac.to}); color: #fff; border-color: transparent; font-weight: 500; }
-  .btn.primary:hover { filter: brightness(1.08); }
-  .btn:focus { outline: 2px solid ${ac.from}; outline-offset: 2px; }
 </style>
 </head>
 <body>
@@ -2762,12 +2910,489 @@ function setupAutoUpdater() {
 //  Session Security
 // ═══════════════════════════════════════════════════════════════════
 
+// Snap-Befehl, den der User im Terminal ausführen kann, falls keine GUI greift.
+const SNAP_CONNECT_CMD = 'sudo snap connect claude-ai-desktop:audio-record';
+
+// Versucht in Reihenfolge: snap-store → gnome-software → plasma-discover → xdg-open.
+// Umgeht den xdg-open-Chooser-Dialog auf Systemen mit mehreren snap://-Handlern.
+function openSnapStorePage() {
+  if (!isSnap) {
+    try { shell.openExternal('snap://claude-ai-desktop'); } catch {}
+    return;
+  }
+  const { execFile, spawn } = require('child_process');
+  const candidates = [
+    { bin: 'snap-store',      args: ['snap://claude-ai-desktop'] },
+    { bin: 'gnome-software',  args: ['--details=claude-ai-desktop'] },
+    { bin: 'plasma-discover', args: ['snap://claude-ai-desktop'] }
+  ];
+  const tryNext = (i) => {
+    if (i >= candidates.length) {
+      try { shell.openExternal('snap://claude-ai-desktop'); } catch {}
+      return;
+    }
+    const c = candidates[i];
+    execFile('which', [c.bin], { timeout: 1500 }, (err) => {
+      if (err) return tryNext(i + 1);
+      try {
+        const child = spawn(c.bin, c.args, { detached: true, stdio: 'ignore' });
+        child.on('error', () => tryNext(i + 1));
+        child.unref();
+      } catch { tryNext(i + 1); }
+    });
+  };
+  tryNext(0);
+}
+
+// Liefert 'connected' | 'disconnected' | 'unknown' asynchron via callback.
+// snapctl liegt fix unter /usr/bin/snapctl im Snap-Confinement; Exit-Code 0 = connected.
+// Asynchron damit das 1.5s-Polling den Main-Thread nicht blockiert.
+function checkSnapAudioRecordStatus(cb) {
+  if (!isSnap) return cb('connected');
+  const { execFile } = require('child_process');
+  execFile('snapctl', ['is-connected', 'audio-record'], { timeout: 1500 }, (err) => {
+    if (!err) return cb('connected');
+    if (err && typeof err.code === 'number') return cb('disconnected');
+    cb('unknown');
+  });
+}
+
+// Defensives JSON-Embedding für Inline-<script>-Blöcke: </script>-Sequenzen
+// in JSON-Strings escapen, damit der HTML-Parser sie nicht als Tag-Ende erkennt.
+function safeJson(v) {
+  return JSON.stringify(v).replace(/<\/(script)/gi, '<\\/$1');
+}
+
+// Strikte claude.ai-Origin-Validierung — claudeusercontent.com (Artifact-iframes)
+// soll für Mikrofon-Zugriff explizit AUSGESCHLOSSEN bleiben.
+function isClaudeAiOrigin(url) {
+  try {
+    const u = new URL(url);
+    if (u.protocol !== 'https:') return false;
+    return u.hostname === 'claude.ai' || u.hostname.endsWith('.claude.ai');
+  } catch { return false; }
+}
+
+// Gemeinsames CSS für Dialog-Fenster (showCustomMessageBox + requestMicrophoneConsent).
+function sharedDialogCSS() {
+  const th = theme();
+  const ac = accent();
+  return `
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;padding:0}
+    body{background:${th.bg};color:${th.textActive};font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;font-size:14px;user-select:none;-webkit-user-select:none}
+    .btn{background:${th.bgHover};color:${th.textActive};border:1px solid ${th.border};border-radius:6px;padding:7px 16px;font-size:13px;cursor:pointer;font-family:inherit;min-width:80px}
+    .btn:hover:not(:disabled){background:${th.bgActive}}
+    .btn.primary{background:linear-gradient(135deg,${ac.from},${ac.to});color:#fff;border-color:transparent;font-weight:500}
+    .btn.primary:hover:not(:disabled){filter:brightness(1.08)}
+    .btn:focus{outline:2px solid ${ac.from};outline-offset:2px}
+    .btn:disabled{opacity:.5;cursor:not-allowed}
+  `;
+}
+
+// Liefert 'granted' | 'denied' | 'dismissed'.
+// 'dismissed' = User schloss Fenster ohne Klick → consentAsked NICHT setzen
+// (d.h. nächste Mikrofon-Anfrage zeigt den Dialog wieder).
+async function requestMicrophoneConsent() {
+  const id = ++_msgboxCounter;
+  const respondChannel = `msgbox-respond-${id}`;
+  const snapOpenChannel = `mic-consent-open-snap-${id}`;
+  const statusChannel = `mic-consent-status-${id}`;
+  const snapNeeded = isSnap;
+  const showSnapPanel = snapNeeded;
+  const initialStatus = snapNeeded ? 'unknown' : 'connected';
+
+  const copyCmdChannel = `mic-consent-copy-cmd-${id}`;
+
+  return new Promise((resolve) => {
+    let settled = false;
+    let pollHandle = null;
+
+    const finish = (reason) => {
+      if (settled) return;
+      settled = true;
+      if (pollHandle) { clearInterval(pollHandle); pollHandle = null; }
+      ipcMain.removeAllListeners(respondChannel);
+      ipcMain.removeAllListeners(snapOpenChannel);
+      ipcMain.removeAllListeners(copyCmdChannel);
+      resolve(reason);
+    };
+
+    const size = { width: 520, height: showSnapPanel ? 480 : 240 };
+    const pos = centerOnMainWindow(size.width, size.height);
+    const parentWin = (mainWindow && !mainWindow.isDestroyed() && mainWindow.isVisible()) ? mainWindow : undefined;
+
+    const win = new BrowserWindow({
+      ...size, ...pos,
+      parent: parentWin,
+      modal: !!parentWin,
+      resizable: false, minimizable: false, maximizable: false,
+      title: t('Mikrofon-Zugriff', 'Microphone access'),
+      backgroundColor: theme().bg,
+      icon: icon(),
+      autoHideMenuBar: true,
+      webPreferences: {
+        preload: path.join(__dirname, 'preload-messagebox.js'),
+        nodeIntegration: false, contextIsolation: true, sandbox: true,
+        spellcheck: false
+      }
+    });
+    win.setMenu(null);
+
+    ipcMain.once(respondChannel, (_, idx) => {
+      finish(idx === 0 ? 'granted' : 'denied');
+      if (!win.isDestroyed()) win.close();
+    });
+
+    ipcMain.on(snapOpenChannel, () => openSnapStorePage());
+    ipcMain.on(copyCmdChannel, () => { try { clipboard.writeText(SNAP_CONNECT_CMD); } catch {} });
+
+    win.on('closed', () => finish('dismissed'));
+
+    const sendStatus = (s) => {
+      if (win.isDestroyed()) return;
+      try { win.webContents.send(statusChannel, s); } catch {}
+    };
+
+    if (showSnapPanel) {
+      // Sofort einmal asynchron prüfen, dann alle 1.5s pollen.
+      checkSnapAudioRecordStatus(sendStatus);
+      pollHandle = setInterval(() => {
+        if (win.isDestroyed()) return;
+        checkSnapAudioRecordStatus(sendStatus);
+      }, 1500);
+    }
+
+    const html = getMicConsentHTML({
+      respondChannel, snapOpenChannel, statusChannel, copyCmdChannel,
+      showSnapPanel, initialStatus
+    });
+    win.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html));
+  });
+}
+
+function getMicConsentHTML({ respondChannel, snapOpenChannel, statusChannel, copyCmdChannel, showSnapPanel, initialStatus }) {
+  const th = theme();
+  const ac = accent();
+  const i18n = {
+    title: t('Mikrofon-Zugriff', 'Microphone access'),
+    message: t(
+      'Claude Desktop möchte auf dein Mikrofon zugreifen, um Spracheingaben zu ermöglichen.',
+      'Claude Desktop wants to access your microphone to enable voice input.'
+    ),
+    hint: t(
+      'Du kannst diese Erlaubnis jederzeit in den App-Einstellungen unter „Mikrofon" widerrufen.',
+      'You can revoke this permission anytime in the app settings under “Microphone”.'
+    ),
+    snapTitle: t('Snap-Berechtigung', 'Snap permission'),
+    snapConnected: t('Verbunden', 'Connected'),
+    snapDisconnected: t('Nicht verbunden', 'Not connected'),
+    snapUnknown: t('Status wird geprüft…', 'Checking status…'),
+    snapButton: t('Im Snap-Store öffnen', 'Open in Snap Store'),
+    snapButtonHint: t(
+      'Öffnet die Snap-Detailseite. Dort auf „Permissions" → „Audio Record" aktivieren – dieser Dialog erkennt es automatisch.',
+      'Opens the Snap detail page. Go to “Permissions” → enable “Audio Record” – this dialog detects it automatically.'
+    ),
+    snapOrCmd: t('Oder im Terminal ausführen:', 'Or run in a terminal:'),
+    snapCmdCopy: t('Befehl kopieren', 'Copy command'),
+    snapCmdCopied: t('Kopiert ✓', 'Copied ✓'),
+    snapNeedConnect: t('Aktiviere zuerst die Snap-Berechtigung, um „Erlauben" auszuwählen.', 'Enable the Snap permission first to choose “Allow”.'),
+    allow: t('Erlauben', 'Allow'),
+    deny: t('Ablehnen', 'Deny')
+  };
+  const esc = (s) => String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+  const snapPanel = showSnapPanel ? `
+    <div class="snap" id="snap-panel" data-status="${esc(initialStatus)}">
+      <div class="snap-head">
+        <span class="dot"></span>
+        <span class="snap-title">${i18n.snapTitle}</span>
+        <span class="snap-status" id="snap-status-text"></span>
+      </div>
+      <div class="snap-body">
+        <button class="btn-snap" id="open-snap">${i18n.snapButton}</button>
+        <div class="snap-hint">${i18n.snapButtonHint}</div>
+        <div class="snap-or">${i18n.snapOrCmd}</div>
+        <div class="snap-cmd-row">
+          <code class="snap-cmd" id="snap-cmd">${esc(SNAP_CONNECT_CMD)}</code>
+          <button class="btn-snap snap-cmd-copy" id="snap-cmd-copy">${i18n.snapCmdCopy}</button>
+        </div>
+      </div>
+    </div>` : '';
+
+  return `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>${esc(i18n.title)}</title>
+<style>
+${sharedDialogCSS()}
+body{font-size:13.5px;display:flex;flex-direction:column}
+.container{padding:22px;flex:1;display:flex;flex-direction:column;gap:14px;overflow:hidden}
+.head{display:flex;gap:14px;align-items:flex-start}
+.icon{color:${ac.from};flex:0 0 auto;line-height:0}
+.text .msg{font-weight:500;margin:0 0 6px;line-height:1.4}
+.text .hint{color:${th.text};font-size:12.5px;line-height:1.5}
+.snap{background:${th.bgHover};border:1px solid ${th.border};border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.snap-head{display:flex;align-items:center;gap:8px}
+.snap-body{display:flex;flex-direction:column;gap:7px}
+.snap[data-status="connected"] .snap-body{display:none}
+.dot{width:9px;height:9px;border-radius:50%;background:${th.text};flex:0 0 auto;transition:background .2s}
+.snap[data-status="connected"] .dot{background:#3fb96e}
+.snap[data-status="disconnected"] .dot{background:#e05e3e}
+.snap[data-status="unknown"] .dot{background:#e0a93e}
+.snap-title{font-weight:600;font-size:12.5px}
+.snap-status{color:${th.text};font-size:12px;flex:1}
+.btn-snap{background:${th.bg};color:${th.textActive};border:1px solid ${th.border};border-radius:6px;padding:7px 12px;font-size:12.5px;font-family:inherit;cursor:pointer;font-weight:500;align-self:flex-start}
+.btn-snap:hover{background:${th.bgActive}}
+.snap-hint{color:${th.text};font-size:11.5px;line-height:1.4}
+.snap-or{color:${th.text};font-size:11.5px;margin-top:2px;font-weight:500}
+.snap-cmd-row{display:flex;gap:6px;align-items:center}
+.snap-cmd{flex:1;background:${th.bg};border:1px solid ${th.border};border-radius:6px;padding:6px 9px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px;color:${th.textActive};user-select:text;-webkit-user-select:text;overflow-x:auto;white-space:nowrap}
+.snap-cmd-copy{padding:6px 10px;font-size:11.5px;flex:0 0 auto}
+.allow-blocker{color:#e0a93e;font-size:11.5px;line-height:1.4;margin-top:2px;display:none}
+.snap[data-status="disconnected"] ~ .allow-blocker{display:block}
+.snap[data-status="unknown"] ~ .allow-blocker{display:block}
+.buttons{padding:14px 22px;border-top:1px solid ${th.border};display:flex;gap:8px;justify-content:flex-end}
+.btn{min-width:90px}
+</style></head><body>
+<div class="container">
+  <div class="head">
+    <div class="icon">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+    </div>
+    <div class="text">
+      <div class="msg">${i18n.message}</div>
+      <div class="hint">${i18n.hint}</div>
+    </div>
+  </div>
+  ${snapPanel}
+  ${showSnapPanel ? `<div class="allow-blocker" id="allow-blocker">${i18n.snapNeedConnect}</div>` : ''}
+</div>
+<div class="buttons">
+  <button class="btn" id="deny">${i18n.deny}</button>
+  <button class="btn primary" id="allow">${i18n.allow}</button>
+</div>
+<script>
+(function(){
+  const respondChannel = ${safeJson(respondChannel)};
+  const snapOpenChannel = ${safeJson(snapOpenChannel)};
+  const statusChannel = ${safeJson(statusChannel)};
+  const copyCmdChannel = ${safeJson(copyCmdChannel || '')};
+  const respond = (i) => { try { window.msgboxAPI.respond(respondChannel, i); } catch {} };
+  const allowBtn = document.getElementById('allow');
+  const denyBtn = document.getElementById('deny');
+  let allowEnabled = ${showSnapPanel ? 'false' : 'true'};
+
+  const setAllowEnabled = (v) => {
+    allowEnabled = !!v;
+    allowBtn.disabled = !allowEnabled;
+  };
+  setAllowEnabled(allowEnabled);
+
+  allowBtn.addEventListener('click', () => { if (allowEnabled) respond(0); });
+  denyBtn.addEventListener('click', () => respond(1));
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') { e.preventDefault(); window.close(); }
+    else if (e.key === 'Enter' && allowEnabled) { e.preventDefault(); respond(0); }
+  });
+  setTimeout(() => (allowEnabled ? allowBtn : denyBtn).focus(), 50);
+
+  const snapPanel = document.getElementById('snap-panel');
+  if (snapPanel) {
+    const statusText = document.getElementById('snap-status-text');
+    const labels = ${safeJson({ connected: i18n.snapConnected, disconnected: i18n.snapDisconnected, unknown: i18n.snapUnknown })};
+    const apply = (s) => {
+      snapPanel.dataset.status = s;
+      statusText.textContent = labels[s] || labels.unknown;
+      setAllowEnabled(s === 'connected');
+    };
+    apply(snapPanel.dataset.status || 'unknown');
+    document.getElementById('open-snap').addEventListener('click', () => {
+      try { window.msgboxAPI.openSnapPermissions(snapOpenChannel); } catch {}
+    });
+    const copyBtn = document.getElementById('snap-cmd-copy');
+    const copyLabels = ${safeJson({ idle: i18n.snapCmdCopy, done: i18n.snapCmdCopied })};
+    let copyResetTimer = null;
+    if (copyBtn && copyCmdChannel) {
+      copyBtn.addEventListener('click', () => {
+        try { window.msgboxAPI.copySnapCmd(copyCmdChannel); } catch {}
+        copyBtn.textContent = copyLabels.done;
+        clearTimeout(copyResetTimer);
+        copyResetTimer = setTimeout(() => { copyBtn.textContent = copyLabels.idle; }, 1800);
+      });
+    }
+    if (window.msgboxAPI.onStatusUpdate) {
+      window.msgboxAPI.onStatusUpdate(statusChannel, (s) => apply(s));
+    }
+  }
+})();
+</script>
+</body></html>`;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  Live Notifications (GitHub-hosted JSON, polled + on-demand)
+// ═══════════════════════════════════════════════════════════════════
+
+// Test-Override-Pfad für lokale Entwicklung. Hat Vorrang vor dem GitHub-Fetch.
+// Setze CLAUDE_NOTIFICATIONS_OVERRIDE auf einen absoluten Pfad zu einer JSON-Datei.
+// In dev (npm start, !app.isPackaged) wird zusätzlich automatisch ./notifications.json
+// im Projektroot probiert, falls die ENV-Var nicht gesetzt ist.
+function getNotificationsOverridePath() {
+  if (process.env.CLAUDE_NOTIFICATIONS_OVERRIDE) return process.env.CLAUDE_NOTIFICATIONS_OVERRIDE;
+  if (!app.isPackaged) {
+    const local = path.join(__dirname, 'notifications.json');
+    if (fs.existsSync(local)) return local;
+  }
+  return null;
+}
+
+function fetchNotificationsRemote() {
+  return new Promise((resolve) => {
+    const req = net.request({ method: 'GET', url: NOTIFICATIONS_URL, redirect: 'follow', cache: 'no-cache' });
+    let body = '';
+    let aborted = false;
+    const timeout = setTimeout(() => { aborted = true; try { req.abort(); } catch {}; resolve(null); }, 10000);
+    req.on('response', (res) => {
+      if (res.statusCode < 200 || res.statusCode >= 300) {
+        clearTimeout(timeout);
+        try { req.abort(); } catch {}
+        return resolve(null);
+      }
+      res.on('data', (chunk) => { body += chunk.toString('utf8'); if (body.length > 256 * 1024) { try { req.abort(); } catch {}; } });
+      res.on('end', () => {
+        clearTimeout(timeout);
+        if (aborted) return resolve(null);
+        try { resolve(JSON.parse(body)); } catch { resolve(null); }
+      });
+      res.on('error', () => { clearTimeout(timeout); resolve(null); });
+    });
+    req.on('error', () => { clearTimeout(timeout); resolve(null); });
+    req.end();
+  });
+}
+
+function loadNotificationsLocal(filePath) {
+  try {
+    const raw = fs.readFileSync(filePath, 'utf8');
+    return JSON.parse(raw);
+  } catch { return null; }
+}
+
+// Validiert + filtert eine eingehende Notification-Liste gegen Version, Plattform,
+// Ablauf-Datum und bereits dismissed-IDs. Gibt eine sicher-typisierte Liste zurück.
+function filterNotifications(payload) {
+  if (!payload || !Array.isArray(payload.notifications)) return [];
+  const now = Date.now();
+  const ALLOWED_SEVERITY = new Set(['info', 'warn', 'critical', 'success']);
+  const out = [];
+  for (const n of payload.notifications) {
+    if (!n || typeof n !== 'object') continue;
+    if (typeof n.id !== 'string' || n.id.length === 0 || n.id.length > 80) continue;
+    if (typeof n.title !== 'string' || n.title.length === 0) continue;
+    if (dismissedNotificationIds.includes(n.id)) continue;
+    if (n.if === 'snap' && !isSnap) continue;
+    if (n.if === 'appimage' && isSnap) continue;
+    if (typeof n.minVersion === 'string' && compareVersions(version, n.minVersion) < 0) continue;
+    if (typeof n.maxVersion === 'string' && compareVersions(version, n.maxVersion) > 0) continue;
+    if (typeof n.expires === 'string') {
+      const exp = Date.parse(n.expires);
+      if (Number.isFinite(exp) && exp < now) continue;
+    }
+    const severity = ALLOWED_SEVERITY.has(n.severity) ? n.severity : 'info';
+    const link = (typeof n.link === 'string' && /^https:\/\//i.test(n.link)) ? n.link : null;
+    out.push({
+      id: n.id,
+      severity,
+      title: String(n.title).slice(0, 200),
+      body: typeof n.body === 'string' ? n.body.slice(0, 600) : '',
+      link,
+      linkLabel: typeof n.linkLabel === 'string' ? n.linkLabel.slice(0, 60) : null,
+      dismissible: n.dismissible !== false
+    });
+  }
+  return out.slice(0, 10);
+}
+
+function pushNotificationsToTabBar() {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  try {
+    mainWindow.webContents.send('notifications-update', activeNotifications.slice(0, MAX_NOTIFICATIONS_VISIBLE));
+  } catch {}
+  // View neu positionieren, da der Banner-Bereich Höhe geändert haben könnte.
+  lastViewBounds = '';
+  resizeActiveView();
+}
+
+function getNotificationBarHeight() {
+  if (!activeNotifications || activeNotifications.length === 0) return 0;
+  return NOTIFICATION_BANNER_HEIGHT * Math.min(activeNotifications.length, MAX_NOTIFICATIONS_VISIBLE);
+}
+
+async function refreshNotifications() {
+  const override = getNotificationsOverridePath();
+  let payload = null;
+  if (override) {
+    payload = loadNotificationsLocal(override);
+  } else {
+    payload = await fetchNotificationsRemote();
+  }
+  activeNotifications = filterNotifications(payload);
+  pushNotificationsToTabBar();
+}
+
+function setupNotifications() {
+  // Override (Dev / lokale Datei): kürzer warten, Banner soll beim Testen schnell erscheinen.
+  const delay = getNotificationsOverridePath() ? 1500 : NOTIFICATIONS_FIRST_FETCH_DELAY_MS;
+  setTimeout(() => { refreshNotifications().catch(() => {}); }, delay);
+  notificationsFetchInterval = setInterval(() => {
+    refreshNotifications().catch(() => {});
+  }, NOTIFICATIONS_FETCH_MS);
+}
+
+function dismissNotification(id) {
+  if (typeof id !== 'string' || !id) return;
+  if (!dismissedNotificationIds.includes(id)) {
+    dismissedNotificationIds.push(id);
+    if (dismissedNotificationIds.length > 200) dismissedNotificationIds = dismissedNotificationIds.slice(-200);
+    saveWindowState();
+  }
+  activeNotifications = activeNotifications.filter(n => n.id !== id);
+  pushNotificationsToTabBar();
+}
+
 function setupSession() {
   const ses = session.fromPartition('persist:claude');
   const allowed = new Set(['clipboard-read', 'clipboard-sanitized-write', 'notifications', 'fullscreen']);
 
-  ses.setPermissionRequestHandler((_, perm, cb) => cb(allowed.has(perm)));
-  ses.setPermissionCheckHandler((_, perm) => allowed.has(perm));
+  let consentInflight = null;
+  ses.setPermissionRequestHandler((_, perm, cb, details) => {
+    if (perm === 'media') {
+      // Mikrofon nur für claude.ai zulassen — claudeusercontent.com (Artifact-iframes)
+      // explizit ausschließen, damit User-generierter Code keinen Mic-Zugriff erbt.
+      if (!isClaudeAiOrigin(details && details.requestingUrl)) return cb(false);
+      const wantsAudio = !details || !details.mediaTypes || details.mediaTypes.includes('audio');
+      if (!wantsAudio) return cb(false);
+      if (microphoneEnabled) return cb(true);
+      if (microphoneConsentAsked) return cb(false);
+      if (consentInflight) { consentInflight.then(v => cb(v)); return; }
+      consentInflight = requestMicrophoneConsent().then(reason => {
+        if (reason !== 'dismissed') {
+          microphoneConsentAsked = true;
+          microphoneEnabled = reason === 'granted';
+          saveWindowState();
+        }
+        return reason === 'granted';
+      }).catch(() => false).finally(() => { consentInflight = null; });
+      consentInflight.then(v => cb(v));
+      return;
+    }
+    cb(allowed.has(perm));
+  });
+  ses.setPermissionCheckHandler((_, perm, requestingOrigin) => {
+    if (perm === 'media') {
+      if (!isClaudeAiOrigin(requestingOrigin)) return false;
+      return microphoneEnabled;
+    }
+    return allowed.has(perm);
+  });
 
   ses.setUserAgent(chromeUA);
 
@@ -2858,6 +3483,8 @@ ipcMain.handle('settings-get', () => ({
   hotkey: currentHotkey,
   clipboardHotkey: currentClipboardHotkey,
   bgNotifications: bgNotificationsEnabled,
+  microphoneEnabled,
+  isSnap,
   templates: promptTemplates.map(t => ({ id: t.id, name: t.name, prefix: t.prefix })),
   autostart: getAutostart()
 }));
@@ -2889,6 +3516,30 @@ ipcMain.on('settings-bg-notifications', (_, v) => {
   bgNotificationsEnabled = v === true;
   saveWindowState();
 });
+
+ipcMain.on('settings-microphone', (_, v) => {
+  microphoneEnabled = v === true;
+  microphoneConsentAsked = true;
+  saveWindowState();
+});
+
+ipcMain.on('settings-microphone-reset', () => {
+  microphoneEnabled = false;
+  microphoneConsentAsked = false;
+  saveWindowState();
+});
+ipcMain.on('settings-open-snap-permissions', () => openSnapStorePage());
+ipcMain.on('settings-copy-snap-cmd', () => { try { clipboard.writeText(SNAP_CONNECT_CMD); } catch {} });
+
+// Live-Notifications (Tab-Bar-Banner)
+ipcMain.on('notification-dismiss', (_, id) => dismissNotification(id));
+ipcMain.on('notification-link', (_, payload) => {
+  if (!payload || typeof payload !== 'object') return;
+  const url = typeof payload.url === 'string' ? payload.url : '';
+  if (!/^https:\/\//i.test(url)) return;
+  try { shell.openExternal(url); } catch {}
+});
+ipcMain.on('notifications-request', () => pushNotificationsToTabBar());
 
 ipcMain.handle('settings-add-template', (_, tpl) => {
   if (!tpl || typeof tpl.name !== 'string' || typeof tpl.prefix !== 'string') return { error: 'invalid' };
@@ -3134,6 +3785,7 @@ app.whenReady().then(() => {
   updateMenu(true);
   setupDownloadManager();
   setupAutoUpdater();
+  setupNotifications();
   setupTray();
   if (currentHotkey) registerHotkey(currentHotkey);
   if (currentClipboardHotkey) registerClipboardHotkey(currentClipboardHotkey);
@@ -3171,6 +3823,7 @@ app.on('before-quit', () => {
   if (updateCheckInterval) { clearInterval(updateCheckInterval); updateCheckInterval = null; }
   if (onlineCheckInterval) { clearInterval(onlineCheckInterval); onlineCheckInterval = null; }
   if (waitForFirstTabInterval) { clearInterval(waitForFirstTabInterval); waitForFirstTabInterval = null; }
+  if (notificationsFetchInterval) { clearInterval(notificationsFetchInterval); notificationsFetchInterval = null; }
   saveWindowStateSync();
 });
 

@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.3.6] – 2026-05-04
+
+### Added
+- **Microphone access for voice input** on claude.ai. The first time you click the microphone icon, the app shows a one-time consent dialog. Choice persists; you can change it any time in App Settings → Microphone.
+- **App Settings → Microphone section** with: an enable/disable toggle, an "Ask again on next microphone click" reset button, and on Snap an "Open in Snap Store" shortcut plus a copyable `snap connect` command. The reset button shows a transient "Done" confirmation after click.
+- **Snap in-app permission wizard**: the consent dialog detects the `audio-record` plug status live via `snapctl is-connected`, shows a colored status indicator (green/red/amber), and offers two parallel paths — a smart "Open in Snap Store" button (tries `snap-store` → `gnome-software` → `plasma-discover` → `xdg-open` to skip the OS chooser dialog), and a copyable `sudo snap connect claude-ai-desktop:audio-record` command for users without a Snap GUI. Live polling auto-detects activation regardless of which path the user takes.
+- `audio-record` plug declared in the Snap manifest (manual user-connect after install; no auto-connect request needed thanks to the in-app wizard).
+- **Live notification system** in the tab bar. The app fetches `notifications.json` from the project's GitHub repo on startup and every 6 hours. JSON entries support `severity` (info/warn/critical/success), `title`, `body`, `link`/`linkLabel`, `minVersion`/`maxVersion`, `expires` (ISO date), `if: snap|appimage` and `dismissible`. Banners appear above the tab bar with severity-coloured accent; dismiss-state persists per notification ID. Used to communicate ongoing fixes (e.g. the Snap microphone Setup) without shipping a new release. Local override via `CLAUDE_NOTIFICATIONS_OVERRIDE=<path>` env var, plus auto-load of `./notifications.json` from the project root in dev mode.
+
+### Fixed
+- **Strict origin check for microphone permission**: only `claude.ai` and its subdomains can request the microphone. `claudeusercontent.com` (artifact iframes) is explicitly excluded so user-generated content can't inherit microphone access.
+- **Dismissed-vs-denied distinction**: closing the consent dialog with X or Escape leaves the choice neutral (the dialog will reappear on the next microphone request) instead of being treated as "permanently denied". Only a deliberate click on Allow or Deny persists the decision.
+- **Allow button blocked while Snap permission is missing**: prevents the silent-failure path where users click Allow but the Snap plug isn't connected yet and recording fails without feedback.
+- **Per-dialog IPC channels** for microphone-related communication so cross-dialog interference is impossible. Preload exposes only whitelisted channel prefixes.
+- **Async `snapctl` polling** instead of synchronous `execFileSync`, so the main thread is never blocked by a slow `snapctl` call (1.5 s polling interval, every check non-blocking).
+
+### Changed
+- **Whats-New 1.3.6 microphone note for Snap** describes the in-app wizard flow rather than a `sudo snap connect` terminal command.
+- **Defensive `</script>` escaping** for inline JSON embeds in Settings, Quick-Prompt and the new microphone consent dialog (preventive — current strings are hardcoded, but the helper is now in place if i18n ever becomes dynamic).
+- **Refactor**: shared dialog CSS extracted into `sharedDialogCSS()` (ends ~30 lines of duplication between message-box and microphone consent dialogs); `openSnapStorePage()` helper centralises the `snap://` deep link; inline `style="…"` attributes in Settings replaced with CSS classes (`.snap-actions`, `.hint-block`).
+
+---
+
 ## [1.3.5] – 2026-05-02
 
 ### Added

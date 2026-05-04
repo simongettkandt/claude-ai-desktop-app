@@ -1,18 +1,27 @@
 name: claude-ai-desktop
-version: '1.3.5'
-summary: Claude AI – Native Desktop App für Linux
+version: '1.3.6'
+summary: Claude AI – Native Desktop App für Linux mit Voice-Input
 description: |
   Eine schnelle, native Desktop-App für Claude AI.
   Nutze Claude direkt vom Desktop – ohne Browser, ablenkungsfrei und immer griffbereit.
 
   Features:
+  - Voice-Input direkt im Chat (Mikrofon-Aufnahme für gesprochene Prompts;
+    die App fragt beim ersten Klick einmal um Erlaubnis und bietet einen
+    jederzeit umlegbaren Schalter in den App-Einstellungen)
   - Tab-System mit visueller Tab-Leiste
   - Dark/Light Mode Toggle
   - Custom Design (Modern/Classic) mit Gradient-Akzenten
   - Google OAuth & Connector Login (GitHub, Google Drive, GitLab, etc.)
+  - Globale Hotkeys (Quick-Prompt, Zwischenablage als Prompt)
   - Automatische Updates
   - Deutsch & Englisch
   - Electron 41 mit Chromium 134
+
+  Hinweis: Voice-Input benötigt das audio-record Interface. Nach der
+  Installation entweder über den In-App-Wizard (Mikrofon-Klick → "Im Snap-Store
+  öffnen") oder im Terminal: sudo snap connect claude-ai-desktop:audio-record
+  Die App erkennt die Aktivierung automatisch.
 
 base: core24
 grade: stable
@@ -27,9 +36,9 @@ apps:
     extensions: [gnome]
     autostart: claude-ai-desktop.desktop
     plugs:
-      - browser-support
       - network
       - audio-playback
+      - audio-record
       - desktop
       - home
       - x11
