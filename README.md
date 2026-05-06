@@ -14,12 +14,14 @@ sudo snap install claude-ai-desktop
 
 [![claude-ai-desktop](https://snapcraft.io/claude-ai-desktop/badge.svg)](https://snapcraft.io/claude-ai-desktop)
 
-> **v1.3.5** – Custom Menu, Markdown Export, Prompt Templates, Background Notifications, Snap Copy & Paste Fix
+> **v1.3.7** – Auto-Update Self-Heal, Voice Input, Live Notifications
 
 ---
 
 ## Features
 
+- **Voice Input** – Microphone permission for claude.ai's voice features, scoped strictly to claude.ai (artifact iframes can't piggyback). Snap users get an in-app setup wizard that detects whether the `audio-record` plug is connected and links straight to the Snap Store permissions page
+- **Live Notifications** – Tab-bar banner for service-side notices (info / warn / critical / success), fetched from the repo every 6h with version filters and per-ID dismiss state, so urgent hints land without a new release
 - **Custom App Menu (Hamburger)** – In-app menu with keyboard navigation, replaces the native menu bar; quick access to all actions including new tab, export, settings, updates and bug report
 - **Tab System** – Multiple chats side by side with a visual tab bar (Ctrl+T, Ctrl+W, Ctrl+Tab); direct buttons in the tab bar for Markdown export and bug report
 - **Markdown Export** – Save the active conversation as a `.md` file via `Ctrl+Shift+E`, including code blocks, lists, headings and links
@@ -33,7 +35,7 @@ sudo snap install claude-ai-desktop
 - **Autostart** – Optional launch on system boot (Linux: writes a `.desktop` file to `~/.config/autostart/`; Snap: native autostart directive)
 - **Custom Design System** – Modern gradient theme or Classic mode toggle
 - **Dark/Light Mode Toggle** – Moon/Sun button in the tab bar, seamless theme switching
-- **Auto-Update** – Automatically updates via GitHub Releases (AppImage) or `snapd` (Snap)
+- **Auto-Update** – Automatically updates via GitHub Releases (AppImage) or `snapd` (Snap); since v1.3.7 the AppImage also self-heals stale `.desktop` and autostart entries so the menu shortcut keeps working after each update
 - **Manual Update Check** – Menu entry shows a dialog with the result
 - **What's-New Popup** – Shows the changelog once after each version upgrade, including notes for skipped versions
 - **Google OAuth** – Google login works out of the box
@@ -80,7 +82,7 @@ cat > ~/.local/share/applications/claude-desktop.desktop << EOF
 [Desktop Entry]
 Name=Claude Desktop
 Comment=Claude AI Desktop App
-Exec=/path/to/Claude-Desktop-1.3.5.AppImage --no-sandbox
+Exec=/path/to/Claude-Desktop-1.3.7.AppImage --no-sandbox
 Icon=/path/to/icon.png
 Type=Application
 Categories=Utility;
@@ -113,7 +115,7 @@ The AppImage updates itself via `electron-updater` whenever the app is **fully q
 
 1. **Quit the app completely** – Right-click the tray icon → Quit, or `File → Quit`. Just closing the window is not enough if minimize-to-tray is enabled.
 2. **Restart the app** – The pending update installs on next launch.
-3. **Check your Desktop shortcut** – If your `~/.local/share/applications/claude-desktop.desktop` still has a hardcoded path like `Claude-Desktop-1.2.0.AppImage`, update it to point to the new file. This is the most common reason updates seem to "not stick".
+3. **Check your Desktop shortcut** – If your `~/.local/share/applications/claude-desktop.desktop` still has a hardcoded path like `Claude-Desktop-1.2.0.AppImage`, update it to point to the new file. Since v1.3.7 the app rewrites this file on startup, so once you've launched a v1.3.7+ AppImage at least once, future updates fix the shortcut on their own.
 4. **Manual check** – `Claude → Check for Updates…` forces an immediate check and shows the result.
 
 Snap users don't need to do anything – `snapd` handles updates in the background.
@@ -163,6 +165,19 @@ The `--no-sandbox` flag is required for Electron AppImages on Linux because the 
 ---
 
 ## Changelog
+
+### v1.3.7 – Auto-Update Self-Heal & Snap Cloudflare Fix (2026-05-06)
+
+- **Auto-Update self-heal** – After an AppImage update, the app rewrites `~/.local/share/applications/claude-desktop.desktop` and `~/.config/autostart/claude-ai-desktop.desktop` to point at the current AppImage path. Fixes the long-standing "menu shortcut launches into the void after update" issue. Idempotent, Linux+AppImage only.
+- **Bash wrapper for the Electron binary** – Adds `--no-sandbox` automatically when the app is launched without arguments (e.g. double-click from the file manager or `quitAndInstall`). Works around the Chrome SUID sandbox on AppImages without forcing users to remember the flag.
+- **Snap Cloudflare fix** – Replaced `--disable-gpu` with `--use-gl=angle --use-angle=gl` in the Snap launcher. Cloudflare Turnstile was treating the SwiftShader fallback as a bot signal and looping the verification step; ANGLE-over-OpenGL gives Mesa GPU vendor strings while still avoiding the NVIDIA DRM hang the original `--disable-gpu` was added for.
+
+### v1.3.6 – Voice Input & Live Notifications (2026-05-04)
+
+- **Voice input permission architecture** – `media` permission strictly scoped to claude.ai (not to claudeusercontent.com artifact iframes that share the same session). Custom in-app consent dialog with a real three-state result, so closing the window with Escape isn't treated as "denied".
+- **Snap microphone setup wizard** – Detects via `snapctl is-connected audio-record` whether the Snap plug is connected, polls every 1.5s, and links straight to the Snap Store permissions page. Per-dialog IPC channels prevent any other renderer from spamming the consent flow.
+- **Live notification system** – Tab-bar banner that fetches `notifications.json` from the repo every 6h. Fields: `severity` (info/warn/critical/success), `title`, `body`, optional `link`/`linkLabel`, `minVersion`/`maxVersion`, `expires`, `if: snap|appimage`, `dismissible`. Per-ID dismiss state is persisted, so users only see each notice once. Lets us push urgent hints (e.g. Snap mic setup) without cutting a release.
+- **Settings → Microphone section** added.
 
 ### v1.3.5 – Custom Menu, Markdown Export, Templates, Snap Clipboard Fix (2026-05-02)
 
