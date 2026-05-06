@@ -539,15 +539,14 @@ function saveWindowStateSync() {
 const domainCache = new Map();
 
 function isAllowedDomain(url) {
-  let r = domainCache.get(url);
+  let h;
+  try { h = new URL(url).hostname; } catch { return false; }
+  let r = domainCache.get(h);
   if (r !== undefined) return r;
-  try {
-    const h = new URL(url).hostname;
-    r = h === 'claude.ai' || h.endsWith('.claude.ai')
-      || h === 'claudeusercontent.com' || h.endsWith('.claudeusercontent.com');
-  } catch { r = false; }
+  r = h === 'claude.ai' || h.endsWith('.claude.ai')
+    || h === 'claudeusercontent.com' || h.endsWith('.claudeusercontent.com');
   if (domainCache.size >= DOMAIN_CACHE_MAX) domainCache.delete(domainCache.keys().next().value);
-  domainCache.set(url, r);
+  domainCache.set(h, r);
   return r;
 }
 
@@ -1187,20 +1186,21 @@ function showBugReportDialog() {
     parent: mainWindow, modal: true,
     title: s.title, icon: icon(),
     backgroundColor: bg,
-    webPreferences: { nodeIntegration: false, contextIsolation: true, sandbox: true }
+    webPreferences: {
+      preload: path.join(__dirname, 'preload-bugreport.js'),
+      nodeIntegration: false, contextIsolation: true, sandbox: true
+    }
   });
   win.setMenuBarVisibility(false);
 
   const cfg = JSON.stringify({
-    accessKey: WEB3FORMS_ACCESS_KEY,
-    endpoint: WEB3FORMS_ENDPOINT,
     bugEmail: BUG_EMAIL,
     meta,
     strings: s
   });
 
   const html = `<!DOCTYPE html><html><head>
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src https://api.web3forms.com;">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline';">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:${bg};color:${fg};font-family:system-ui,-apple-system,sans-serif;font-size:14px;
@@ -1359,25 +1359,17 @@ button.secondary:hover{background:${inputBg};color:${fg}}
     bodyMessage += (userEmail ? '\\n\\nUser-Email: ' + userEmail : '\\n\\nUser-Email: (not provided)');
 
     const payload = {
-      access_key: cfg.accessKey,
       subject: 'Claude Desktop Bug Report v' + meta.version,
-      from_name: 'Claude Desktop App',
-      message: bodyMessage,
-      botcheck: ''
+      message: bodyMessage
     };
     if (userEmail) payload.email = userEmail;
 
     try {
-      const res = await fetch(cfg.endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      const data = await res.json().catch(() => ({}));
-      if (res.ok && data.success) {
+      const result = await window.bugAPI.submit(payload);
+      if (result && result.success) {
         showView('success');
       } else {
-        throw new Error(data.message || ('HTTP ' + res.status));
+        throw new Error((result && result.message) || 'Submit failed');
       }
     } catch (err) {
       console.error('Bug-report submit failed:', err);
@@ -2439,7 +2431,7 @@ function openAppMenuWindow(rendererX, rendererY) {
     appMenuWindow.close();
     return;
   }
-  if (!mainWindow || mainWindow.isDestroyed()) return;
+  if (!mainWindow || mainWindow.isDestroyed() || !mainWindow.isVisible()) return;
 
   const items = getAppMenuItems();
   // Höhe: Header ~52px + Items 30px + Separators 11px + 18px card-padding/border + 16px body-padding
@@ -2503,10 +2495,11 @@ function showCustomMessageBox(opts) {
 
   return new Promise((resolve) => {
     let settled = false;
+    let ipcHandler;
     const finish = (index) => {
       if (settled) return;
       settled = true;
-      ipcMain.removeAllListeners(channel);
+      ipcMain.removeListener(channel, ipcHandler);
       resolve({ response: typeof index === 'number' ? index : cancelId });
     };
 
@@ -2531,10 +2524,11 @@ function showCustomMessageBox(opts) {
     });
     win.setMenu(null);
 
-    ipcMain.once(channel, (_, index) => {
+    ipcHandler = (_, index) => {
       finish(index);
       if (!win.isDestroyed()) win.close();
-    });
+    };
+    ipcMain.once(channel, ipcHandler);
 
     win.on('closed', () => finish(cancelId));
 
@@ -3026,14 +3020,15 @@ async function requestMicrophoneConsent() {
   return new Promise((resolve) => {
     let settled = false;
     let pollHandle = null;
+    let respondHandler, snapOpenHandler, copyCmdHandler;
 
     const finish = (reason) => {
       if (settled) return;
       settled = true;
       if (pollHandle) { clearInterval(pollHandle); pollHandle = null; }
-      ipcMain.removeAllListeners(respondChannel);
-      ipcMain.removeAllListeners(snapOpenChannel);
-      ipcMain.removeAllListeners(copyCmdChannel);
+      ipcMain.removeListener(respondChannel, respondHandler);
+      ipcMain.removeListener(snapOpenChannel, snapOpenHandler);
+      ipcMain.removeListener(copyCmdChannel, copyCmdHandler);
       resolve(reason);
     };
 
@@ -3058,13 +3053,15 @@ async function requestMicrophoneConsent() {
     });
     win.setMenu(null);
 
-    ipcMain.once(respondChannel, (_, idx) => {
+    respondHandler = (_, idx) => {
       finish(idx === 0 ? 'granted' : 'denied');
       if (!win.isDestroyed()) win.close();
-    });
-
-    ipcMain.on(snapOpenChannel, () => openSnapStorePage());
-    ipcMain.on(copyCmdChannel, () => { try { clipboard.writeText(SNAP_CONNECT_CMD); } catch {} });
+    };
+    snapOpenHandler = () => openSnapStorePage();
+    copyCmdHandler = () => { try { clipboard.writeText(SNAP_CONNECT_CMD); } catch {} };
+    ipcMain.once(respondChannel, respondHandler);
+    ipcMain.on(snapOpenChannel, snapOpenHandler);
+    ipcMain.on(copyCmdChannel, copyCmdHandler);
 
     win.on('closed', () => finish('dismissed'));
 
@@ -3309,8 +3306,9 @@ function filterNotifications(payload) {
     if (dismissedNotificationIds.includes(n.id)) continue;
     if (n.if === 'snap' && !isSnap) continue;
     if (n.if === 'appimage' && isSnap) continue;
-    if (typeof n.minVersion === 'string' && compareVersions(version, n.minVersion) < 0) continue;
-    if (typeof n.maxVersion === 'string' && compareVersions(version, n.maxVersion) > 0) continue;
+    const versionRe = /^\d+(\.\d+)*(-\S+)?$/;
+    if (typeof n.minVersion === 'string' && versionRe.test(n.minVersion) && compareVersions(version, n.minVersion) < 0) continue;
+    if (typeof n.maxVersion === 'string' && versionRe.test(n.maxVersion) && compareVersions(version, n.maxVersion) > 0) continue;
     if (typeof n.expires === 'string') {
       const exp = Date.parse(n.expires);
       if (Number.isFinite(exp) && exp < now) continue;
@@ -3517,8 +3515,8 @@ function selfHealDesktopFiles() {
     if (fs.existsSync(appsDesktop)) {
       const content = fs.readFileSync(appsDesktop, 'utf8');
       const updated = content
-        .replace(/^Exec=.*$/m, `Exec="${appImagePath}" --no-sandbox %U`)
-        .replace(/^X-AppImage-Version=.*$/m, `X-AppImage-Version=${version}`);
+        .replace(/^Exec=.*$/m, () => `Exec="${appImagePath}" --no-sandbox %U`)
+        .replace(/^X-AppImage-Version=.*$/m, () => `X-AppImage-Version=${version}`);
       if (updated !== content) {
         fs.writeFileSync(appsDesktop, updated);
         appsChanged = true;
@@ -3529,7 +3527,7 @@ function selfHealDesktopFiles() {
   try {
     if (fs.existsSync(AUTOSTART_FILE)) {
       const content = fs.readFileSync(AUTOSTART_FILE, 'utf8');
-      const updated = content.replace(/^Exec=.*$/m, `Exec="${appImagePath}" --no-sandbox`);
+      const updated = content.replace(/^Exec=.*$/m, () => `Exec="${appImagePath}" --no-sandbox`);
       if (updated !== content) fs.writeFileSync(AUTOSTART_FILE, updated, { mode: 0o644 });
     }
   } catch (_) {}
@@ -3688,9 +3686,8 @@ ipcMain.on('app-menu-popup', (_event, x, y) => {
   openAppMenuWindow(x, y);
 });
 ipcMain.on('appmenu-action', (event, name) => {
-  if (appMenuWindow && !appMenuWindow.isDestroyed() && event.sender === appMenuWindow.webContents) {
-    appMenuWindow.close();
-  }
+  if (!appMenuWindow || appMenuWindow.isDestroyed() || event.sender !== appMenuWindow.webContents) return;
+  appMenuWindow.close();
   switch (name) {
     case 'new-tab': createTab(); break;
     case 'close-tab': closeTab(activeTabIndex); break;
@@ -3827,25 +3824,32 @@ app.on('web-contents-created', (_, wc) => {
   wc.on('will-attach-webview', (event) => event.preventDefault());
 });
 
-// Web3Forms blockiert Requests ohne Browser-Origin (data:-URLs senden Origin: null,
-// was Web3Forms als "Server-Side"-Aufruf einstuft und mit "Pro plan required" ablehnt).
-// Fix: für api.web3forms.com setzen wir Origin/Referer auf die im Dashboard registrierte Domain.
-function setupWeb3FormsHeaderRewrite() {
-  session.defaultSession.webRequest.onBeforeSendHeaders(
-    { urls: ['https://api.web3forms.com/*'] },
-    (details, cb) => {
-      const h = details.requestHeaders;
-      h['Origin'] = 'https://localhost';
-      h['Referer'] = 'https://localhost/';
-      cb({ requestHeaders: h });
-    }
-  );
-}
+ipcMain.handle('bug-report-submit', async (event, payload) => {
+  if (!payload || typeof payload !== 'object') return { success: false, message: 'Invalid payload' };
+  const body = {
+    access_key: WEB3FORMS_ACCESS_KEY,
+    subject: String(payload.subject || '').slice(0, 300),
+    from_name: 'Claude Desktop App',
+    message: String(payload.message || '').slice(0, 5000),
+    botcheck: ''
+  };
+  if (payload.email) body.email = String(payload.email).slice(0, 200);
+  try {
+    const res = await fetch(WEB3FORMS_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify(body)
+    });
+    const data = await res.json().catch(() => ({}));
+    return { success: res.ok && !!data.success, message: data.message || ('HTTP ' + res.status) };
+  } catch (err) {
+    return { success: false, message: err.message };
+  }
+});
 
 app.whenReady().then(() => {
   selfHealDesktopFiles();
   setupSession();
-  setupWeb3FormsHeaderRewrite();
   createWindow();
   updateMenu(true);
   setupDownloadManager();

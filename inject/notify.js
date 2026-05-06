@@ -1,6 +1,7 @@
 (function() {
   if (window._cdNotify) return;
   window._cdNotify = true;
+  if (window._cdNotifyInterval) { clearInterval(window._cdNotifyInterval); window._cdNotifyInterval = null; }
 
   // Heuristik: claude.ai zeigt während Generation einen Stop-Button und tauscht ihn
   // gegen einen Send-Button, sobald Claude fertig ist. Wir beobachten Buttons im
@@ -57,5 +58,5 @@
 
   // Polling reicht aus — DOM-Mutationen sind häufig, aber wir wollen nur den
   // Übergang erkennen. 700ms ist ein Kompromiss aus Latenz und CPU.
-  setInterval(tick, 700);
+  window._cdNotifyInterval = setInterval(tick, 700);
 })();
