@@ -13,6 +13,13 @@ dialog.showErrorBox = (title, content) => {
 
 if (app.isPackaged) process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = 'true';
 
+// ── Sandbox-Fallback ──
+// Belt-and-suspenders zum --no-sandbox-Flag im .desktop-File: greift wenn die App
+// ohne Argumente gestartet wird (z.B. nach Auto-Update durch quitAndInstall, oder
+// per Doppelklick aus dem Dateimanager). chrome-sandbox-Helper ist auf üblichen
+// Linux-Distributionen nicht setuid-konfiguriert, ohne diesen Switch crasht der
+// Renderer beim Start.
+
 // ── Single Instance ──
 if (!app.requestSingleInstanceLock()) { app.quit(); }
 
@@ -387,6 +394,18 @@ const RELEASE_NOTES = {
       icon: 'bolt',
       title: 'Live-Hinweise direkt in der App',
       text: 'Wichtige Hinweise (z.B. zu bekannten Problemen oder Updates) erscheinen jetzt als Banner \u00fcber der Tab-Leiste. Sie kommen direkt vom Projekt-Repo und k\u00f6nnen jederzeit per Klick auf das \u00d7 weggeschoben werden.'
+    }
+  ],
+  '1.3.7': [
+    {
+      icon: 'check',
+      title: 'App startet nach Auto-Update wieder zuverl\u00e4ssig',
+      text: 'Nach einem automatischen Update startete die App beim n\u00e4chsten Aufruf \u00fcber den Men\u00fc-Eintrag manchmal nicht mehr, weil die Verkn\u00fcpfung noch auf die alte Datei zeigte. Das ist behoben \u2013 die Verkn\u00fcpfungen werden jetzt bei jedem Start gepr\u00fcft und bei Bedarf automatisch auf die aktuelle Version umgebogen.'
+    },
+    {
+      icon: 'check',
+      title: 'Stabiler Start aus dem App-Men\u00fc',
+      text: 'Beim Start aus dem System-App-Men\u00fc oder per Doppelklick aus dem Dateimanager kam es nach Updates teils zu Sandbox-Fehlern. Die App setzt das n\u00f6tige Flag jetzt selbst, der Start ist wieder stabil.'
     }
   ]
 };
@@ -3478,6 +3497,51 @@ X-GNOME-Autostart-enabled=true
   }
 }
 
+// .desktop-Self-Heal: electron-updater ersetzt die AppImage durch eine mit neuer
+// Versionsnummer im Dateinamen (~/Apps/Claude-Desktop-1.3.X.AppImage). Die im
+// Installer geschriebene applications/.desktop-Datei zeigt aber weiter auf den
+// alten Pfad und der Menü-Eintrag startet nach jedem Auto-Update ins Leere.
+// Lösung: bei jedem Start prüfen, ob der Exec= im .desktop-File mit dem aktuellen
+// process.env.APPIMAGE übereinstimmt; wenn nicht, beide Files (Menü + Autostart,
+// falls aktiv) rewriten und update-desktop-database triggern.
+function selfHealDesktopFiles() {
+  if (process.platform !== 'linux') return;
+  if (isSnap) return;
+  const appImagePath = process.env.APPIMAGE;
+  if (!appImagePath) return;
+
+  const appsDesktop = path.join(app.getPath('home'), '.local', 'share', 'applications', 'claude-desktop.desktop');
+  let appsChanged = false;
+
+  try {
+    if (fs.existsSync(appsDesktop)) {
+      const content = fs.readFileSync(appsDesktop, 'utf8');
+      const updated = content
+        .replace(/^Exec=.*$/m, `Exec="${appImagePath}" --no-sandbox %U`)
+        .replace(/^X-AppImage-Version=.*$/m, `X-AppImage-Version=${version}`);
+      if (updated !== content) {
+        fs.writeFileSync(appsDesktop, updated);
+        appsChanged = true;
+      }
+    }
+  } catch (_) {}
+
+  try {
+    if (fs.existsSync(AUTOSTART_FILE)) {
+      const content = fs.readFileSync(AUTOSTART_FILE, 'utf8');
+      const updated = content.replace(/^Exec=.*$/m, `Exec="${appImagePath}" --no-sandbox`);
+      if (updated !== content) fs.writeFileSync(AUTOSTART_FILE, updated, { mode: 0o644 });
+    }
+  } catch (_) {}
+
+  if (appsChanged) {
+    try {
+      const { execFile } = require('child_process');
+      execFile('update-desktop-database', [path.dirname(appsDesktop)], { timeout: 5000 }, () => {});
+    } catch (_) {}
+  }
+}
+
 ipcMain.handle('settings-get', () => ({
   minimizeOnClose,
   hotkey: currentHotkey,
@@ -3779,6 +3843,7 @@ function setupWeb3FormsHeaderRewrite() {
 }
 
 app.whenReady().then(() => {
+  selfHealDesktopFiles();
   setupSession();
   setupWeb3FormsHeaderRewrite();
   createWindow();

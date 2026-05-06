@@ -1,11 +1,11 @@
 #!/bin/bash
 if [ -n "$WAYLAND_DISPLAY" ]; then
   exec env XDG_CURRENT_DESKTOP=Unity "$SNAP/app/claude-desktop" \
-    --no-sandbox --disable-gpu \
+    --no-sandbox --use-gl=angle --use-angle=gl \
     --ozone-platform-hint=auto --enable-wayland-ime \
     --enable-features=UseOzonePlatform "$@"
 else
   exec env XDG_CURRENT_DESKTOP=Unity "$SNAP/app/claude-desktop" \
-    --no-sandbox --disable-gpu \
+    --no-sandbox --use-gl=angle --use-angle=gl \
     --ozone-platform=x11 "$@"
 fi

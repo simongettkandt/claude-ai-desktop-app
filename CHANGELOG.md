@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.3.7] – 2026-05-06
+
+### Fixed
+- **Auto-update launch reliability (AppImage)**: the app now adds `--no-sandbox` automatically on Linux when launched without command-line arguments — for example via the system app menu or after `quitAndInstall()`. Previously the app could fail to come back up after an auto-update because the chrome-sandbox SUID helper isn't set up on most Linux systems.
+- **`.desktop` files self-heal after auto-update (AppImage)**: on every start the app checks `~/.local/share/applications/claude-desktop.desktop` and `~/.config/autostart/claude-ai-desktop.desktop`, and rewrites the `Exec=` path if it doesn't match the currently running AppImage. Fixes the bug where the menu shortcut still pointed at the previous version's file after `electron-updater` had replaced it, leaving the launcher dead.
+
+---
+
 ## [1.3.6] – 2026-05-04
 
 ### Added
