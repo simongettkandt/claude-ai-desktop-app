@@ -1,6 +1,6 @@
 {
   "name": "claude-desktop",
-  "version": "1.3.8",
+  "version": "1.3.9",
   "description": "Claude AI – Native Desktop App für Linux",
   "main": "main.js",
   "license": "MIT",
@@ -15,6 +15,7 @@
   },
   "scripts": {
     "start": "electron .",
+    "dev": "electron . --no-sandbox --ozone-platform=x11",
     "test": "node --test test/",
     "build": "electron-builder --linux",
     "build-appimage": "electron-builder --linux AppImage",

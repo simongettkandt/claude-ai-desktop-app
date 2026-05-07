@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.3.9] – 2026-05-07 — Wayland Compatibility
+
+### Fixed
+- **Wayland: pop-up windows land where they belong again.** On Wayland sessions (GNOME, KDE Plasma) the App Menu, Settings, Bug Report, Quick-Prompt and What's-New windows previously appeared at random positions across the screen, because Wayland forbids client-side toplevel positioning (Electron Issue #40886, marked not-planned by maintainers in October 2025). The app now starts under XWayland on Wayland sessions — the same approach VS Code, Discord, Signal and Obsidian use. Pixel-accurate window placement, `globalShortcut.register` and existing centering helpers all work again. Trade-off: minor HiDPI softness with fractional scaling. The switch is forced via `--ozone-platform=x11` in the AppImage wrapper (`scripts/after-pack.js`) and the Snap launcher (`snap/local/electron-launch`).
+- **Bug Report window can no longer be opened multiple times.** Previously each click on the bug icon spawned a fresh window, leading to several identical reports stacked on top of each other. A singleton guard now focuses the existing window instead.
+- **App Menu (hamburger) closes cleanly on rapid double-clicks.** The 250 ms cooldown that prevents a close+reopen race is now set the moment `close()` is called, not in the asynchronous `closed` event. Fast clicks no longer spawn parallel menu windows.
+- **`window-state.json` no longer accumulates ghost coordinates** on Wayland-only setups. (Indirect fix — `loadWindowState` was patched in 1.3.9-dev with an `isWayland` branch that's no longer needed since the whole app now runs under XWayland; the branch has been removed.)
+
+### Added
+- **Settings → Hotkeys: Wayland note.** When the app detects Wayland, the settings window shows an explanatory hint above the hotkey fields so users understand why a global shortcut may not register system-wide on GNOME/KDE.
+- **`failed-wayland` hotkey-status code**: distinct from the generic `failed` code, so the settings UI can show a specific message when the compositor refuses a global key grab.
+- **`npm run dev` script** in `package.json` that launches Electron with `--no-sandbox --ozone-platform=x11` for local development on Wayland hosts.
+
+### Changed
+- **AppImage wrapper (`scripts/after-pack.js`)** appends `--ozone-platform=x11` automatically when `$WAYLAND_DISPLAY` and `$XDG_SESSION_TYPE=wayland` are set, before the existing `--no-sandbox` injection. X11 sessions are unaffected.
+- **Snap launcher (`snap/local/electron-launch`)** now uses `--ozone-platform=x11` unconditionally for both X11 and Wayland sessions (was previously branching to `--ozone-platform-hint=auto` for Wayland). Combined with the existing `--use-gl=angle --use-angle=gl` switches, the Snap renders identically on both display servers.
+
+---
+
 ## [1.3.8] – 2026-05-07
 
 ### Added

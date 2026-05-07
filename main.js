@@ -14,6 +14,14 @@ dialog.showErrorBox = (title, content) => {
 
 if (app.isPackaged) process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = 'true';
 
+// Wayland-Bypass: BrowserWindow-Positionierung ist unter nativem Wayland
+// no-op (Issue #40886, Maintainer-Statement Okt 2025). Loesung: ueber
+// XWayland rendern. Der Switch wird zur Build-Zeit im AppImage-Wrapper
+// (scripts/after-pack.js) und im Snap (snap/local/electron-launch) immer
+// fix gesetzt. Im Dev-Modus muss er manuell beim Start mitgegeben werden:
+// `npx electron . --no-sandbox --ozone-platform=x11`. Das `npm run dev`-
+// Script in package.json macht das automatisch.
+
 // ── Sandbox-Fallback ──
 // Belt-and-suspenders zum --no-sandbox-Flag im .desktop-File: greift wenn die App
 // ohne Argumente gestartet wird (z.B. nach Auto-Update durch quitAndInstall, oder
@@ -30,6 +38,13 @@ if (!app.requestSingleInstanceLock()) { app.quit(); }
 
 const isDev = !app.isPackaged;
 const chromeUA = `Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${process.versions.chrome} Safari/537.36`;
+
+// Wayland erkennen: clientseitige Toplevel-Positionierung wird vom Compositor
+// ignoriert (kein xdg_positioner fuer toplevel). Alle x/y-Constructor-Params und
+// setPosition()-Aufrufe sind unter Wayland No-ops; statt absoluter Koordinaten
+// nutzen wir parent+center:true und ueberlassen die Platzierung dem Compositor.
+const isWayland = process.platform === 'linux'
+  && (process.env.XDG_SESSION_TYPE === 'wayland' || !!process.env.WAYLAND_DISPLAY);
 
 const TAB_BAR_HEIGHT = 40;
 const POOL_SIZE = 0;
@@ -309,6 +324,7 @@ let settingsWindow = null;
 let quickPromptWindow = null;
 let whatsNewWindow = null;
 let appMenuWindow = null;
+let bugReportWindow = null;
 let appMenuJustClosedAt = 0;
 let minimizeOnClose = false;
 let currentHotkey = null;
@@ -490,6 +506,28 @@ const RELEASE_NOTES = {
       icon: 'bug',
       title: 'Klarer Hinweis im Bug-Report',
       text: 'Im Fehler-melden-Fenster steht jetzt ein deutlicher Hinweis: das hier ist ein inoffizieller Community-Wrapper, kein offizieller Anthropic-Support. Bei Account-, Login-, Abo- oder Bezahl-Fragen f\u00fchrt ein Link direkt zu support.anthropic.com.'
+    }
+  ],
+  '1.3.9': [
+    {
+      icon: 'check',
+      title: 'Wayland: Fenster landen wieder dort, wo sie hingeh\u00f6ren',
+      text: 'Auf Wayland-Sitzungen (GNOME, KDE Plasma) sind App-Men\u00fc, Einstellungen, Bug-Report und das Quick-Prompt-Fenster zuvor an zuf\u00e4lligen Stellen \u00fcber den Bildschirm verteilt aufgeploppt \u2013 weil Wayland clientseitige Fenster-Positionierung nicht erlaubt. Die App startet auf Wayland jetzt automatisch \u00fcber XWayland (so wie es VS Code, Discord und Signal auch machen). Dialoge sitzen wieder zentriert, das App-Men\u00fc \u00f6ffnet direkt unter dem Hamburger-Button.'
+    },
+    {
+      icon: 'bug',
+      title: 'Bug-Report-Fenster nicht mehr mehrfach aufrufbar',
+      text: 'Mehrfach-Klick auf das K\u00e4fer-Symbol hat zuvor mehrere identische Bug-Report-Fenster nebeneinander ge\u00f6ffnet. Jetzt fokussiert die App das bestehende Fenster, statt ein neues zu spawnen.'
+    },
+    {
+      icon: 'settings',
+      title: 'Hamburger-Men\u00fc \u00f6ffnet sich nur noch einmal',
+      text: 'Schnelles Mehrfach-Klicken auf das Men\u00fc-Icon konnte zuvor mehrere Men\u00fc-Fenster gleichzeitig erzeugen. Der Cooldown greift jetzt sofort beim Klick, nicht erst nach dem Schlie\u00dfen.'
+    },
+    {
+      icon: 'bolt',
+      title: 'Hinweis bei nicht registrierbarem Hotkey',
+      text: 'Falls die Registrierung eines globalen Hotkeys auf Wayland am Compositor scheitert (GNOME erlaubt es z.B. eingeschr\u00e4nkt), zeigt das App-Einstellungen-Fenster jetzt einen klaren Hinweistext, statt eine generische Fehlermeldung.'
     }
   ]
 };
@@ -1207,6 +1245,10 @@ function getAppMode() {
 }
 
 function showBugReportDialog() {
+  if (bugReportWindow && !bugReportWindow.isDestroyed()) {
+    bugReportWindow.focus();
+    return;
+  }
   const s = { ...bugReportStrings.en, ...(bugReportStrings[sysLang] || {}) };
   const dark = isDarkMode;
   const bg = dark ? '#1a1a18' : '#faf8f6';
@@ -1239,7 +1281,9 @@ function showBugReportDialog() {
       nodeIntegration: false, contextIsolation: true, sandbox: true
     }
   });
+  bugReportWindow = win;
   win.setMenuBarVisibility(false);
+  win.on('closed', () => { bugReportWindow = null; });
 
   const cfg = JSON.stringify({
     bugEmail: BUG_EMAIL,
@@ -1591,9 +1635,8 @@ function openQuickPrompt() {
     return;
   }
   const qpSize = { width: 600, height: 160 };
-  const qpPos = centerOnMainDisplay(qpSize.width, qpSize.height);
-  quickPromptWindow = new BrowserWindow({
-    ...qpSize, ...qpPos,
+  const qpBase = {
+    ...qpSize,
     frame: false, resizable: false, movable: true,
     alwaysOnTop: true, skipTaskbar: true, show: false,
     transparent: true, hasShadow: false,
@@ -1603,6 +1646,9 @@ function openQuickPrompt() {
       nodeIntegration: false, contextIsolation: true, sandbox: true,
       spellcheck: false
     }
+  };
+  quickPromptWindow = new BrowserWindow({
+    ...qpBase, ...centerOnMainDisplay(qpSize.width, qpSize.height)
   });
   quickPromptWindow.setMenu(null);
   quickPromptWindow.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(getQuickPromptHTML()));
@@ -1763,7 +1809,7 @@ function registerHotkey(accel) {
       return 'ok';
     }
   } catch {}
-  return 'failed';
+  return isWayland ? 'failed-wayland' : 'failed';
 }
 
 // ── Feature 6: Clipboard → Chat ──────────────────────────────────
@@ -1795,7 +1841,7 @@ function registerClipboardHotkey(accel) {
       return 'ok';
     }
   } catch {}
-  return 'failed';
+  return isWayland ? 'failed-wayland' : 'failed';
 }
 
 // ── Feature 4: Markdown-Export ───────────────────────────────────
@@ -1961,10 +2007,12 @@ function getSettingsHTML() {
     close: t('Schlie\u00dfen', 'Close'),
     registered: t('Hotkey registriert.', 'Hotkey registered.'),
     failed: t('Diese Kombination konnte nicht registriert werden – evtl. systemweit belegt.', 'Could not register this combination — likely already in use system-wide.'),
+    failedWayland: t('Globaler Hotkey konnte unter Wayland nicht registriert werden – der Compositor erlaubt das nicht. Quick-Prompt funktioniert nur bei aktivem Fenster.', 'Could not register a global hotkey on Wayland – the compositor does not allow it. Quick-Prompt only works when the window is focused.'),
     conflictQp: t('Diese Kombination ist bereits dem Quick-Prompt-Hotkey zugewiesen.', 'This combination is already assigned to the Quick-Prompt hotkey.'),
     conflictClip: t('Diese Kombination ist bereits dem Clipboard-Hotkey zugewiesen.', 'This combination is already assigned to the Clipboard hotkey.'),
     removed: t('Hotkey entfernt.', 'Hotkey removed.'),
     needMod: t('Bitte mindestens eine Modifikator-Taste (Strg/Alt/Shift) verwenden.', 'Please use at least one modifier key (Ctrl/Alt/Shift).'),
+    waylandHint: t('Hinweis: Auf Wayland werden globale Hotkeys vom Compositor begrenzt und können je nach Desktop (GNOME/KDE) nicht systemweit greifen. Wenn die Registrierung fehlschlägt, weicht die App still aus – du kannst den Quick-Prompt dann nur bei aktivem Fenster auslösen.', 'Note: On Wayland, global hotkeys are gated by the compositor and may not work system-wide depending on the desktop (GNOME/KDE). If registration fails, the app silently skips it – the Quick-Prompt is then only reachable while the window is focused.'),
     tplEmpty: t('Noch keine Templates. F\u00fcgst du eines hinzu, erscheint es im Quick-Prompt-Fenster als Auswahl.', 'No templates yet. Once added, they appear as a picker in the Quick-Prompt window.'),
     tplName: t('Name (z.B. \u201e\u00dcbersetze")', 'Name (e.g. \u201eTranslate")'),
     tplPrefix: t('Prefix-Text (wird vor deinem Input eingef\u00fcgt)', 'Prefix text (prepended to your input)'),
@@ -2079,6 +2127,7 @@ button:disabled{opacity:.5;cursor:not-allowed}
 
   <div class="section">
     <h2>${i18n.secHotkeys}</h2>
+    ${isWayland ? `<div class="hint" style="margin-left:0;margin-bottom:10px">${i18n.waylandHint}</div>` : ''}
     <div class="hotkey-row">
       <div class="lab">${i18n.hotkeyQp}</div>
       <div class="capture" data-key="qp" tabindex="0">${i18n.press}</div>
@@ -2182,6 +2231,7 @@ function onKeydown(e, key) {
   applyHotkey(key, accel).then(res => {
     if (res === 'ok') statusHk.textContent = I.registered;
     else if (res === 'conflict') statusHk.textContent = key === 'qp' ? I.conflictClip : I.conflictQp;
+    else if (res === 'failed-wayland') statusHk.textContent = I.failedWayland;
     else statusHk.textContent = I.failed;
     resetCapture(key);
   });
@@ -2416,9 +2466,8 @@ function openWhatsNewWindow() {
     return;
   }
   const size = { width: 520, height: 560 };
-  const pos = centerOnMainWindow(size.width, size.height);
-  whatsNewWindow = new BrowserWindow({
-    ...size, ...pos,
+  const wnBase = {
+    ...size,
     parent: mainWindow && !mainWindow.isDestroyed() ? mainWindow : undefined,
     modal: false, resizable: false, minimizable: false, maximizable: false,
     title: t('Neu in Claude', 'What\u2019s new in Claude'),
@@ -2430,6 +2479,9 @@ function openWhatsNewWindow() {
       nodeIntegration: false, contextIsolation: true, sandbox: true,
       spellcheck: false
     }
+  };
+  whatsNewWindow = new BrowserWindow({
+    ...wnBase, ...centerOnMainWindow(size.width, size.height)
   });
   whatsNewWindow.setMenu(null);
   whatsNewWindow.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(getWhatsNewHTML()));
@@ -2442,9 +2494,8 @@ function openSettingsWindow() {
     return;
   }
   const swSize = { width: 540, height: 480 };
-  const swPos = centerOnMainWindow(swSize.width, swSize.height);
-  settingsWindow = new BrowserWindow({
-    ...swSize, ...swPos,
+  const swBase = {
+    ...swSize,
     parent: mainWindow && !mainWindow.isDestroyed() ? mainWindow : undefined,
     modal: false, resizable: false, minimizable: false, maximizable: false,
     title: t('Claude \u2013 Einstellungen', 'Claude \u2013 Settings'),
@@ -2456,6 +2507,9 @@ function openSettingsWindow() {
       nodeIntegration: false, contextIsolation: true, sandbox: true,
       spellcheck: false
     }
+  };
+  settingsWindow = new BrowserWindow({
+    ...swBase, ...centerOnMainWindow(swSize.width, swSize.height)
   });
   settingsWindow.setMenu(null);
   settingsWindow.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(getSettingsHTML()));
@@ -2602,6 +2656,10 @@ observer.observe(card);
 
 function openAppMenuWindow(rendererX, rendererY) {
   if (appMenuWindow && !appMenuWindow.isDestroyed()) {
+    // Cooldown SOFORT setzen, nicht erst im closed-Event. Das closed-Event
+    // feuert async; ohne sofortiges Setzen rast ein zweiter Hamburger-Klick
+    // durch den 250ms-IPC-Filter und spawned ein zweites Fenster.
+    appMenuJustClosedAt = Date.now();
     appMenuWindow.close();
     return;
   }
@@ -2618,7 +2676,9 @@ function openAppMenuWindow(rendererX, rendererY) {
   const screenX = cb.x + (Number.isFinite(rendererX) ? Math.round(rendererX) : 0);
   const screenY = cb.y + (Number.isFinite(rendererY) ? Math.round(rendererY) : TAB_BAR_HEIGHT);
 
-  appMenuWindow = new BrowserWindow({
+  // Wayland-Compositor ignoriert x/y -> auf parent+center:true ausweichen,
+  // mutter zentriert dann auf das Hauptfenster. Auf X11 weiter Pixel-genau.
+  const baseOpts = {
     width, height,
     x: screenX, y: screenY,
     frame: false, resizable: false, movable: false,
@@ -2630,7 +2690,8 @@ function openAppMenuWindow(rendererX, rendererY) {
       nodeIntegration: false, contextIsolation: true, sandbox: true,
       spellcheck: false
     }
-  });
+  };
+  appMenuWindow = new BrowserWindow(baseOpts);
   appMenuWindow.setMenu(null);
   appMenuWindow.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(getAppMenuHTML()));
   appMenuWindow.once('ready-to-show', () => {

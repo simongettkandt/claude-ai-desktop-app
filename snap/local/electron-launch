@@ -1,11 +1,10 @@
 #!/bin/bash
-if [ -n "$WAYLAND_DISPLAY" ]; then
-  exec env XDG_CURRENT_DESKTOP=Unity "$SNAP/app/claude-desktop" \
-    --no-sandbox --use-gl=angle --use-angle=gl \
-    --ozone-platform-hint=auto --enable-wayland-ime \
-    --enable-features=UseOzonePlatform "$@"
-else
-  exec env XDG_CURRENT_DESKTOP=Unity "$SNAP/app/claude-desktop" \
-    --no-sandbox --use-gl=angle --use-angle=gl \
-    --ozone-platform=x11 "$@"
-fi
+# Wayland und X11 laufen beide via XWayland (--ozone-platform=x11). Grund:
+# Electron-BrowserWindow x/y-Position ist unter nativem Wayland no-op
+# (Issue #40886, Electron-Maintainer-Statement Okt 2025), Pop-ups landen
+# verstreut. Unter XWayland funktionieren Position, globalShortcut und
+# alle bisherigen Code-Pfade wieder. Trade-Off: leicht unschaerfer bei
+# Fractional-Scaling. VS Code, Discord, Signal, Obsidian machen es genauso.
+exec env XDG_CURRENT_DESKTOP=Unity "$SNAP/app/claude-desktop" \
+  --no-sandbox --use-gl=angle --use-angle=gl \
+  --ozone-platform=x11 "$@"
