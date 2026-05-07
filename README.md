@@ -14,7 +14,7 @@ sudo snap install claude-ai-desktop
 
 [![claude-ai-desktop](https://snapcraft.io/claude-ai-desktop/badge.svg)](https://snapcraft.io/claude-ai-desktop)
 
-> **v1.3.8** – Snap mic live status, clearer Bug-Report (unofficial-app notice + Anthropic support link), more robust background notifications
+> **v1.3.9** – Wayland Compatibility: pop-up windows land where they belong again on Wayland sessions, plus singleton guards against duplicate Bug-Report and App-Menu windows
 
 ---
 
@@ -82,7 +82,7 @@ cat > ~/.local/share/applications/claude-desktop.desktop << EOF
 [Desktop Entry]
 Name=Claude Desktop
 Comment=Claude AI Desktop App
-Exec=/path/to/Claude-Desktop-1.3.7.AppImage --no-sandbox
+Exec=/path/to/Claude-Desktop-1.3.9.AppImage --no-sandbox
 Icon=/path/to/icon.png
 Type=Application
 Categories=Utility;
@@ -165,6 +165,23 @@ The `--no-sandbox` flag is required for Electron AppImages on Linux because the 
 ---
 
 ## Changelog
+
+### v1.3.9 – Wayland Compatibility (2026-05-07)
+
+- **Wayland: pop-up windows land where they belong again** – On Wayland sessions (GNOME, KDE Plasma) the App Menu, Settings, Bug Report, Quick-Prompt and What's-New windows previously appeared at random positions across the screen, because Wayland forbids client-side toplevel positioning (Electron Issue #40886, marked not-planned by maintainers in October 2025). The app now starts under XWayland on Wayland sessions via `--ozone-platform=x11`, the same approach VS Code, Discord, Signal and Obsidian use. Pixel-accurate placement and `globalShortcut.register` work again. Trade-off: minor HiDPI softness with fractional scaling.
+- **Bug Report window can no longer be opened multiple times** – Each click on the bug icon previously spawned a fresh window. A singleton guard now focuses the existing window instead.
+- **App Menu (hamburger) closes cleanly on rapid double-clicks** – The 250 ms cooldown that prevents a close+reopen race is now set the moment `close()` is called, not in the asynchronous `closed` event.
+- **Settings → Hotkeys: Wayland note** – When Wayland is detected, the settings window shows a hint explaining why a global shortcut may not register system-wide on GNOME/KDE; new `failed-wayland` status code distinguishes compositor refusal from a generic failure.
+- **`npm run dev` script** added that launches Electron with `--no-sandbox --ozone-platform=x11` for local development on Wayland hosts.
+
+### v1.3.8 – Snap Mic Live Status & Disclaimer (2026-05-07)
+
+- **Unofficial-app disclaimer in the Bug Report dialog** – A prominent amber-coloured note explains that this is an unofficial community wrapper (not an official Anthropic product) and links directly to https://support.anthropic.com for account, login, subscription, billing or payment questions. Localised in DE/EN/FR/ES/IT.
+- **Live Snap microphone status** in App Settings → Microphone: a coloured pill next to the toggle shows whether the `audio-record` plug is currently connected (green pulsing) or not (red), with 3-second polling while the settings window is open.
+- **Snap-aware microphone toggle** – Turning the toggle on while the Snap plug is not connected automatically reopens the consent wizard, so the user is never left in a state where the toggle is on but recording silently fails.
+- **Allow-button pulse on Snap status flip** – The consent dialog's Allow button briefly pulses and refocuses the moment `snapctl is-connected audio-record` flips to connected.
+- **Notification heuristic with fallback selector stack** – `inject/notify.js` now tries four strategies (aria-label → data-testid → SVG `data-icon` → text content) to detect the claude.ai stop-button, so Background-Tab notifications keep working when claude.ai changes its DOM.
+- **Unit tests** for the pure utility functions (`compareVersions`, `safeJson`, `isClaudeAiOrigin`, `validateAccelerator`) under `test/`, runnable via `npm test`.
 
 ### v1.3.7 – Auto-Update Self-Heal & Snap Cloudflare Fix (2026-05-06)
 
