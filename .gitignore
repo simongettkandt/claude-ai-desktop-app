@@ -14,3 +14,6 @@ ORCHESTRATOR_REPORT*.md
 # Live-Notifications: lokale Test-Datei, niemals committen.
 # Echte Notifications werden separat via GitHub-Web-UI direkt auf main hochgeladen.
 notifications.json
+
+# Persoenliche Snap-Release-Anleitung, bleibt lokal.
+SNAP-RELEASE.md
