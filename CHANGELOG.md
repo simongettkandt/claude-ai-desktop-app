@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.3.8] – 2026-05-07
+
+### Added
+- **Unofficial-app disclaimer in the Bug Report dialog**: a prominent amber-coloured note explains that this is an unofficial community wrapper (not an official Anthropic product) and links directly to https://support.anthropic.com for account, login, subscription, billing or payment questions. Localised in DE/EN/FR/ES/IT.
+- **Live Snap microphone status** in App Settings → Microphone: a coloured pill next to the toggle shows whether the `audio-record` plug is currently connected (green pulsing) or not (red), with 3-second polling while the settings window is open.
+- **Snap-aware microphone toggle**: turning the toggle on while the Snap plug is not connected automatically reopens the consent wizard, so the user is never left in a state where the toggle is on but recording silently fails.
+- **Allow-button pulse on Snap status flip**: the consent dialog's Allow button briefly pulses and refocuses the moment `snapctl is-connected audio-record` flips to connected, so the user sees that activating the permission worked without watching the status badge.
+- **Notification heuristic with fallback selector stack**: `inject/notify.js` now tries four strategies (aria-label → data-testid → SVG `data-icon` → text content) to detect the claude.ai stop-button. The first matching strategy logs once to the DevTools console so regressions become visible if claude.ai changes its DOM. Visibility check now also catches fixed-positioned buttons.
+- **Unit tests** for the pure utility functions (`compareVersions`, `safeJson`, `isClaudeAiOrigin`, `validateAccelerator`) under `test/`, runnable via `npm test` (uses `node:test`, no extra dev dependency).
+
+### Changed
+- **Refactor `STATE_SCHEMA`**: the 12 persisted window-state fields now have a single declaration that drives both `loadWindowState()` (on startup) and `buildState()` (on save). Previously the same set of fields was defined three times.
+- **Refactor `createDialogWindow(opts)` helper**: shared `BrowserWindow` setup for the message-box and microphone-consent dialogs (size, position, parent/modal, preload, theme background) is now in one place.
+- **Pure utilities extracted** to `utils/pure.js` so they can be unit-tested independently of Electron.
+
+---
+
 ## [1.3.7] – 2026-05-06
 
 ### Fixed

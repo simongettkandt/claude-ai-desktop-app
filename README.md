@@ -14,13 +14,13 @@ sudo snap install claude-ai-desktop
 
 [![claude-ai-desktop](https://snapcraft.io/claude-ai-desktop/badge.svg)](https://snapcraft.io/claude-ai-desktop)
 
-> **v1.3.7** – Auto-Update Self-Heal, Voice Input, Live Notifications
+> **v1.3.8** – Snap mic live status, clearer Bug-Report (unofficial-app notice + Anthropic support link), more robust background notifications
 
 ---
 
 ## Features
 
-- **Voice Input** – Microphone permission for claude.ai's voice features, scoped strictly to claude.ai (artifact iframes can't piggyback). Snap users get an in-app setup wizard that detects whether the `audio-record` plug is connected and links straight to the Snap Store permissions page
+- **Voice Input** – Microphone permission for claude.ai's voice features, scoped strictly to claude.ai (artifact iframes can't piggyback). Snap users get an in-app setup wizard that detects whether the `audio-record` plug is connected and links straight to the Snap Store permissions page. Since v1.3.8 the App Settings show a live colored status pill next to the toggle and the Allow button briefly pulses the moment the Snap permission is granted
 - **Live Notifications** – Tab-bar banner for service-side notices (info / warn / critical / success), fetched from the repo every 6h with version filters and per-ID dismiss state, so urgent hints land without a new release
 - **Custom App Menu (Hamburger)** – In-app menu with keyboard navigation, replaces the native menu bar; quick access to all actions including new tab, export, settings, updates and bug report
 - **Tab System** – Multiple chats side by side with a visual tab bar (Ctrl+T, Ctrl+W, Ctrl+Tab); direct buttons in the tab bar for Markdown export and bug report
@@ -30,7 +30,7 @@ sudo snap install claude-ai-desktop
 - **Prompt Templates** – Define named prefixes (e.g. "Translate to English:"), pick them with Tab in the Quick-Prompt window
 - **Clipboard Hotkey** – Separate global hotkey that opens a new chat with your clipboard text already inserted
 - **Background-Tab Response Notifications** – Optional native notification when Claude finishes a response in a tab you're not currently viewing
-- **In-App Bug Report** – Description, optional error codes, optional contact email; auto-includes app/OS info on opt-in. Localized in DE, EN, FR, ES, IT
+- **In-App Bug Report** – Description, optional error codes, optional contact email; auto-includes app/OS info on opt-in. Includes a clear notice that this is an unofficial community wrapper (not an official Anthropic product) with a direct link to https://support.anthropic.com for account/login/billing/payment questions. Localized in DE, EN, FR, ES, IT
 - **App Settings Window** – Configure hotkeys, minimize-to-tray, autostart, background notifications and templates from `Claude → App Settings…`
 - **Autostart** – Optional launch on system boot (Linux: writes a `.desktop` file to `~/.config/autostart/`; Snap: native autostart directive)
 - **Custom Design System** – Modern gradient theme or Classic mode toggle

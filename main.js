@@ -3,6 +3,7 @@ const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const fs = require('fs');
 const { version } = require('./package.json');
+const { compareVersions, safeJson, isClaudeAiOrigin, validateAccelerator } = require('./utils/pure');
 
 // ── Electron "Object has been destroyed" Error-Dialog abfangen ──
 const _origErrorBox = dialog.showErrorBox;
@@ -134,6 +135,10 @@ const bugReportStrings = {
   en: {
     title: 'Report a Bug',
     intro: 'Found a bug or have a suggestion? Send us a message — your feedback helps improve the app.',
+    disclaimerTitle: 'Unofficial community app',
+    disclaimerBody: 'This is an unofficial community wrapper for claude.ai, not an official Anthropic product. We can only help with issues specific to this Linux desktop wrapper. For account, login, subscription, billing or payment questions please contact Anthropic support directly:',
+    disclaimerLink: 'support.anthropic.com',
+    disclaimerLinkUrl: 'https://support.anthropic.com',
     descLabel: 'Description',
     descPlaceholder: 'What happened? What did you expect?',
     errorLabel: 'Error codes / messages (optional)',
@@ -158,6 +163,10 @@ const bugReportStrings = {
   de: {
     title: 'Fehler melden',
     intro: 'Einen Fehler gefunden oder einen Vorschlag? Schick uns eine Nachricht – dein Feedback hilft, die App zu verbessern.',
+    disclaimerTitle: 'Inoffizielle Community-App',
+    disclaimerBody: 'Das hier ist ein inoffizieller Community-Wrapper für claude.ai – kein offizielles Produkt von Anthropic. Wir können nur Probleme lösen, die diesen Linux-Desktop-Wrapper selbst betreffen. Bei Fragen zu Account, Login, Abo, Rechnung oder Bezahlung wende dich bitte direkt an den Anthropic-Support:',
+    disclaimerLink: 'support.anthropic.com',
+    disclaimerLinkUrl: 'https://support.anthropic.com',
     descLabel: 'Beschreibung',
     descPlaceholder: 'Was ist passiert? Was hast du erwartet?',
     errorLabel: 'Fehlercodes / Meldungen (optional)',
@@ -182,6 +191,10 @@ const bugReportStrings = {
   fr: {
     title: 'Signaler un bug',
     intro: 'Vous avez trouv\u00e9 un bug ou une suggestion ? Envoyez-nous un message \u2014 vos retours nous aident \u00e0 am\u00e9liorer l\u2019application.',
+    disclaimerTitle: 'Application communautaire non officielle',
+    disclaimerBody: 'Ceci est un wrapper communautaire non officiel pour claude.ai, pas un produit officiel d\u2019Anthropic. Nous pouvons aider uniquement pour les probl\u00e8mes sp\u00e9cifiques \u00e0 ce wrapper Linux. Pour toute question concernant le compte, la connexion, l\u2019abonnement, la facturation ou le paiement, veuillez contacter directement le support d\u2019Anthropic :',
+    disclaimerLink: 'support.anthropic.com',
+    disclaimerLinkUrl: 'https://support.anthropic.com',
     descLabel: 'Description',
     descPlaceholder: 'Que s\u2019est-il pass\u00e9 ? Qu\u2019attendiez-vous ?',
     errorLabel: 'Codes d\u2019erreur / messages (facultatif)',
@@ -206,6 +219,10 @@ const bugReportStrings = {
   es: {
     title: 'Reportar un error',
     intro: '\u00bfHas encontrado un error o tienes una sugerencia? Env\u00edanos un mensaje \u2014 tu feedback ayuda a mejorar la app.',
+    disclaimerTitle: 'Aplicaci\u00f3n comunitaria no oficial',
+    disclaimerBody: 'Esta es una aplicaci\u00f3n comunitaria no oficial para claude.ai, no un producto oficial de Anthropic. Solo podemos ayudar con problemas espec\u00edficos de este wrapper para Linux. Para cuestiones de cuenta, inicio de sesi\u00f3n, suscripci\u00f3n, facturaci\u00f3n o pagos, contacta directamente con el soporte de Anthropic:',
+    disclaimerLink: 'support.anthropic.com',
+    disclaimerLinkUrl: 'https://support.anthropic.com',
     descLabel: 'Descripci\u00f3n',
     descPlaceholder: '\u00bfQu\u00e9 pas\u00f3? \u00bfQu\u00e9 esperabas?',
     errorLabel: 'C\u00f3digos de error / mensajes (opcional)',
@@ -231,6 +248,10 @@ const bugReportStrings = {
   it: {
     title: 'Segnala un bug',
     intro: 'Hai trovato un bug o hai un suggerimento? Inviaci un messaggio \u2014 il tuo feedback aiuta a migliorare l\u2019app.',
+    disclaimerTitle: 'App di comunit\u00e0 non ufficiale',
+    disclaimerBody: 'Questa \u00e8 un\u2019app di comunit\u00e0 non ufficiale per claude.ai, non un prodotto ufficiale Anthropic. Possiamo aiutarti solo con problemi specifici di questo wrapper Linux. Per questioni di account, accesso, abbonamento, fatturazione o pagamenti, contatta direttamente il supporto Anthropic:',
+    disclaimerLink: 'support.anthropic.com',
+    disclaimerLinkUrl: 'https://support.anthropic.com',
     descLabel: 'Descrizione',
     descPlaceholder: 'Cosa \u00e8 successo? Cosa ti aspettavi?',
     errorLabel: 'Codici di errore / messaggi (facoltativo)',
@@ -296,6 +317,9 @@ let promptTemplates = [];      // [{ id, name, prefix }]
 let bgNotificationsEnabled = false;
 let microphoneEnabled = false;
 let microphoneConsentAsked = false;
+// Modul-weiter Mutex fuer den Mic-Consent-Dialog. Verhindert Double-Modals
+// (z.B. wenn Settings-Toggle und claude.ai-Mic-Click parallel triggern).
+let consentInflight = null;
 let lastActiveTabIndex = -1;   // für Background-Notifications
 let updateCheckInterval = null;
 let onlineCheckInterval = null;
@@ -303,6 +327,44 @@ let waitForFirstTabInterval = null;
 let notificationsFetchInterval = null;
 let activeNotifications = [];                    // gefilterte, aktuell sichtbare Notifications
 let dismissedNotificationIds = [];                // persistiert in windowState
+
+// Zentrales Schema fuer alle persistierten State-Felder. Eine Stelle definiert
+// Default-Verhalten + Validierung. loadWindowState() liest, buildState() schreibt.
+// Felder mit `optional: true` werden nur gesetzt wenn sie im JSON definiert sind
+// (behalten sonst den Modul-Default), die anderen werden immer auf den
+// validierten Wert gezwungen.
+const STATE_SCHEMA = [
+  { key: 'customDesign', optional: true, get: () => customDesign,
+    set: v => { customDesign = v === true; } },
+  { key: 'isDarkMode', optional: true, get: () => isDarkMode,
+    set: v => { isDarkMode = v === true; } },
+  { key: 'minimizeOnClose', get: () => minimizeOnClose,
+    set: v => { minimizeOnClose = v === true; } },
+  { key: 'hotkey', get: () => currentHotkey,
+    set: v => { currentHotkey = (typeof v === 'string' && v.length > 0) ? v : null; } },
+  { key: 'clipboardHotkey', get: () => currentClipboardHotkey,
+    set: v => { currentClipboardHotkey = (typeof v === 'string' && v.length > 0) ? v : null; } },
+  { key: 'promptTemplates', get: () => promptTemplates,
+    set: v => {
+      promptTemplates = Array.isArray(v)
+        ? v.filter(tpl => tpl && typeof tpl.name === 'string' && typeof tpl.prefix === 'string').slice(0, 50)
+        : [];
+    } },
+  { key: 'bgNotificationsEnabled', get: () => bgNotificationsEnabled,
+    set: v => { bgNotificationsEnabled = v === true; } },
+  { key: 'microphoneEnabled', get: () => microphoneEnabled,
+    set: v => { microphoneEnabled = v === true; } },
+  { key: 'microphoneConsentAsked', get: () => microphoneConsentAsked,
+    set: v => { microphoneConsentAsked = v === true; } },
+  { key: 'dismissedNotificationIds', get: () => dismissedNotificationIds.slice(0, 200),
+    set: v => {
+      dismissedNotificationIds = Array.isArray(v)
+        ? v.filter(id => typeof id === 'string').slice(0, 200)
+        : [];
+    } },
+  { key: 'lastSeenVersion', get: () => windowState.lastSeenVersion || null,
+    set: () => { /* eigene Logik in What's-New, hier nur passthrough */ } }
+];
 
 const RELEASE_NOTES = {
   '1.3.0': [
@@ -407,24 +469,30 @@ const RELEASE_NOTES = {
       title: 'Stabiler Start aus dem App-Men\u00fc',
       text: 'Beim Start aus dem System-App-Men\u00fc oder per Doppelklick aus dem Dateimanager kam es nach Updates teils zu Sandbox-Fehlern. Die App setzt das n\u00f6tige Flag jetzt selbst, der Start ist wieder stabil.'
     }
+  ],
+  '1.3.8': [
+    {
+      icon: 'check',
+      title: 'Snap: Mikrofon-Status live im Settings sichtbar',
+      text: 'In den App-Einstellungen unter \u201eMikrofon" zeigt eine kleine farbige Anzeige jetzt direkt, ob die Audio-Record-Berechtigung im Snap aktiv ist. Wenn du den Schalter aktivierst und die Berechtigung noch fehlt, ploppt der Hilfedialog automatisch auf.'
+    },
+    {
+      icon: 'bolt',
+      title: 'Hinweis-Dialog merkt, wenn du die Snap-Berechtigung aktivierst',
+      text: 'Sobald du im Snap-Store \u201eAudio Record" einschaltest oder den Befehl im Terminal ausf\u00fchrst, blinkt der Erlauben-Knopf im Mikrofon-Hinweis kurz auf \u2013 du musst nicht raten, ob alles geklappt hat.'
+    },
+    {
+      icon: 'settings',
+      title: 'Robustere Antwort-Erkennung',
+      text: 'Die Hintergrund-Benachrichtigung \u201eClaude ist fertig" pr\u00fcft jetzt mehrere Strategien parallel. Wenn claude.ai sein Layout \u00e4ndert, greift einer der Fallbacks und die Notifications bleiben am Laufen.'
+    },
+    {
+      icon: 'bug',
+      title: 'Klarer Hinweis im Bug-Report',
+      text: 'Im Fehler-melden-Fenster steht jetzt ein deutlicher Hinweis: das hier ist ein inoffizieller Community-Wrapper, kein offizieller Anthropic-Support. Bei Account-, Login-, Abo- oder Bezahl-Fragen f\u00fchrt ein Link direkt zu support.anthropic.com.'
+    }
   ]
 };
-
-function compareVersions(a, b) {
-  const parse = v => {
-    const [main, pre] = String(v).split('-');
-    return { nums: main.split('.').map(n => parseInt(n, 10) || 0), pre: pre || null };
-  };
-  const A = parse(a), B = parse(b);
-  for (let i = 0; i < 3; i++) {
-    const da = A.nums[i] || 0, db = B.nums[i] || 0;
-    if (da !== db) return da - db;
-  }
-  if (A.pre && !B.pre) return -1;
-  if (!A.pre && B.pre) return 1;
-  if (A.pre && B.pre) return A.pre.localeCompare(B.pre);
-  return 0;
-}
 
 function getFilteredNotes(currentVersion, lastSeenVersion) {
   const all = Object.keys(RELEASE_NOTES);
@@ -451,20 +519,10 @@ function loadWindowState() {
   try {
     if (fs.existsSync(stateFile)) windowState = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
   } catch {}
-  if (windowState.customDesign !== undefined) customDesign = windowState.customDesign;
-  if (windowState.isDarkMode !== undefined) isDarkMode = windowState.isDarkMode;
-  minimizeOnClose = windowState.minimizeOnClose === true;
-  currentHotkey = typeof windowState.hotkey === 'string' && windowState.hotkey.length > 0 ? windowState.hotkey : null;
-  currentClipboardHotkey = typeof windowState.clipboardHotkey === 'string' && windowState.clipboardHotkey.length > 0 ? windowState.clipboardHotkey : null;
-  promptTemplates = Array.isArray(windowState.promptTemplates) ? windowState.promptTemplates.filter(tpl =>
-    tpl && typeof tpl.name === 'string' && typeof tpl.prefix === 'string'
-  ).slice(0, 50) : [];
-  bgNotificationsEnabled = windowState.bgNotificationsEnabled === true;
-  microphoneEnabled = windowState.microphoneEnabled === true;
-  microphoneConsentAsked = windowState.microphoneConsentAsked === true;
-  dismissedNotificationIds = Array.isArray(windowState.dismissedNotificationIds)
-    ? windowState.dismissedNotificationIds.filter(id => typeof id === 'string').slice(0, 200)
-    : [];
+  for (const f of STATE_SCHEMA) {
+    if (f.optional && windowState[f.key] === undefined) continue;
+    f.set(windowState[f.key]);
+  }
 
   const result = {
     width: windowState.width || 1200, height: windowState.height || 800,
@@ -491,18 +549,8 @@ function loadWindowState() {
 }
 
 function buildState() {
-  const base = {
-    customDesign, isDarkMode,
-    minimizeOnClose,
-    hotkey: currentHotkey,
-    clipboardHotkey: currentClipboardHotkey,
-    promptTemplates,
-    bgNotificationsEnabled,
-    microphoneEnabled,
-    microphoneConsentAsked,
-    dismissedNotificationIds: dismissedNotificationIds.slice(0, 200),
-    lastSeenVersion: windowState.lastSeenVersion || null
-  };
+  const base = {};
+  for (const f of STATE_SCHEMA) base[f.key] = f.get();
   if (mainWindow && !mainWindow.isDestroyed()) {
     try {
       const bounds = mainWindow.getBounds();
@@ -1148,7 +1196,7 @@ function toggleDesign() {
 // ═══════════════════════════════════════════════════════════════════
 
 const BUG_EMAIL = 'claudeai.desktop.linux@gmail.com';
-const WEB3FORMS_ACCESS_KEY = '269ca388-8c7d-41e9-9063-2b6429a81b6b';
+const WEB3FORMS_ACCESS_KEY = 'f72095f3-b338-4fa5-8462-5ddee347eb32';
 const WEB3FORMS_ENDPOINT = 'https://api.web3forms.com/submit';
 
 function getAppMode() {
@@ -1179,7 +1227,7 @@ function showBugReportDialog() {
     mode: getAppMode()
   };
 
-  const brSize = { width: 500, height: 660 };
+  const brSize = { width: 500, height: 760 };
   const brPos = centerOnMainWindow(brSize.width, brSize.height);
   const win = new BrowserWindow({
     ...brSize, ...brPos, resizable: false,
@@ -1195,12 +1243,14 @@ function showBugReportDialog() {
 
   const cfg = JSON.stringify({
     bugEmail: BUG_EMAIL,
+    web3formsKey: WEB3FORMS_ACCESS_KEY,
+    web3formsEndpoint: WEB3FORMS_ENDPOINT,
     meta,
     strings: s
   });
 
   const html = `<!DOCTYPE html><html><head>
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src https://api.web3forms.com;">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:${bg};color:${fg};font-family:system-ui,-apple-system,sans-serif;font-size:14px;
@@ -1232,6 +1282,15 @@ button.primary:disabled{background:${btnDisabled};cursor:not-allowed}
 button.secondary{background:transparent;color:${sub};border:1px solid ${inputBorder}}
 button.secondary:hover{background:${inputBg};color:${fg}}
 .honeypot{position:absolute;left:-9999px;width:1px;height:1px;opacity:0}
+.disclaimer{display:flex;gap:10px;align-items:flex-start;padding:11px 13px;margin:-2px 0 16px;
+  background:${dark ? 'rgba(224,169,62,0.10)' : 'rgba(224,150,40,0.12)'};
+  border:1px solid ${dark ? 'rgba(224,169,62,0.35)' : 'rgba(224,150,40,0.45)'};
+  border-radius:8px;font-size:12.5px;line-height:1.5}
+.disclaimer .ico{flex:0 0 auto;color:${dark ? '#e0a93e' : '#c97e1c'};line-height:0;margin-top:1px}
+.disclaimer .txt{flex:1;color:${fg}}
+.disclaimer .ttl{font-weight:600;display:block;margin-bottom:3px;color:${dark ? '#e0a93e' : '#a86412'}}
+.disclaimer a{color:${inputFocus};text-decoration:underline;cursor:pointer;font-weight:500}
+.disclaimer a:hover{filter:brightness(1.15)}
 .status{display:none;flex-direction:column;align-items:center;justify-content:center;
   height:100%;text-align:center;padding:20px}
 .status.visible{display:flex}
@@ -1247,6 +1306,11 @@ button.secondary:hover{background:${inputBg};color:${fg}}
 <div id="form-view">
   <h2>${s.title}</h2>
   <p class="intro">${s.intro}</p>
+
+  <div class="disclaimer" role="note">
+    <span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span>
+    <span class="txt"><span class="ttl">${s.disclaimerTitle}</span>${s.disclaimerBody} <a id="anthropic-link" href="#" tabindex="0">${s.disclaimerLink}</a></span>
+  </div>
 
   <form id="bugform" novalidate>
     <div class="field">
@@ -1325,6 +1389,18 @@ button.secondary:hover{background:${inputBg};color:${fg}}
 
   cancelBtn.addEventListener('click', () => window.close());
 
+  const anthropicLink = document.getElementById('anthropic-link');
+  if (anthropicLink) {
+    const openLink = (e) => {
+      if (e) { e.preventDefault(); }
+      try { window.bugAPI.openSupport(); } catch {}
+    };
+    anthropicLink.addEventListener('click', openLink);
+    anthropicLink.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') openLink(e);
+    });
+  }
+
   function showView(which) {
     formView.style.display = which === 'form' ? '' : 'none';
     successView.classList.toggle('visible', which === 'success');
@@ -1359,17 +1435,25 @@ button.secondary:hover{background:${inputBg};color:${fg}}
     bodyMessage += (userEmail ? '\\n\\nUser-Email: ' + userEmail : '\\n\\nUser-Email: (not provided)');
 
     const payload = {
+      access_key: cfg.web3formsKey,
       subject: 'Claude Desktop Bug Report v' + meta.version,
-      message: bodyMessage
+      from_name: 'Claude Desktop App',
+      message: bodyMessage,
+      botcheck: ''
     };
     if (userEmail) payload.email = userEmail;
 
     try {
-      const result = await window.bugAPI.submit(payload);
-      if (result && result.success) {
+      const res = await fetch(cfg.web3formsEndpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success) {
         showView('success');
       } else {
-        throw new Error((result && result.message) || 'Submit failed');
+        throw new Error(data.message || ('HTTP ' + res.status));
       }
     } catch (err) {
       console.error('Bug-report submit failed:', err);
@@ -1611,6 +1695,33 @@ function centerOnMainWindow(width, height) {
   }
 }
 
+// Gemeinsamer BrowserWindow-Setup fuer Modal-Dialoge (showCustomMessageBox,
+// requestMicrophoneConsent). Zentriert auf das Main-Window, parent+modal wenn
+// mainWindow sichtbar ist, preload-messagebox.js + sandbox an.
+function createDialogWindow(opts) {
+  const width = opts.width;
+  const height = opts.height;
+  const pos = centerOnMainWindow(width, height);
+  const parentWin = (mainWindow && !mainWindow.isDestroyed() && mainWindow.isVisible()) ? mainWindow : undefined;
+  const win = new BrowserWindow({
+    width, height, ...pos,
+    parent: parentWin,
+    modal: !!parentWin,
+    resizable: false, minimizable: false, maximizable: false,
+    title: opts.title || '',
+    backgroundColor: theme().bg,
+    icon: icon(),
+    autoHideMenuBar: true,
+    webPreferences: {
+      preload: path.join(__dirname, opts.preload || 'preload-messagebox.js'),
+      nodeIntegration: false, contextIsolation: true, sandbox: true,
+      spellcheck: false
+    }
+  });
+  win.setMenu(null);
+  return win;
+}
+
 function setupTray() {
   if (tray) return;
   try {
@@ -1838,6 +1949,10 @@ function getSettingsHTML() {
     micResetLabel: t('Erneut fragen beim n\u00e4chsten Mikrofon-Klick', 'Ask again on next microphone click'),
     micResetDone: t('Erledigt \u2013 Dialog erscheint beim n\u00e4chsten Mikrofon-Klick wieder.', 'Done \u2013 dialog will appear again on next microphone click.'),
     micResetHint: t('Verwirft die letzte Auswahl, sodass der Hinweis-Dialog beim n\u00e4chsten Mikrofon-Zugriff wieder erscheint.', 'Discards the last choice so the consent dialog appears again on the next microphone request.'),
+    micSnapStatusConnected: t('Snap: Audio-Record verbunden', 'Snap: audio-record connected'),
+    micSnapStatusDisconnected: t('Snap: Audio-Record nicht verbunden', 'Snap: audio-record not connected'),
+    micSnapStatusUnknown: t('Snap-Status wird gepr\u00fcft\u2026', 'Checking snap status\u2026'),
+    micToggleNeedsConsent: t('Bitte zuerst die Snap-Berechtigung freigeben.', 'Please enable the Snap permission first.'),
     hotkeyQp: t('Neuer Chat (Quick-Prompt)', 'New chat (Quick-Prompt)'),
     hotkeyClip: t('Zwischenablage als Prompt einf\u00fcgen', 'Send clipboard text as new prompt'),
     press: t('Klick hier und dr\u00fccke eine Tastenkombination', 'Click here and press a key combination'),
@@ -1905,6 +2020,13 @@ button:disabled{opacity:.5;cursor:not-allowed}
 .snap-cmd-text{flex:1;background:${th.bgHover};border:1px solid ${th.border};border-radius:6px;padding:6px 9px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px;color:${th.textActive};user-select:text;-webkit-user-select:text;overflow-x:auto;white-space:nowrap}
 .snap-cmd-copy-btn{padding:6px 10px!important;font-size:11.5px}
 .hint-block{margin-left:0;margin-top:6px}
+.snap-status-pill{display:inline-flex;align-items:center;gap:6px;margin:6px 0 0 24px;padding:3px 10px;border-radius:999px;font-size:11.5px;border:1px solid ${th.border};background:${th.bgHover};color:${th.text}}
+.snap-status-pill .dot{width:8px;height:8px;border-radius:50%;background:#9a9a96}
+.snap-status-pill[data-status="connected"]{background:rgba(46,160,67,.15);border-color:rgba(46,160,67,.4);color:#3aaf52}
+.snap-status-pill[data-status="connected"] .dot{background:#3aaf52;box-shadow:0 0 0 0 rgba(58,175,82,.6);animation:dotpulse 2.4s infinite}
+.snap-status-pill[data-status="disconnected"]{background:rgba(224,94,62,.15);border-color:rgba(224,94,62,.4);color:#e05e3e}
+.snap-status-pill[data-status="disconnected"] .dot{background:#e05e3e}
+@keyframes dotpulse{0%{box-shadow:0 0 0 0 rgba(58,175,82,.6)}70%{box-shadow:0 0 0 6px rgba(58,175,82,0)}100%{box-shadow:0 0 0 0 rgba(58,175,82,0)}}
 </style></head><body>
 <div class="head">
   <h1>${i18n.title}</h1>
@@ -1934,6 +2056,9 @@ button:disabled{opacity:.5;cursor:not-allowed}
     <h2>${i18n.secMicrophone}</h2>
     <div class="row">
       <label class="chk"><input type="checkbox" id="mic"><span>${i18n.micLabel}</span></label>
+      <div class="snap-status-pill" id="mic-snap-status" style="display:none" data-status="unknown">
+        <span class="dot"></span><span class="text">${i18n.micSnapStatusUnknown}</span>
+      </div>
       <div class="hint">${i18n.micHint}</div>
       <div class="hint" id="mic-snap-hint" style="display:none">${i18n.micSnapHint}</div>
       <div id="mic-snap-actions" class="snap-actions" style="display:none">
@@ -1994,9 +2119,13 @@ const mic = document.getElementById('mic');
 const micReset = document.getElementById('mic-reset');
 const micSnapHint = document.getElementById('mic-snap-hint');
 const micSnapActions = document.getElementById('mic-snap-actions');
+const micSnapStatusPill = document.getElementById('mic-snap-status');
+const micSnapStatusText = micSnapStatusPill ? micSnapStatusPill.querySelector('.text') : null;
 const micSnapOpen = document.getElementById('mic-snap-open');
 const micSnapCopy = document.getElementById('mic-snap-copy');
 let micSnapCopyTimer = null;
+let micSnapPollHandle = null;
+let isSnapInstall = false;
 const closeBtn = document.getElementById('close');
 const statusBg = document.getElementById('status-bg');
 const statusHk = document.getElementById('status-hk');
@@ -2086,7 +2215,45 @@ as.addEventListener('change', async () => {
   } finally { as.disabled = false; }
 });
 bn.addEventListener('change', () => api.setBgNotifications(bn.checked));
-mic.addEventListener('change', () => api.setMicrophone(mic.checked));
+mic.addEventListener('change', async () => {
+  const want = mic.checked;
+  if (!isSnapInstall) {
+    api.setMicrophone(want);
+    return;
+  }
+  // Snap: Plug-Status pruefen + ggf. Consent-Dialog
+  mic.disabled = true;
+  try {
+    const res = await api.setMicrophoneWithConsent(want);
+    mic.checked = !!res.applied;
+    updateSnapStatus(res.status);
+    if (want && !res.applied && res.status === 'disconnected') {
+      statusMic.textContent = I.micToggleNeedsConsent;
+      if (statusMicTimer) clearTimeout(statusMicTimer);
+      statusMicTimer = setTimeout(() => { statusMic.textContent = ''; }, 4000);
+    }
+  } catch {
+    mic.checked = !want;
+  } finally {
+    mic.disabled = false;
+  }
+});
+
+function updateSnapStatus(status) {
+  if (!micSnapStatusPill || !micSnapStatusText) return;
+  micSnapStatusPill.dataset.status = status;
+  if (status === 'connected') micSnapStatusText.textContent = I.micSnapStatusConnected;
+  else if (status === 'disconnected') micSnapStatusText.textContent = I.micSnapStatusDisconnected;
+  else micSnapStatusText.textContent = I.micSnapStatusUnknown;
+}
+
+async function refreshSnapStatus() {
+  if (!isSnapInstall) return;
+  try {
+    const status = await api.getSnapMicStatus();
+    updateSnapStatus(status);
+  } catch {}
+}
 micReset.addEventListener('click', () => {
   api.resetMicrophoneConsent();
   mic.checked = false;
@@ -2107,9 +2274,16 @@ api.get().then(s => {
   as.checked = !!s.autostart;
   bn.checked = !!s.bgNotifications;
   mic.checked = !!s.microphoneEnabled;
+  isSnapInstall = !!s.isSnap;
   if (s.isSnap) {
     micSnapHint.style.display = '';
     micSnapActions.style.display = '';
+    if (micSnapStatusPill) micSnapStatusPill.style.display = '';
+    refreshSnapStatus();
+    micSnapPollHandle = setInterval(refreshSnapStatus, 3000);
+    window.addEventListener('beforeunload', () => {
+      if (micSnapPollHandle) { clearInterval(micSnapPollHandle); micSnapPollHandle = null; }
+    });
   }
   if (s.hotkey) { display.qp = s.hotkey; captures.qp.textContent = s.hotkey; }
   if (s.clipboardHotkey) { display.clip = s.clipboardHotkey; captures.clip.textContent = s.clipboardHotkey; }
@@ -2503,26 +2677,11 @@ function showCustomMessageBox(opts) {
       resolve({ response: typeof index === 'number' ? index : cancelId });
     };
 
-    const size = { width: 480, height: detail ? 260 : 200 };
-    const pos = centerOnMainWindow(size.width, size.height);
-    const parentWin = (mainWindow && !mainWindow.isDestroyed() && mainWindow.isVisible()) ? mainWindow : undefined;
-
-    const win = new BrowserWindow({
-      ...size, ...pos,
-      parent: parentWin,
-      modal: !!parentWin,
-      resizable: false, minimizable: false, maximizable: false,
-      title,
-      backgroundColor: theme().bg,
-      icon: icon(),
-      autoHideMenuBar: true,
-      webPreferences: {
-        preload: path.join(__dirname, 'preload-messagebox.js'),
-        nodeIntegration: false, contextIsolation: true, sandbox: true,
-        spellcheck: false
-      }
+    const win = createDialogWindow({
+      width: 480,
+      height: detail ? 260 : 200,
+      title
     });
-    win.setMenu(null);
 
     ipcHandler = (_, index) => {
       finish(index);
@@ -2972,20 +3131,6 @@ function checkSnapAudioRecordStatus(cb) {
 
 // Defensives JSON-Embedding für Inline-<script>-Blöcke: </script>-Sequenzen
 // in JSON-Strings escapen, damit der HTML-Parser sie nicht als Tag-Ende erkennt.
-function safeJson(v) {
-  return JSON.stringify(v).replace(/<\/(script)/gi, '<\\/$1');
-}
-
-// Strikte claude.ai-Origin-Validierung — claudeusercontent.com (Artifact-iframes)
-// soll für Mikrofon-Zugriff explizit AUSGESCHLOSSEN bleiben.
-function isClaudeAiOrigin(url) {
-  try {
-    const u = new URL(url);
-    if (u.protocol !== 'https:') return false;
-    return u.hostname === 'claude.ai' || u.hostname.endsWith('.claude.ai');
-  } catch { return false; }
-}
-
 // Gemeinsames CSS für Dialog-Fenster (showCustomMessageBox + requestMicrophoneConsent).
 function sharedDialogCSS() {
   const th = theme();
@@ -3001,6 +3146,15 @@ function sharedDialogCSS() {
     .btn:focus{outline:2px solid ${ac.from};outline-offset:2px}
     .btn:disabled{opacity:.5;cursor:not-allowed}
   `;
+}
+
+// Hol-oder-starte den Consent-Dialog. Mehrere parallele Aufrufer (Settings-Toggle
+// + claude.ai-Mic-Click) bekommen denselben Promise; nur EIN Modal-Fenster oeffnet sich.
+function getOrStartMicConsent() {
+  if (consentInflight) return consentInflight;
+  consentInflight = requestMicrophoneConsent()
+    .finally(() => { consentInflight = null; });
+  return consentInflight;
 }
 
 // Liefert 'granted' | 'denied' | 'dismissed'.
@@ -3032,26 +3186,11 @@ async function requestMicrophoneConsent() {
       resolve(reason);
     };
 
-    const size = { width: 520, height: showSnapPanel ? 480 : 240 };
-    const pos = centerOnMainWindow(size.width, size.height);
-    const parentWin = (mainWindow && !mainWindow.isDestroyed() && mainWindow.isVisible()) ? mainWindow : undefined;
-
-    const win = new BrowserWindow({
-      ...size, ...pos,
-      parent: parentWin,
-      modal: !!parentWin,
-      resizable: false, minimizable: false, maximizable: false,
-      title: t('Mikrofon-Zugriff', 'Microphone access'),
-      backgroundColor: theme().bg,
-      icon: icon(),
-      autoHideMenuBar: true,
-      webPreferences: {
-        preload: path.join(__dirname, 'preload-messagebox.js'),
-        nodeIntegration: false, contextIsolation: true, sandbox: true,
-        spellcheck: false
-      }
+    const win = createDialogWindow({
+      width: 520,
+      height: showSnapPanel ? 480 : 240,
+      title: t('Mikrofon-Zugriff', 'Microphone access')
     });
-    win.setMenu(null);
 
     respondHandler = (_, idx) => {
       finish(idx === 0 ? 'granted' : 'denied');
@@ -3167,6 +3306,8 @@ body{font-size:13.5px;display:flex;flex-direction:column}
 .snap[data-status="unknown"] ~ .allow-blocker{display:block}
 .buttons{padding:14px 22px;border-top:1px solid ${th.border};display:flex;gap:8px;justify-content:flex-end}
 .btn{min-width:90px}
+.btn.pulse{animation:btnpulse 1.6s ease-in-out 3;outline:0}
+@keyframes btnpulse{0%{box-shadow:0 0 0 0 rgba(232,82,79,.55)}50%{box-shadow:0 0 0 10px rgba(232,82,79,0)}100%{box-shadow:0 0 0 0 rgba(232,82,79,0)}}
 </style></head><body>
 <div class="container">
   <div class="head">
@@ -3214,12 +3355,21 @@ body{font-size:13.5px;display:flex;flex-direction:column}
   if (snapPanel) {
     const statusText = document.getElementById('snap-status-text');
     const labels = ${safeJson({ connected: i18n.snapConnected, disconnected: i18n.snapDisconnected, unknown: i18n.snapUnknown })};
+    let lastStatus = snapPanel.dataset.status || 'unknown';
+    let pulseTimer = null;
     const apply = (s) => {
       snapPanel.dataset.status = s;
       statusText.textContent = labels[s] || labels.unknown;
       setAllowEnabled(s === 'connected');
+      if (s === 'connected' && lastStatus !== 'connected') {
+        allowBtn.classList.add('pulse');
+        try { allowBtn.focus(); } catch {}
+        clearTimeout(pulseTimer);
+        pulseTimer = setTimeout(() => allowBtn.classList.remove('pulse'), 5000);
+      }
+      lastStatus = s;
     };
-    apply(snapPanel.dataset.status || 'unknown');
+    apply(lastStatus);
     document.getElementById('open-snap').addEventListener('click', () => {
       try { window.msgboxAPI.openSnapPermissions(snapOpenChannel); } catch {}
     });
@@ -3379,7 +3529,6 @@ function setupSession() {
   const ses = session.fromPartition('persist:claude');
   const allowed = new Set(['clipboard-read', 'clipboard-sanitized-write', 'notifications', 'fullscreen']);
 
-  let consentInflight = null;
   ses.setPermissionRequestHandler((_, perm, cb, details) => {
     if (perm === 'media') {
       // Mikrofon nur für claude.ai zulassen — claudeusercontent.com (Artifact-iframes)
@@ -3389,16 +3538,14 @@ function setupSession() {
       if (!wantsAudio) return cb(false);
       if (microphoneEnabled) return cb(true);
       if (microphoneConsentAsked) return cb(false);
-      if (consentInflight) { consentInflight.then(v => cb(v)); return; }
-      consentInflight = requestMicrophoneConsent().then(reason => {
+      getOrStartMicConsent().then(reason => {
         if (reason !== 'dismissed') {
           microphoneConsentAsked = true;
           microphoneEnabled = reason === 'granted';
           saveWindowState();
         }
-        return reason === 'granted';
-      }).catch(() => false).finally(() => { consentInflight = null; });
-      consentInflight.then(v => cb(v));
+        cb(reason === 'granted');
+      }).catch(() => cb(false));
       return;
     }
     cb(allowed.has(perm));
@@ -3555,12 +3702,6 @@ ipcMain.on('settings-minimize', (_, v) => {
   saveWindowState();
 });
 ipcMain.handle('settings-autostart', (_, v) => setAutostart(v === true));
-const HOTKEY_RE = /^(?:(?:Command|Cmd|Control|Ctrl|CommandOrControl|CmdOrCtrl|Alt|Option|AltGr|Shift|Super|Meta)\+)*[A-Za-z0-9]+$|^(?:(?:Command|Cmd|Control|Ctrl|CommandOrControl|CmdOrCtrl|Alt|Option|AltGr|Shift|Super|Meta)\+)*(?:F1[0-9]?|F20|F[1-9]|Plus|Space|Tab|Backspace|Delete|Insert|Return|Enter|Up|Down|Left|Right|Home|End|PageUp|PageDown|Escape|Esc|VolumeUp|VolumeDown|VolumeMute|MediaPlayPause|PrintScreen|numdec|numadd|numsub|nummult|numdiv|num[0-9])$/;
-
-function validateAccelerator(accel) {
-  if (typeof accel !== 'string' || accel.length === 0 || accel.length >= 64) return null;
-  return HOTKEY_RE.test(accel) ? accel : null;
-}
 
 ipcMain.handle('settings-hotkey', (_, accel) => {
   const value = validateAccelerator(accel);
@@ -3583,6 +3724,47 @@ ipcMain.on('settings-microphone', (_, v) => {
   microphoneEnabled = v === true;
   microphoneConsentAsked = true;
   saveWindowState();
+});
+
+// Snap-aware Mic-Toggle: bei ON auf Snap mit disconnected Plug zeigt
+// requestMicrophoneConsent() den Wizard. Bei !isSnap oder bereits connected
+// verhaelt es sich wie der direkte Toggle.
+ipcMain.handle('settings-microphone-with-consent', async (_, v) => {
+  const want = v === true;
+  if (!want) {
+    microphoneEnabled = false;
+    microphoneConsentAsked = true;
+    saveWindowState();
+    return { applied: false, status: 'connected' };
+  }
+  if (!isSnap) {
+    microphoneEnabled = true;
+    microphoneConsentAsked = true;
+    saveWindowState();
+    return { applied: true, status: 'connected' };
+  }
+  // Snap: Plug-Status pruefen
+  const status = await new Promise(resolve => checkSnapAudioRecordStatus(resolve));
+  if (status === 'connected') {
+    microphoneEnabled = true;
+    microphoneConsentAsked = true;
+    saveWindowState();
+    return { applied: true, status };
+  }
+  // Plug nicht verbunden -> Consent-Dialog mit Snap-Wizard.
+  // Geht ueber den Modul-weiten Mutex, damit ein paralleler claude.ai-Mic-Trigger
+  // nicht ein zweites Modal aufmacht.
+  const reason = await getOrStartMicConsent();
+  if (reason !== 'dismissed') microphoneConsentAsked = true;
+  microphoneEnabled = reason === 'granted';
+  saveWindowState();
+  const newStatus = await new Promise(resolve => checkSnapAudioRecordStatus(resolve));
+  return { applied: microphoneEnabled, status: newStatus };
+});
+
+ipcMain.handle('settings-mic-snap-status', () => {
+  if (!isSnap) return Promise.resolve('connected');
+  return new Promise(resolve => checkSnapAudioRecordStatus(resolve));
 });
 
 ipcMain.on('settings-microphone-reset', () => {
@@ -3824,32 +4006,32 @@ app.on('web-contents-created', (_, wc) => {
   wc.on('will-attach-webview', (event) => event.preventDefault());
 });
 
-ipcMain.handle('bug-report-submit', async (event, payload) => {
-  if (!payload || typeof payload !== 'object') return { success: false, message: 'Invalid payload' };
-  const body = {
-    access_key: WEB3FORMS_ACCESS_KEY,
-    subject: String(payload.subject || '').slice(0, 300),
-    from_name: 'Claude Desktop App',
-    message: String(payload.message || '').slice(0, 5000),
-    botcheck: ''
-  };
-  if (payload.email) body.email = String(payload.email).slice(0, 200);
-  try {
-    const res = await fetch(WEB3FORMS_ENDPOINT, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify(body)
-    });
-    const data = await res.json().catch(() => ({}));
-    return { success: res.ok && !!data.success, message: data.message || ('HTTP ' + res.status) };
-  } catch (err) {
-    return { success: false, message: err.message };
-  }
+ipcMain.on('bug-report-open-support', () => {
+  try { shell.openExternal('https://support.anthropic.com'); } catch {}
 });
+
+// Web3Forms erkennt Origin: null (unser data:-URL-Renderer) als "server-side"
+// und antwortet mit 403/Pro-required. Mit einem echten Origin-Header laeuft der
+// Submit als regulaerer Client-Call durch. localhost ist im Web3Forms-Dashboard
+// als erlaubte Domain registriert.
+function setupWeb3FormsHeaderRewrite() {
+  try {
+    session.defaultSession.webRequest.onBeforeSendHeaders(
+      { urls: ['https://api.web3forms.com/*'] },
+      (details, callback) => {
+        const headers = { ...details.requestHeaders };
+        headers['Origin'] = 'https://localhost';
+        headers['Referer'] = 'https://localhost/';
+        callback({ requestHeaders: headers });
+      }
+    );
+  } catch (_) {}
+}
 
 app.whenReady().then(() => {
   selfHealDesktopFiles();
   setupSession();
+  setupWeb3FormsHeaderRewrite();
   createWindow();
   updateMenu(true);
   setupDownloadManager();

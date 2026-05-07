@@ -1,0 +1,18 @@
+name = "claude-desktop-bugreport"
+main = "src/worker.js"
+compatibility_date = "2025-01-01"
+
+# Optionaler KV-Namespace fuer IP-basierten Rate-Limit.
+# Setup: `npx wrangler kv namespace create RATE_LIMIT`
+# danach die zurueckgegebene id hier eintragen und Block einkommentieren:
+#
+# [[kv_namespaces]]
+# binding = "RATE_LIMIT"
+# id = "<die-id-aus-dem-create-output>"
+
+# Secrets werden via CLI gesetzt, NICHT hier:
+#   npx wrangler secret put WEB3FORMS_KEY       (zwingend)
+#   npx wrangler secret put APP_SHARED_SECRET   (optional, schwacher App-Check)
+
+[observability]
+enabled = true

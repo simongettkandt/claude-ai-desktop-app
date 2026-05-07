@@ -3,40 +3,79 @@
   window._cdNotify = true;
   if (window._cdNotifyInterval) { clearInterval(window._cdNotifyInterval); window._cdNotifyInterval = null; }
 
-  // Heuristik: claude.ai zeigt während Generation einen Stop-Button und tauscht ihn
-  // gegen einen Send-Button, sobald Claude fertig ist. Wir beobachten Buttons im
-  // Composer-Bereich und feuern ein Event, wenn der Stop-Button verschwindet
-  // (Wechsel von "generierend" → "fertig"). Zusätzlich ein Cooldown von 2s.
+  // Heuristik: claude.ai zeigt waehrend Generation einen Stop-Button und tauscht ihn
+  // gegen einen Send-Button, sobald Claude fertig ist. Wir beobachten den Stop-Button
+  // im Composer und feuern ein Event, wenn er verschwindet.
+  //
+  // Mehrere Selektor-Strategien als Fallback-Stack: wenn claude.ai eine Strategie
+  // bricht, greifen die anderen. Bei Erst-Match jeder Strategie loggen wir einmal,
+  // damit man bei Regressionen in DevTools sieht welche noch greift.
 
-  var STOP_RE = /stop|abbrechen|abbreche|abbruch/i;
+  var STOP_RE = /stop|abbrechen|abbreche|abbruch|halt/i;
   var lastFire = 0;
   var COOLDOWN = 2000;
   var wasGenerating = false;
+  var strategiesUsed = {};
+
+  function logStrategy(id, name) {
+    if (strategiesUsed[id]) return;
+    strategiesUsed[id] = true;
+    try { console.info('[claudeDesktop.notify] stop-button via strategy', id, name); } catch (e) {}
+  }
+
+  function isVisible(el) {
+    if (!el) return false;
+    if (el.offsetParent !== null) return true;
+    try {
+      var st = getComputedStyle(el);
+      if (st.position === 'fixed' && st.display !== 'none' && st.visibility !== 'hidden') return true;
+    } catch (e) {}
+    return false;
+  }
 
   function findStopButton() {
-    // Bevorzugt: aria-label oder data-testid mit "stop"
-    var byAria = document.querySelector('button[aria-label*="stop" i], button[aria-label*="abbrechen" i]');
-    if (byAria) return byAria;
+    // 1. aria-label (DE+EN)
+    var byAria = document.querySelector('button[aria-label*="stop" i], button[aria-label*="abbrechen" i], button[aria-label*="halt" i]');
+    if (byAria && isVisible(byAria)) { logStrategy(1, 'aria-label'); return byAria; }
+    // 2. data-testid
     var byTest = document.querySelector('button[data-testid*="stop" i]');
-    if (byTest) return byTest;
-    // Fallback: alle Buttons mit STOP-Wort prüfen
+    if (byTest && isVisible(byTest)) { logStrategy(2, 'data-testid'); return byTest; }
+    // 3. SVG-Icon mit data-icon oder ueber svg-rect (Stop-Symbol = Quadrat)
+    var byDataIcon = document.querySelector('button [data-icon="stop" i], button [data-icon="square" i]');
+    if (byDataIcon) {
+      var btn = byDataIcon.closest('button');
+      if (btn && isVisible(btn)) { logStrategy(3, 'data-icon'); return btn; }
+    }
+    // 4. Textinhalt-Fallback
     var btns = document.querySelectorAll('button');
     for (var i = 0; i < btns.length; i++) {
       var b = btns[i];
       var l = (b.getAttribute('aria-label') || b.textContent || '').trim();
-      if (l && STOP_RE.test(l) && b.offsetParent !== null) return b;
+      if (l && STOP_RE.test(l) && isVisible(b)) {
+        logStrategy(4, 'text-content');
+        return b;
+      }
     }
     return null;
   }
 
   function getLastAssistantPreview() {
     try {
-      var msgs = document.querySelectorAll('[data-testid="assistant-message"], div.font-claude-message');
-      var last = msgs[msgs.length - 1];
-      if (!last) return '';
-      var text = (last.innerText || '').replace(/\s+/g, ' ').trim();
-      return text.slice(0, 200);
-    } catch (e) { return ''; }
+      var selectors = [
+        '[data-testid="assistant-message"]',
+        'div.font-claude-message',
+        '[class*="assistant"][class*="message"]'
+      ];
+      for (var s = 0; s < selectors.length; s++) {
+        var msgs = document.querySelectorAll(selectors[s]);
+        if (msgs.length === 0) continue;
+        var last = msgs[msgs.length - 1];
+        if (!last) continue;
+        var text = (last.innerText || '').replace(/\s+/g, ' ').trim();
+        if (text) return text.slice(0, 200);
+      }
+    } catch (e) {}
+    return '';
   }
 
   function tick() {
@@ -56,7 +95,7 @@
     wasGenerating = generating;
   }
 
-  // Polling reicht aus — DOM-Mutationen sind häufig, aber wir wollen nur den
-  // Übergang erkennen. 700ms ist ein Kompromiss aus Latenz und CPU.
+  // Polling reicht aus — DOM-Mutationen sind haeufig, aber wir wollen nur den
+  // Uebergang erkennen. 700ms ist ein Kompromiss aus Latenz und CPU.
   window._cdNotifyInterval = setInterval(tick, 700);
 })();
