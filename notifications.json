@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "notifications": [
+    {
+      "id": "update-1310-snap-2026-05",
+      "if": "snap",
+      "severity": "warn",
+      "title": "Update available: Claude Desktop v1.3.10",
+      "body": "Fixes MCP connectors (Visualize) and the Cloudflare verification loop. Snap auto-updates within a day, or refresh manually.",
+      "minVersion": "1.0.0",
+      "maxVersion": "1.3.9",
+      "expires": "2026-07-01T00:00:00Z",
+      "dismissible": true,
+      "link": "https://snapcraft.io/claude-ai-desktop",
+      "linkLabel": "Open Snap Store"
+    },
+    {
+      "id": "update-1310-appimage-2026-05",
+      "if": "appimage",
+      "severity": "warn",
+      "title": "Update available: Claude Desktop v1.3.10",
+      "body": "Fixes MCP connectors (Visualize) and the Cloudflare verification loop. Restart the app or download v1.3.10 manually.",
+      "minVersion": "1.0.0",
+      "maxVersion": "1.3.9",
+      "expires": "2026-07-01T00:00:00Z",
+      "dismissible": true,
+      "link": "https://github.com/simonlinuxcraft/claude-ai-desktop-app/releases/latest",
+      "linkLabel": "Download v1.3.10"
+    }
+  ]
+}
