@@ -14,7 +14,7 @@ sudo snap install claude-ai-desktop
 
 [![claude-ai-desktop](https://snapcraft.io/claude-ai-desktop/badge.svg)](https://snapcraft.io/claude-ai-desktop)
 
-> **v1.3.9** – Wayland Compatibility: pop-up windows land where they belong again on Wayland sessions, plus singleton guards against duplicate Bug-Report and App-Menu windows
+> **v1.3.10** – MCP Connectors & Self-Service Diagnostics: Visualize and other MCP apps in claude.ai load again, plus new "Copy diagnostics info" and "Reset claude.ai verification…" entries in the App Menu
 
 ---
 
@@ -82,7 +82,7 @@ cat > ~/.local/share/applications/claude-desktop.desktop << EOF
 [Desktop Entry]
 Name=Claude Desktop
 Comment=Claude AI Desktop App
-Exec=/path/to/Claude-Desktop-1.3.9.AppImage --no-sandbox
+Exec=/path/to/Claude-Desktop-1.3.10.AppImage --no-sandbox
 Icon=/path/to/icon.png
 Type=Application
 Categories=Utility;
@@ -165,6 +165,12 @@ The `--no-sandbox` flag is required for Electron AppImages on Linux because the 
 ---
 
 ## Changelog
+
+### v1.3.10 – MCP Connectors & Self-Service Diagnostics (2026-05-11)
+
+- **MCP connectors (Visualize and others) now load again** – Users who had connected an MCP app inside claude.ai saw the error *"Failed to set up MCP app — check that claudemcpcontent.com is not blocked by your network or browser"*. The cause was the app's own allowlist: `claudemcpcontent.com` (a separate sandbox origin Anthropic uses for MCP iframe content, analogous to `claudeusercontent.com` for artifacts) was missing from `isAllowedDomain`, so `will-frame-navigate` blocked the iframe load. Added `claudemcpcontent.com` and prophylactically `claudemcp.com` to the allowlist – same fix shape as the 1.3.3 artifact-iframe bug.
+- **App Menu → "Copy diagnostics info"** – New entry that dumps app version, Electron/Chrome/Node build, kernel release, session type (X11/Wayland), `XDG_SESSION_TYPE` / `WAYLAND_DISPLAY` / `DISPLAY`, locale, user-agent, full GPU feature status, GPU vendor/device IDs and driver strings (`app.getGPUInfo('complete')`), GL vendor/renderer/version, and WebGL vendor/renderer/version (probed in the active tab via `WEBGL_debug_renderer_info`) into the clipboard. Makes verification-loop and rendering-stack bug reports reproducible.
+- **App Menu → "Reset claude.ai verification…"** – Confirm-gated action that clears cookies, local storage, service workers, cache, IndexedDB, websql and filesystem storage for `claude.ai`, `claudeusercontent.com`, `claudemcpcontent.com` and `claudemcp.com` (all subdomains), plus the session cache and host resolver cache, then reloads `https://claude.ai`. Self-service recovery for users stuck on a *"Performing security verification"* loop.
 
 ### v1.3.9 – Wayland Compatibility (2026-05-07)
 

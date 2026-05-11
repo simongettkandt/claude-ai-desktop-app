@@ -1,27 +1,78 @@
 name: claude-ai-desktop
 version: '1.3.10'
-summary: Claude AI – Native Desktop App für Linux mit Voice-Input
+summary: Fast desktop wrapper for Claude AI – tabs, tray, voice, distraction-free
 description: |
-  Eine schnelle, native Desktop-App für Claude AI.
-  Nutze Claude direkt vom Desktop – ohne Browser, ablenkungsfrei und immer griffbereit.
+  A fast desktop app for Claude AI – no browser needed.
+  Use Claude directly from your desktop, distraction-free and always at hand.
 
-  Features:
-  - Voice-Input direkt im Chat (Mikrofon-Aufnahme für gesprochene Prompts;
-    die App fragt beim ersten Klick einmal um Erlaubnis und bietet einen
-    jederzeit umlegbaren Schalter in den App-Einstellungen)
-  - Tab-System mit visueller Tab-Leiste
-  - Dark/Light Mode Toggle
-  - Custom Design (Modern/Classic) mit Gradient-Akzenten
-  - Google OAuth & Connector Login (GitHub, Google Drive, GitLab, etc.)
-  - Globale Hotkeys (Quick-Prompt, Zwischenablage als Prompt)
-  - Automatische Updates
-  - Deutsch & Englisch
-  - Electron 41 mit Chromium 134
+  **What's new in v1.3.10:**
 
-  Hinweis: Voice-Input benötigt das audio-record Interface. Nach der
-  Installation entweder über den In-App-Wizard (Mikrofon-Klick → "Im Snap-Store
-  öffnen") oder im Terminal: sudo snap connect claude-ai-desktop:audio-record
-  Die App erkennt die Aktivierung automatisch.
+  * **MCP Connectors fixed** – Visualize and other MCP apps in claude.ai
+    now load correctly. The error "Failed to set up MCP app – check that
+    claudemcpcontent.com is not blocked" was caused by the wrapper itself
+    missing that origin in its allowlist.
+  * **Diagnostics Info in App Menu** – New "Copy diagnostics info" entry
+    dumps version, Electron/Chrome build, kernel, session type, GPU vendor
+    and WebGL renderer into the clipboard. Makes verification-loop and
+    rendering bug reports reproducible.
+  * **Reset claude.ai Verification** – Stuck on "Performing security
+    verification"? New menu entry clears cookies, cache and storage for
+    all claude.ai origins and reloads – without losing other tabs.
+
+  **Earlier highlights (v1.3.7 – v1.3.9):**
+
+  * **Wayland compatibility (v1.3.9)** – Pop-ups and dialogs land where
+    they belong on GNOME / KDE. The app runs through XWayland under
+    Wayland, like VS Code, Discord and Signal.
+  * **Live Snap microphone status (v1.3.8)** – App Settings shows whether
+    the audio-record interface is connected.
+  * **Cloudflare loop fix on Snap (v1.3.7)** – Snap launch now uses ANGLE
+    over OpenGL instead of SwiftShader; Cloudflare no longer mis-flags
+    the renderer.
+
+  **Core features:**
+
+  * **Tab system** with its own tab bar (Ctrl+T, Ctrl+W, Ctrl+Tab)
+  * **System Tray** with optional minimize-to-tray
+  * **Global Quick-Prompt Hotkey** – frameless prompt window drops your
+    text straight into a new chat from any app
+  * **Voice Input** – record voice messages directly in claude.ai
+  * **OAuth logins in-app** – Google, GitHub, Drive, GitLab, Bitbucket,
+    Microsoft
+  * **Markdown export** of conversations (Ctrl+Shift+E)
+  * **Prompt templates** for the Quick-Prompt window
+  * **Background reply notifications** when Claude finishes answering
+  * **Clipboard & screenshot hotkeys** to start a chat from selection
+  * **Dark/Light mode** plus two design variants (Modern, Classic)
+  * **Bug Report form** in DE/EN/FR/ES/IT
+  * **Auto-update** synced with the GitHub Release
+  * **Window memory**, **crash recovery**, **offline page**, **download
+    manager**, **autostart**, sandbox enabled, zero npm vulnerabilities
+
+  **Snap permissions:**
+
+  For Voice Input the audio-record interface must be connected once:
+
+    sudo snap connect claude-ai-desktop:audio-record
+
+  The in-app wizard guides you through this on first microphone use.
+
+  **Get in touch:**
+
+  Use the built-in "Report a Bug" button (App Menu → Report a Bug) for
+  feedback and bug reports. Or contact:
+  claudeai.desktop.linux@gmail.com
+
+  Source code: https://github.com/simonlinuxcraft/claude-ai-desktop-app
+  (MIT licence)
+
+  **Not affiliated with Anthropic.**
+
+  This is an unofficial community wrapper around claude.ai for Linux.
+  It is not made by, endorsed by, or affiliated with Anthropic PBC.
+  "Claude" and the Claude logo are trademarks of Anthropic PBC. For
+  account, login, subscription, billing or any service-side questions
+  please contact Anthropic directly at https://support.anthropic.com.
 
 base: core24
 grade: stable
