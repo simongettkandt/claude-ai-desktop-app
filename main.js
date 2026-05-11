@@ -529,6 +529,23 @@ const RELEASE_NOTES = {
       title: 'Hinweis bei nicht registrierbarem Hotkey',
       text: 'Falls die Registrierung eines globalen Hotkeys auf Wayland am Compositor scheitert (GNOME erlaubt es z.B. eingeschr\u00e4nkt), zeigt das App-Einstellungen-Fenster jetzt einen klaren Hinweistext, statt eine generische Fehlermeldung.'
     }
+  ],
+  '1.3.10': [
+    {
+      icon: 'check',
+      title: 'MCP-Connectoren (Visualize & Co.) funktionieren wieder',
+      text: 'Wer in claude.ai einen MCP-Connector wie Visualize oder \u00e4hnliche aktiviert hat, sah zuvor die Fehlermeldung \u201eFailed to set up MCP app \u2013 check that claudemcpcontent.com is not blocked by your network or browser". Ursache war keine Netzsperre, sondern die App selbst: die Domain `claudemcpcontent.com` (separater Sandbox-Origin f\u00fcr MCP-Inhalte, analog zu `claudeusercontent.com` f\u00fcr Artifacts) war in der internen Allowlist nicht eingetragen. Behoben \u2013 MCP-iframes laden wieder, prophylaktisch auch `claudemcp.com` mit drin.'
+    },
+    {
+      icon: 'bug',
+      title: 'Neue Diagnose-Funktion im App-Men\u00fc',
+      text: 'Im Hamburger-Men\u00fc gibt es jetzt den Punkt \u201eDiagnose-Info kopieren". Er sammelt App-Version, Electron/Chrome-Build, Kernel, Display-Session, GPU-Vendor und WebGL-Renderer in einem Block und kopiert ihn in die Zwischenablage \u2013 hilfreich, wenn z.B. eine Cloudflare-Verifizierungs-Seite h\u00e4ngen bleibt und der Fehler genauer reproduziert werden soll.'
+    },
+    {
+      icon: 'check',
+      title: 'Selbsthilfe bei h\u00e4ngender claude.ai-Verifizierung',
+      text: 'Ebenfalls neu im Men\u00fc: \u201eclaude.ai-Verifizierung zur\u00fccksetzen". L\u00f6scht Cookies und Cache f\u00fcr alle claude.ai-Origins und l\u00e4dt die Seite neu. Sinnvoll, falls die Cloudflare-Sicherheits\u00fcberpr\u00fcfung (\u201ePerforming security verification") in einer Schleife stecken bleibt. Erfordert anschlie\u00dfend einen erneuten Login.'
+    }
   ]
 };
 
@@ -630,7 +647,9 @@ function isAllowedDomain(url) {
   let r = domainCache.get(h);
   if (r !== undefined) return r;
   r = h === 'claude.ai' || h.endsWith('.claude.ai')
-    || h === 'claudeusercontent.com' || h.endsWith('.claudeusercontent.com');
+    || h === 'claudeusercontent.com' || h.endsWith('.claudeusercontent.com')
+    || h === 'claudemcpcontent.com' || h.endsWith('.claudemcpcontent.com')
+    || h === 'claudemcp.com' || h.endsWith('.claudemcp.com');
   if (domainCache.size >= DOMAIN_CACHE_MAX) domainCache.delete(domainCache.keys().next().value);
   domainCache.set(h, r);
   return r;
@@ -1242,6 +1261,122 @@ function getAppMode() {
   if (process.env.SNAP) return 'Snap';
   if (!app.isPackaged) return 'Development';
   return 'Packaged';
+}
+
+async function copyDiagnosticsInfo() {
+  const lines = [];
+  lines.push(`App: Claude Desktop v${app.getVersion()}`);
+  lines.push(`Mode: ${getAppMode()}`);
+  lines.push(`Electron: ${process.versions.electron}  Chrome: ${process.versions.chrome}  Node: ${process.versions.node}`);
+  lines.push(`OS: ${process.platform} ${process.arch}  Kernel: ${require('os').release()}`);
+  lines.push(`Session: XDG_SESSION_TYPE=${process.env.XDG_SESSION_TYPE || '?'}  WAYLAND_DISPLAY=${process.env.WAYLAND_DISPLAY || ''}  DISPLAY=${process.env.DISPLAY || ''}`);
+  lines.push(`Locale: ${app.getLocale()}  sysLang: ${sysLang}`);
+  lines.push(`UA: ${chromeUA}`);
+
+  try {
+    const features = app.getGPUFeatureStatus ? app.getGPUFeatureStatus() : null;
+    if (features && typeof features === 'object') {
+      const fmt = Object.keys(features).sort().map(k => `${k}=${features[k]}`).join(', ');
+      lines.push(`GPU-Features: ${fmt}`);
+    }
+  } catch (e) {
+    lines.push(`GPU-Features: error (${e && e.message || e})`);
+  }
+
+  try {
+    const gpuInfo = await app.getGPUInfo('complete');
+    if (gpuInfo && Array.isArray(gpuInfo.gpuDevice)) {
+      gpuInfo.gpuDevice.forEach((d, i) => {
+        lines.push(`GPU[${i}]: vendor=0x${(d.vendorId || 0).toString(16)} device=0x${(d.deviceId || 0).toString(16)} active=${d.active} driverVendor=${d.driverVendor || ''} driverVersion=${d.driverVersion || ''}`);
+      });
+    }
+    const aux = gpuInfo && gpuInfo.auxAttributes;
+    if (aux) {
+      const glVendor = aux.glVendor || aux.gl_vendor || '';
+      const glRenderer = aux.glRenderer || aux.gl_renderer || '';
+      const glVersion = aux.glVersion || aux.gl_version || '';
+      lines.push(`GL-Vendor: ${glVendor}`);
+      lines.push(`GL-Renderer: ${glRenderer}`);
+      lines.push(`GL-Version: ${glVersion}`);
+    }
+  } catch (e) {
+    lines.push(`GPU-Info: error (${e && e.message || e})`);
+  }
+
+  const active = tabs[activeTabIndex];
+  if (active && alive(active.view)) {
+    try {
+      const wgl = await active.view.webContents.executeJavaScript(`(()=>{try{const c=document.createElement('canvas');const gl=c.getContext('webgl2')||c.getContext('webgl');if(!gl)return{ok:false};const e=gl.getExtension('WEBGL_debug_renderer_info');return{ok:true,vendor:e?gl.getParameter(e.UNMASKED_VENDOR_WEBGL):'',renderer:e?gl.getParameter(e.UNMASKED_RENDERER_WEBGL):'',version:gl.getParameter(gl.VERSION),ua:navigator.userAgent};}catch(err){return{ok:false,err:String(err)};}})()`, true);
+      if (wgl && wgl.ok) {
+        lines.push(`WebGL-Vendor: ${wgl.vendor}`);
+        lines.push(`WebGL-Renderer: ${wgl.renderer}`);
+        lines.push(`WebGL-Version: ${wgl.version}`);
+        lines.push(`navigator.userAgent: ${wgl.ua}`);
+      } else {
+        lines.push(`WebGL: not available (${wgl && wgl.err || ''})`);
+      }
+    } catch (e) {
+      lines.push(`WebGL-Probe: error (${e && e.message || e})`);
+    }
+  }
+
+  const text = lines.join('\n');
+  try { clipboard.writeText(text); } catch {}
+  showCustomMessageBox({
+    type: 'info',
+    title: 'Claude',
+    message: t('Diagnose-Info in Zwischenablage kopiert', 'Diagnostics info copied to clipboard'),
+    detail: text
+  });
+}
+
+async function resetClaudeVerification() {
+  const confirm = await showCustomMessageBox({
+    type: 'warning',
+    title: 'Claude',
+    message: t(
+      'claude.ai-Cache und -Cookies zurücksetzen?',
+      'Reset claude.ai cache and cookies?'
+    ),
+    detail: t(
+      'Du wirst danach erneut bei claude.ai angemeldet sein müssen. Hilft, wenn die Verifizierungs-Seite („Performing security verification") in einer Schleife hängt.',
+      'You will need to sign in to claude.ai again afterwards. This helps when the verification page ("Performing security verification") gets stuck in a loop.'
+    ),
+    buttons: [t('Abbrechen', 'Cancel'), t('Zurücksetzen', 'Reset')],
+    defaultId: 1,
+    cancelId: 0
+  });
+  if (!confirm || confirm.response !== 1) return;
+
+  try {
+    const ses = session.fromPartition('persist:claude');
+    const origins = [
+      'https://claude.ai',
+      'https://www.claude.ai',
+      'https://api.claude.ai',
+      'https://cdn.claude.ai',
+      'https://claudeusercontent.com',
+      'https://www.claudeusercontent.com',
+      'https://claudemcpcontent.com',
+      'https://www.claudemcpcontent.com',
+      'https://claudemcp.com',
+      'https://www.claudemcp.com'
+    ];
+    const storages = ['cookies', 'localstorage', 'serviceworkers', 'cachestorage', 'indexdb', 'websql', 'filesystem'];
+    for (const origin of origins) {
+      try { await ses.clearStorageData({ origin, storages }); } catch {}
+    }
+    try { await ses.clearCache(); } catch {}
+    try { await ses.clearHostResolverCache(); } catch {}
+    domainCache.clear();
+  } catch (e) {
+    console.error('resetClaudeVerification:', e);
+  }
+
+  const active = tabs[activeTabIndex];
+  if (active && alive(active.view)) {
+    active.view.webContents.loadURL('https://claude.ai');
+  }
 }
 
 function showBugReportDialog() {
@@ -2534,6 +2669,8 @@ function getAppMenuItems() {
     { type: 'sep' },
     { type: 'item', action: 'check-updates', label: t('Nach Updates suchen…', 'Check for Updates…'), icon: 'refresh' },
     { type: 'item', action: 'bug-report', label: (bugReportStrings[sysLang] || bugReportStrings.en).title, icon: 'bug' },
+    { type: 'item', action: 'copy-diagnostics', label: t('Diagnose-Info kopieren', 'Copy diagnostics info'), icon: 'info' },
+    { type: 'item', action: 'reset-verification', label: t('claude.ai-Verifizierung zurücksetzen…', 'Reset claude.ai verification…'), icon: 'shield' },
     { type: 'sep' },
     { type: 'item', action: 'quit', label: t('Beenden', 'Quit'), accel: 'Ctrl+Q', icon: 'power' }
   ];
@@ -2552,6 +2689,8 @@ function getAppMenuHTML() {
     palette: '<circle cx="12" cy="12" r="9"/><circle cx="7.5" cy="10.5" r="1"/><circle cx="12" cy="7.5" r="1"/><circle cx="16.5" cy="10.5" r="1"/><circle cx="14.5" cy="15.5" r="1"/>',
     cog:     '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.6 1.6 0 00-1.8-.3 1.6 1.6 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.6 1.6 0 00-1-1.5 1.6 1.6 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.6 1.6 0 00.3-1.8 1.6 1.6 0 00-1.5-1H3a2 2 0 110-4h.1a1.6 1.6 0 001.5-1 1.6 1.6 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.6 1.6 0 001.8.3h0a1.6 1.6 0 001-1.5V3a2 2 0 114 0v.1a1.6 1.6 0 001 1.5 1.6 1.6 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.6 1.6 0 00-.3 1.8v0a1.6 1.6 0 001.5 1H21a2 2 0 110 4h-.1a1.6 1.6 0 00-1.5 1z"/>',
     bug:     '<path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>',
+    info:    '<circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v5h1"/>',
+    shield:  '<path d="M12 2L4 5v6c0 5 3.5 9.5 8 11 4.5-1.5 8-6 8-11V5l-8-3z"/><path d="M9 12l2 2 4-4"/>',
     power:   '<path d="M18.36 6.64a9 9 0 11-12.73 0M12 2v10"/>'
   };
 
@@ -3949,6 +4088,8 @@ ipcMain.on('appmenu-action', (event, name) => {
       }
       break;
     case 'bug-report': showBugReportDialog(); break;
+    case 'copy-diagnostics': copyDiagnosticsInfo(); break;
+    case 'reset-verification': resetClaudeVerification(); break;
     case 'quit': isQuitting = true; app.quit(); break;
   }
 });

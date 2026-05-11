@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.3.10] – 2026-05-11 — MCP Connectors & Self-Service Diagnostics
+
+### Fixed
+- **MCP connectors (Visualize and others) now load again.** Users who had connected an MCP app inside claude.ai saw the error "Failed to set up MCP app — check that claudemcpcontent.com is not blocked by your network or browser". The cause was the app's own allowlist: `claudemcpcontent.com` (a separate sandbox origin Anthropic uses for MCP iframe content, analogous to `claudeusercontent.com` for artifacts) was missing from `isAllowedDomain`, so `will-frame-navigate` blocked the iframe load. Added `claudemcpcontent.com` and prophylactically `claudemcp.com` to the allowlist (same fix shape as the 1.3.3 artifact-iframe bug).
+
+### Added
+- **App Menu → "Copy diagnostics info"**: collects app version, Electron/Chrome/Node build, kernel release, session type (X11/Wayland), `XDG_SESSION_TYPE` / `WAYLAND_DISPLAY` / `DISPLAY`, locale, user-agent, GPU vendor/device IDs and driver strings (via `app.getGPUInfo('basic')`), GL vendor/renderer/version, and WebGL vendor/renderer/version (probed in the active tab via `WEBGL_debug_renderer_info`) into the clipboard. Makes future Cloudflare-verification-loop and rendering-stack bug reports reproducible.
+- **App Menu → "Reset claude.ai verification…"**: a confirm-gated action that clears cookies, local storage, service workers, cache, IndexedDB, websql and filesystem storage for `claude.ai`, `claudeusercontent.com`, `claudemcpcontent.com` and `claudemcp.com` (all subdomains), plus the session cache and host resolver cache, then reloads `https://claude.ai` in the active tab. Self-service recovery for users stuck on a "Performing security verification" loop.
+
+---
+
 ## [1.3.9] – 2026-05-07 — Wayland Compatibility
 
 ### Fixed
