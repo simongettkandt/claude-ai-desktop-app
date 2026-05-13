@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.3.11] – 2026-05-13 — Cloudflare Verification Loop Fix
+
+### Fixed
+- **Cloudflare Turnstile no longer gets stuck in a verification loop.** Users reported that v1.3.10 (and occasionally earlier versions) could hang on "Performing security verification" / "Verifying you are human" indefinitely. Three root causes were addressed:
+  - `isAllowedDomain` blocked the Turnstile challenge iframe (`challenges.cloudflare.com`) via `will-frame-navigate`, so the challenge could never complete. The host is now whitelisted alongside `claude.ai`, the Anthropic sandbox origins, and `claudemcp.com`.
+  - The `webRequest.onBeforeSendHeaders` listener was scoped to `*.claude.ai` only, so the sandbox origins (`claudeusercontent.com`, `claudemcpcontent.com`, `claudemcp.com`), `*.anthropic.com` and the Cloudflare challenge endpoint received the default Electron user-agent and incomplete Client Hints — a known Cloudflare bot signal. The listener now covers all of these in a single combined URL filter (single listener per session, as required by Electron).
+  - `Sec-Ch-Ua-Full-Version-List` and `Sec-Ch-Ua-Platform-Version` were missing (Electron upstream bug #34762: Electron does not send high-entropy UA Client Hints automatically). They are now injected with the same brand list and order as `Sec-Ch-Ua`, so Cloudflare's Client-Hints consistency check no longer mis-flags the renderer.
+
+### Added
+- **Bug Report dialog now shows a "browser cross-check" hint** under the unofficial-app disclaimer: "Quick check: does the same error also happen on claude.ai in a regular browser? If yes, it is a server-side issue at Anthropic and not a wrapper bug." Localised in DE/EN/FR/ES/IT (other languages fall back to English via the existing `bugReportStrings.en` merge). Cuts down on reports for server-side issues like the recent "Could not load connectors directory" message, which also occurs in the official Anthropic Claude apps and in regular browsers.
+- **`*.anthropic.com` in the header hook**: prophylactic coverage for newer Anthropic endpoints (e.g. `assets-proxy.anthropic.com` referenced in upstream MCP diagnostics) so that future Connectors / asset proxy requests don't degrade the Cloudflare trust score because of a default Electron UA.
+
+### Note for users on very old kernels
+- Reports of "App is not responding" on kernel 5.3.0 (Ubuntu 19.10, end-of-life since 2020) are an unsupported-environment issue: `core24` Snap base on a pre-5.4 kernel runs with silently-degraded AppArmor confinement and broken Mesa userspace ABI for ANGLE. Please upgrade to Ubuntu 20.04 or newer.
+
+---
+
 ## [1.3.10] – 2026-05-11 — MCP Connectors & Self-Service Diagnostics
 
 ### Fixed

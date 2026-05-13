@@ -2,6 +2,7 @@ const { app, BrowserWindow, WebContentsView, shell, Menu, Tray, globalShortcut, 
 const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 const { version } = require('./package.json');
 const { compareVersions, safeJson, isClaudeAiOrigin, validateAccelerator } = require('./utils/pure');
 
@@ -57,7 +58,7 @@ const DOMAIN_CACHE_MAX = 50;
 const NOTIFICATIONS_URL = 'https://raw.githubusercontent.com/simonlinuxcraft/claude-ai-desktop-app/main/notifications.json';
 const NOTIFICATIONS_FETCH_MS = 6 * 60 * 60 * 1000;        // alle 6h
 const NOTIFICATIONS_FIRST_FETCH_DELAY_MS = 8 * 1000;       // nach App-Start 8s warten
-const NOTIFICATION_BANNER_HEIGHT = 38;
+const NOTIFICATION_BANNER_HEIGHT = 64;
 const MAX_NOTIFICATIONS_VISIBLE = 1;                        // ein Banner gleichzeitig
 
 // ═══════════════════════════════════════════════════════════════════
@@ -154,6 +155,7 @@ const bugReportStrings = {
     disclaimerBody: 'This is an unofficial community wrapper for claude.ai, not an official Anthropic product. We can only help with issues specific to this Linux desktop wrapper. For account, login, subscription, billing or payment questions please contact Anthropic support directly:',
     disclaimerLink: 'support.anthropic.com',
     disclaimerLinkUrl: 'https://support.anthropic.com',
+    serverSideHint: 'Quick check: does the same error also happen on claude.ai in a regular browser (Firefox/Chrome)? If yes, it is a server-side issue at Anthropic and not a wrapper bug.',
     descLabel: 'Description',
     descPlaceholder: 'What happened? What did you expect?',
     errorLabel: 'Error codes / messages (optional)',
@@ -182,6 +184,7 @@ const bugReportStrings = {
     disclaimerBody: 'Das hier ist ein inoffizieller Community-Wrapper für claude.ai – kein offizielles Produkt von Anthropic. Wir können nur Probleme lösen, die diesen Linux-Desktop-Wrapper selbst betreffen. Bei Fragen zu Account, Login, Abo, Rechnung oder Bezahlung wende dich bitte direkt an den Anthropic-Support:',
     disclaimerLink: 'support.anthropic.com',
     disclaimerLinkUrl: 'https://support.anthropic.com',
+    serverSideHint: 'Kurzer Check: Tritt der gleiche Fehler auch auf claude.ai in einem normalen Browser (Firefox/Chrome) auf? Wenn ja, ist es ein serverseitiges Problem bei Anthropic und kein Wrapper-Bug.',
     descLabel: 'Beschreibung',
     descPlaceholder: 'Was ist passiert? Was hast du erwartet?',
     errorLabel: 'Fehlercodes / Meldungen (optional)',
@@ -210,6 +213,7 @@ const bugReportStrings = {
     disclaimerBody: 'Ceci est un wrapper communautaire non officiel pour claude.ai, pas un produit officiel d\u2019Anthropic. Nous pouvons aider uniquement pour les probl\u00e8mes sp\u00e9cifiques \u00e0 ce wrapper Linux. Pour toute question concernant le compte, la connexion, l\u2019abonnement, la facturation ou le paiement, veuillez contacter directement le support d\u2019Anthropic :',
     disclaimerLink: 'support.anthropic.com',
     disclaimerLinkUrl: 'https://support.anthropic.com',
+    serverSideHint: 'V\u00e9rification rapide : la m\u00eame erreur appara\u00eet-elle sur claude.ai dans un navigateur normal (Firefox/Chrome) ? Si oui, c\u2019est un probl\u00e8me c\u00f4t\u00e9 serveur chez Anthropic et non un bug du wrapper.',
     descLabel: 'Description',
     descPlaceholder: 'Que s\u2019est-il pass\u00e9 ? Qu\u2019attendiez-vous ?',
     errorLabel: 'Codes d\u2019erreur / messages (facultatif)',
@@ -238,6 +242,7 @@ const bugReportStrings = {
     disclaimerBody: 'Esta es una aplicaci\u00f3n comunitaria no oficial para claude.ai, no un producto oficial de Anthropic. Solo podemos ayudar con problemas espec\u00edficos de este wrapper para Linux. Para cuestiones de cuenta, inicio de sesi\u00f3n, suscripci\u00f3n, facturaci\u00f3n o pagos, contacta directamente con el soporte de Anthropic:',
     disclaimerLink: 'support.anthropic.com',
     disclaimerLinkUrl: 'https://support.anthropic.com',
+    serverSideHint: 'Comprobaci\u00f3n r\u00e1pida: \u00bfaparece el mismo error en claude.ai en un navegador normal (Firefox/Chrome)? Si es as\u00ed, es un problema del servidor de Anthropic y no un bug del wrapper.',
     descLabel: 'Descripci\u00f3n',
     descPlaceholder: '\u00bfQu\u00e9 pas\u00f3? \u00bfQu\u00e9 esperabas?',
     errorLabel: 'C\u00f3digos de error / mensajes (opcional)',
@@ -267,6 +272,7 @@ const bugReportStrings = {
     disclaimerBody: 'Questa \u00e8 un\u2019app di comunit\u00e0 non ufficiale per claude.ai, non un prodotto ufficiale Anthropic. Possiamo aiutarti solo con problemi specifici di questo wrapper Linux. Per questioni di account, accesso, abbonamento, fatturazione o pagamenti, contatta direttamente il supporto Anthropic:',
     disclaimerLink: 'support.anthropic.com',
     disclaimerLinkUrl: 'https://support.anthropic.com',
+    serverSideHint: 'Verifica rapida: lo stesso errore compare anche su claude.ai in un browser normale (Firefox/Chrome)? Se s\u00ec, \u00e8 un problema lato server di Anthropic e non un bug del wrapper.',
     descLabel: 'Descrizione',
     descPlaceholder: 'Cosa \u00e8 successo? Cosa ti aspettavi?',
     errorLabel: 'Codici di errore / messaggi (facoltativo)',
@@ -530,6 +536,18 @@ const RELEASE_NOTES = {
       text: 'Falls die Registrierung eines globalen Hotkeys auf Wayland am Compositor scheitert (GNOME erlaubt es z.B. eingeschr\u00e4nkt), zeigt das App-Einstellungen-Fenster jetzt einen klaren Hinweistext, statt eine generische Fehlermeldung.'
     }
   ],
+  '1.3.11': [
+    {
+      icon: 'check',
+      title: 'Cloudflare-Verifizierungsschleife behoben',
+      text: 'Manche Nutzer blieben auf der Seite "Performing security verification" / "Verifying you are human" hängen. Drei Ursachen wurden gefixt: (1) Der Cloudflare-Turnstile-iframe (`challenges.cloudflare.com`) war in der internen Allowlist nicht eingetragen und wurde von `will-frame-navigate` blockiert – die Challenge konnte nie fertig werden. (2) Die UA-Header (inkl. Sec-Ch-Ua) wurden nur für `claude.ai` gesetzt, nicht für Sandbox-Origins, `*.anthropic.com` oder den Challenge-Endpunkt – was Cloudflare als Bot-Signal wertet. (3) `Sec-Ch-Ua-Full-Version-List` und `Sec-Ch-Ua-Platform-Version` fehlten (bekannter Electron-Bug #34762) und werden nun konsistent mit identischer Brand-Reihenfolge mitgesendet.'
+    },
+    {
+      icon: 'bug',
+      title: 'Bug-Report: Hinweis zum Browser-Gegencheck',
+      text: 'Der Bug-Report-Dialog zeigt jetzt unter dem Community-App-Hinweis einen kurzen Gegencheck: "Tritt der gleiche Fehler auch auf claude.ai in einem normalen Browser auf? Dann ist es ein serverseitiges Problem bei Anthropic und kein Wrapper-Bug." Reduziert Berichte zu Problemen wie der jüngsten "Could not load connectors directory"-Meldung, die auch im offiziellen Claude-Desktop und in regulären Browsern auftritt.'
+    }
+  ],
   '1.3.10': [
     {
       icon: 'check',
@@ -649,7 +667,8 @@ function isAllowedDomain(url) {
   r = h === 'claude.ai' || h.endsWith('.claude.ai')
     || h === 'claudeusercontent.com' || h.endsWith('.claudeusercontent.com')
     || h === 'claudemcpcontent.com' || h.endsWith('.claudemcpcontent.com')
-    || h === 'claudemcp.com' || h.endsWith('.claudemcp.com');
+    || h === 'claudemcp.com' || h.endsWith('.claudemcp.com')
+    || h === 'challenges.cloudflare.com';
   if (domainCache.size >= DOMAIN_CACHE_MAX) domainCache.delete(domainCache.keys().next().value);
   domainCache.set(h, r);
   return r;
@@ -733,21 +752,24 @@ body{background:var(--bg);font:500 12px/1 -apple-system,BlinkMacSystemFont,'Sego
   display:flex;flex-direction:column;contain:layout style}
 #notif-bar{display:flex;flex-direction:column;flex-shrink:0;-webkit-app-region:no-drag}
 #notif-bar:empty{display:none}
-.notif{display:flex;align-items:center;gap:10px;height:${NOTIFICATION_BANNER_HEIGHT}px;padding:0 12px;font-size:12px;line-height:1.3;color:var(--ta);border-bottom:1px solid var(--bd);background:var(--bgh)}
+.notif{display:flex;align-items:center;gap:14px;min-height:${NOTIFICATION_BANNER_HEIGHT}px;padding:10px 14px 10px 0;font-family:inherit;line-height:1.35;color:var(--ta);border-bottom:1px solid var(--bd);background:var(--bgh);position:relative}
 .notif[data-sev="info"]{background:linear-gradient(90deg,color-mix(in srgb,var(--ac-from) 14%,var(--bgh)),var(--bgh))}
 .notif[data-sev="warn"]{background:linear-gradient(90deg,color-mix(in srgb,#e0a93e 22%,var(--bgh)),var(--bgh))}
 .notif[data-sev="critical"]{background:linear-gradient(90deg,color-mix(in srgb,#e05e3e 28%,var(--bgh)),var(--bgh))}
 .notif[data-sev="success"]{background:linear-gradient(90deg,color-mix(in srgb,#3fb96e 22%,var(--bgh)),var(--bgh))}
-.notif-dot{width:8px;height:8px;border-radius:50%;background:var(--ac-from);flex:0 0 auto}
+.notif-dot{flex:0 0 4px;align-self:stretch;background:var(--ac-from);margin-right:6px}
 .notif[data-sev="warn"] .notif-dot{background:#e0a93e}
 .notif[data-sev="critical"] .notif-dot{background:#e05e3e}
 .notif[data-sev="success"] .notif-dot{background:#3fb96e}
-.notif-text{flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
-.notif-text strong{font-weight:600;color:var(--ta);margin-right:6px}
-.notif-text span{color:var(--t);font-weight:400}
-.notif-link{flex:0 0 auto;background:transparent;color:var(--ac-from);border:1px solid color-mix(in srgb,var(--ac-from) 35%,transparent);border-radius:5px;padding:3px 9px;font-size:11.5px;font-family:inherit;font-weight:500;cursor:pointer}
-.notif-link:hover{background:color-mix(in srgb,var(--ac-from) 12%,transparent)}
-.notif-x{flex:0 0 auto;width:22px;height:22px;border-radius:5px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t);font-size:15px;line-height:1;border:none;background:transparent;font-family:inherit}
+.notif-text{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;overflow:hidden}
+.notif-text strong{font-weight:600;color:var(--ta);font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.notif-text span{color:var(--t);font-weight:400;font-size:12.5px;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.notif-link{flex:0 0 auto;background:var(--ac-from);color:#fff;border:none;border-radius:6px;padding:7px 14px;font-size:12.5px;font-family:inherit;font-weight:600;cursor:pointer;white-space:nowrap;transition:filter .12s ease}
+.notif[data-sev="warn"] .notif-link{background:#e0a93e;color:#1c1208}
+.notif[data-sev="critical"] .notif-link{background:#e05e3e;color:#fff}
+.notif[data-sev="success"] .notif-link{background:#3fb96e;color:#0e1d14}
+.notif-link:hover{filter:brightness(1.08)}
+.notif-x{flex:0 0 auto;width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t);font-size:18px;line-height:1;border:none;background:transparent;font-family:inherit;transition:background .12s ease}
 .notif-x:hover{background:var(--bga);color:var(--ta)}
 #tab-row{display:flex;align-items:flex-end;height:${TAB_BAR_HEIGHT}px;flex:0 0 ${TAB_BAR_HEIGHT}px;border-bottom:1px solid var(--bd);-webkit-app-region:drag}
 .menu-btn{-webkit-app-region:no-drag;width:30px;height:30px;display:flex;align-items:center;justify-content:center;
@@ -1488,7 +1510,7 @@ button.secondary:hover{background:${inputBg};color:${fg}}
 
   <div class="disclaimer" role="note">
     <span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span>
-    <span class="txt"><span class="ttl">${s.disclaimerTitle}</span>${s.disclaimerBody} <a id="anthropic-link" href="#" tabindex="0">${s.disclaimerLink}</a></span>
+    <span class="txt"><span class="ttl">${s.disclaimerTitle}</span>${s.disclaimerBody} <a id="anthropic-link" href="#" tabindex="0">${s.disclaimerLink}</a>${s.serverSideHint ? `<br><br>${s.serverSideHint}` : ''}</span>
   </div>
 
   <form id="bugform" novalidate>
@@ -3760,15 +3782,29 @@ function setupSession() {
 
   ses.setUserAgent(chromeUA);
 
-  const chromeMajor = process.versions.chrome.split('.')[0];
+  const chromeFull = process.versions.chrome;
+  const chromeMajor = chromeFull.split('.')[0];
   const secChUa = `"Chromium";v="${chromeMajor}", "Not(A:Brand";v="24", "Google Chrome";v="${chromeMajor}"`;
+  const secChUaFullVersionList = `"Chromium";v="${chromeFull}", "Not(A:Brand";v="24.0.0.0", "Google Chrome";v="${chromeFull}"`;
+  const kernelVersion = `"${os.release().split('-')[0]}"`;
 
-  ses.webRequest.onBeforeSendHeaders({ urls: ['*://*.claude.ai/*'] }, (details, cb) => {
+  ses.webRequest.onBeforeSendHeaders({
+    urls: [
+      '*://*.claude.ai/*',
+      '*://*.claudeusercontent.com/*',
+      '*://*.claudemcpcontent.com/*',
+      '*://*.claudemcp.com/*',
+      '*://*.anthropic.com/*',
+      '*://challenges.cloudflare.com/*'
+    ]
+  }, (details, cb) => {
     const h = details.requestHeaders;
     h['DNT'] = '1';
     h['Sec-Ch-Ua'] = secChUa;
     h['Sec-Ch-Ua-Mobile'] = '?0';
     h['Sec-Ch-Ua-Platform'] = '"Linux"';
+    h['Sec-Ch-Ua-Full-Version-List'] = secChUaFullVersionList;
+    h['Sec-Ch-Ua-Platform-Version'] = kernelVersion;
     cb({ requestHeaders: h });
   });
 
