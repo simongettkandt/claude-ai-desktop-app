@@ -38,11 +38,11 @@ description: |
 
   **System requirements:**
 
-  Designed for Ubuntu 20.04 (kernel 5.4) or newer, Fedora 32+, or any
-  current rolling-release distro. Older kernels (e.g. Ubuntu 19.10,
-  kernel 5.3) run with degraded Snap AppArmor confinement and broken
-  Mesa userspace ABI for ANGLE – the app may fail to render. Please
-  upgrade if you see "App is not responding" on launch.
+  Tested on Ubuntu 20.04 (kernel 5.4) and newer, Fedora 32+, and recent
+  Arch / Manjaro / openSUSE Tumbleweed. Older kernels (e.g. Ubuntu
+  19.10, kernel 5.3) have degraded Snap AppArmor confinement and a
+  broken Mesa userspace ABI for ANGLE – the app may fail to render.
+  Please upgrade if you see "App is not responding" on launch.
 
   **Core features:**
 

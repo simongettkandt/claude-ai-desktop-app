@@ -1,6 +1,6 @@
 # Claude Desktop App for Linux
 
-A fast, desktop app for Claude AI – no browser needed. Runs on all Linux distributions.
+Desktop wrapper for claude.ai. Runs as a native window on Linux without a browser tab.
 
 ## Installation
 
@@ -25,7 +25,7 @@ sudo snap install claude-ai-desktop
 - **Custom App Menu (Hamburger)** – In-app menu with keyboard navigation, replaces the native menu bar; quick access to all actions including new tab, export, settings, updates and bug report
 - **Tab System** – Multiple chats side by side with a visual tab bar (Ctrl+T, Ctrl+W, Ctrl+Tab); direct buttons in the tab bar for Markdown export and bug report
 - **Markdown Export** – Save the active conversation as a `.md` file via `Ctrl+Shift+E`, including code blocks, lists, headings and links
-- **System Tray** – Optional minimize-to-tray, keeps Claude one click away in the background
+- **System Tray** – Optional minimize-to-tray instead of closing the window
 - **Global Quick-Prompt Hotkey** – Configurable hotkey opens a frameless prompt window that injects your text into a new chat
 - **Prompt Templates** – Define named prefixes (e.g. "Translate to English:"), pick them with Tab in the Quick-Prompt window
 - **Clipboard Hotkey** – Separate global hotkey that opens a new chat with your clipboard text already inserted
@@ -35,17 +35,16 @@ sudo snap install claude-ai-desktop
 - **Autostart** – Optional launch on system boot (Linux: writes a `.desktop` file to `~/.config/autostart/`; Snap: native autostart directive)
 - **Custom Design System** – Modern gradient theme or Classic mode toggle
 - **Dark/Light Mode Toggle** – Moon/Sun button in the tab bar
-- **Auto-Update** – Automatically updates via GitHub Releases (AppImage) or `snapd` (Snap); since v1.3.7 the AppImage also self-heals stale `.desktop` and autostart entries so the menu shortcut keeps working after each update
+- **Auto-Update** – Updates via GitHub Releases (AppImage) or `snapd` (Snap). Since v1.3.7 the AppImage also rewrites stale `.desktop` and autostart entries on startup, so the menu shortcut keeps pointing at the current file after `electron-updater` replaces the AppImage
 - **Manual Update Check** – Menu entry shows a dialog with the result
 - **What's-New Popup** – Shows the changelog once after each version upgrade, including notes for skipped versions
-- **Google OAuth** – Google login works out of the box
-- **In-App OAuth Popups** – GitHub, Google Drive, GitLab, Bitbucket, Microsoft
+- **In-App OAuth Popups** – Google, GitHub, Google Drive, GitLab, Bitbucket, Microsoft, Auth0, Higgsfield
 - **Multilingual UI** – Automatic language detection (25 languages, system fallback to English)
 - **Offline Detection** – Automatic reconnect when connection is restored
 - **Crash Recovery** – Crashed tabs reload automatically (max 3 retries)
 - **Background Throttling** – Reduces CPU usage when the window is minimized
-- **Security** – Sandbox enabled, IPC validation, CSP headers, 0 npm vulnerabilities
-- **Performance** – GPU acceleration, disk caching, tab preloading, no white flash on start
+- **Security** – Sandbox enabled, IPC validation, CSP headers
+- **Performance** – GPU acceleration, disk caching, tab preloading
 
 ---
 
@@ -82,7 +81,7 @@ cat > ~/.local/share/applications/claude-desktop.desktop << EOF
 [Desktop Entry]
 Name=Claude Desktop
 Comment=Claude AI Desktop App
-Exec=/path/to/Claude-Desktop-1.3.10.AppImage --no-sandbox
+Exec=/path/to/Claude-Desktop-1.3.12.AppImage --no-sandbox
 Icon=/path/to/icon.png
 Type=Application
 Categories=Utility;
