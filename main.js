@@ -6,7 +6,7 @@ const os = require('os');
 const { version } = require('./package.json');
 const { compareVersions, safeJson, isClaudeAiOrigin, validateAccelerator } = require('./utils/pure');
 
-// ── Electron "Object has been destroyed" Error-Dialog abfangen ──
+// Electron "Object has been destroyed" Error-Dialog abfangen
 const _origErrorBox = dialog.showErrorBox;
 dialog.showErrorBox = (title, content) => {
   if (typeof content === 'string' && content.includes('Object has been destroyed')) return;
@@ -23,19 +23,17 @@ if (app.isPackaged) process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = 'true';
 // `npx electron . --no-sandbox --ozone-platform=x11`. Das `npm run dev`-
 // Script in package.json macht das automatisch.
 
-// ── Sandbox-Fallback ──
+// Sandbox-Fallback
 // Belt-and-suspenders zum --no-sandbox-Flag im .desktop-File: greift wenn die App
 // ohne Argumente gestartet wird (z.B. nach Auto-Update durch quitAndInstall, oder
 // per Doppelklick aus dem Dateimanager). chrome-sandbox-Helper ist auf üblichen
 // Linux-Distributionen nicht setuid-konfiguriert, ohne diesen Switch crasht der
 // Renderer beim Start.
 
-// ── Single Instance ──
+// Single Instance
 if (!app.requestSingleInstanceLock()) { app.quit(); }
 
-// ═══════════════════════════════════════════════════════════════════
-//  Konstanten
-// ═══════════════════════════════════════════════════════════════════
+// Konstanten
 
 const isDev = !app.isPackaged;
 const chromeUA = `Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${process.versions.chrome} Safari/537.36`;
@@ -61,16 +59,12 @@ const NOTIFICATIONS_FIRST_FETCH_DELAY_MS = 8 * 1000;       // nach App-Start 8s 
 const NOTIFICATION_BANNER_HEIGHT = 64;
 const MAX_NOTIFICATIONS_VISIBLE = 1;                        // ein Banner gleichzeitig
 
-// ═══════════════════════════════════════════════════════════════════
-//  Injected Scripts (aus Dateien geladen)
-// ═══════════════════════════════════════════════════════════════════
+// Injected Scripts (aus Dateien geladen)
 
 const BRAND_SCRIPT = fs.readFileSync(path.join(__dirname, 'inject', 'brand.js'), 'utf8');
 const NOTIFY_SCRIPT = fs.readFileSync(path.join(__dirname, 'inject', 'notify.js'), 'utf8');
 
-// ═══════════════════════════════════════════════════════════════════
-//  State
-// ═══════════════════════════════════════════════════════════════════
+// State
 
 let mainWindow = null;
 let tabs = [];
@@ -82,9 +76,7 @@ let customDesign = true;
 // Tab-Pool (vorgeladene Views)
 const viewPool = [];
 
-// ═══════════════════════════════════════════════════════════════════
-//  Helpers
-// ═══════════════════════════════════════════════════════════════════
+// Helpers
 
 function debounce(fn, ms) {
   let timer;
@@ -108,9 +100,7 @@ function alive(viewOrWc) {
   return wc && !wc.isDestroyed();
 }
 
-// ═══════════════════════════════════════════════════════════════════
-//  i18n (multi-language)
-// ═══════════════════════════════════════════════════════════════════
+// i18n (multi-language)
 
 const sysLang = (() => {
   const l = (process.env.LANG || process.env.LANGUAGE || '').toLowerCase();
@@ -317,9 +307,7 @@ const bugReportStrings = {
   id: { title: 'Laporkan bug', body: 'Menemukan bug atau punya saran?\nSilakan kirim email ke:', btn: 'Salin email', copied: 'Disalin!' },
 };
 
-// ═══════════════════════════════════════════════════════════════════
-//  Window-State (persistiert Größe, Position, Theme)
-// ═══════════════════════════════════════════════════════════════════
+// Window-State (persistiert Größe, Position, Theme)
 
 const stateFile = path.join(app.getPath('userData'), 'window-state.json');
 let windowState = {};
@@ -536,6 +524,23 @@ const RELEASE_NOTES = {
       text: 'Falls die Registrierung eines globalen Hotkeys auf Wayland am Compositor scheitert (GNOME erlaubt es z.B. eingeschr\u00e4nkt), zeigt das App-Einstellungen-Fenster jetzt einen klaren Hinweistext, statt eine generische Fehlermeldung.'
     }
   ],
+  '1.3.12': [
+    {
+      icon: 'check',
+      title: 'Higgsfield-Connector lässt sich verbinden',
+      text: 'Beim Klick auf "Connect" / "Accept" im Higgsfield-Connector-Dialog auf claude.ai passierte vorher nichts Sichtbares. Ursache: `higgsfield.ai` war in der OAuth-Allowlist nicht eingetragen, daher wurde das Auth-Popup in den Systembrowser umgeleitet, wo der Callback zurück zur App nicht ankam. `higgsfield.ai` und Subdomains gelten jetzt als OAuth-Domain — das Popup öffnet in der App, Callback landet in derselben Session.'
+    },
+    {
+      icon: 'check',
+      title: 'Bug-Report-Dialog: Buttons nicht mehr abgeschnitten',
+      text: 'Der in 1.3.11 hinzugefügte Browser-Gegencheck-Hinweis hat den Disclaimer-Block länger gemacht, die Fensterhöhe (760 px) blieb aber gleich – "Abbrechen" und "Bericht senden" waren je nach Skalierung halb oder ganz unten weggeschnitten. Höhe von 760 auf 860 px erhöht.'
+    },
+    {
+      icon: 'bug',
+      title: 'Kleine Aufräumarbeiten',
+      text: 'mailto:-Links aus claude.ai öffnen jetzt auch dann den Mail-Client, wenn sie aus der Navigation kommen (vorher nur aus `window.open()`). Außerdem interne Kommentar-Aufräumung in main.js; rein kosmetisch.'
+    }
+  ],
   '1.3.11': [
     {
       icon: 'check',
@@ -653,9 +658,7 @@ function saveWindowStateSync() {
   } catch {}
 }
 
-// ═══════════════════════════════════════════════════════════════════
-//  Domain-Validierung
-// ═══════════════════════════════════════════════════════════════════
+// Domain-Validierung
 
 const domainCache = new Map();
 
@@ -682,13 +685,12 @@ function isOAuthDomain(url) {
       || h === 'drive.google.com' || h === 'docs.google.com'
       || h === 'login.microsoftonline.com'
       || h === 'gitlab.com' || h === 'bitbucket.org'
-      || h.endsWith('.auth0.com') || h.endsWith('.claude.ai');
+      || h.endsWith('.auth0.com') || h.endsWith('.claude.ai')
+      || h === 'higgsfield.ai' || h.endsWith('.higgsfield.ai');
   } catch { return false; }
 }
 
-// ═══════════════════════════════════════════════════════════════════
-//  Theme & Design
-// ═══════════════════════════════════════════════════════════════════
+// Theme & Design
 
 const THEME = {
   dark:  { bg: '#262624', bgHover: '#333330', bgActive: '#3a3a37', text: '#9a9a96', textActive: '#e8e8e4', border: '#333330' },
@@ -726,9 +728,7 @@ function iconDataUrl() {
   return _iconDataUrlCache[p];
 }
 
-// ═══════════════════════════════════════════════════════════════════
-//  Tab-Bar HTML
-// ═══════════════════════════════════════════════════════════════════
+// Tab-Bar HTML
 
 let _tabBarCache = '';
 let _tabBarKey = '';
@@ -915,9 +915,7 @@ window.tabAPI.requestNotifications();
   return _tabBarCache;
 }
 
-// ═══════════════════════════════════════════════════════════════════
-//  Tab-Bar Sync (IPC → Renderer)
-// ═══════════════════════════════════════════════════════════════════
+// Tab-Bar Sync (IPC → Renderer)
 
 const sendTabsUpdate = throttle(() => {
   if (!mainWindow || mainWindow.isDestroyed()) return;
@@ -935,9 +933,7 @@ function sendDesignUpdate() {
   if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('design-update', customDesign);
 }
 
-// ═══════════════════════════════════════════════════════════════════
-//  Script-Injection
-// ═══════════════════════════════════════════════════════════════════
+// Script-Injection
 
 function injectScripts(wc) {
   if (!alive(wc)) return;
@@ -959,14 +955,12 @@ function reinjectScripts(wc) {
   }).catch(() => {});
 }
 
-// ═══════════════════════════════════════════════════════════════════
-//  View Setup (Security + Events)
-// ═══════════════════════════════════════════════════════════════════
+// View Setup (Security + Events)
 
 function setupView(view) {
   const wc = view.webContents;
 
-  // ── Window-Open: OAuth in-app, claude.ai erlaubt, Rest extern ──
+  // Window-Open: OAuth in-app, claude.ai erlaubt, Rest extern
   wc.setWindowOpenHandler(({ url }) => {
     if (isOAuthDomain(url)) {
       return { action: 'allow', overrideBrowserWindowOptions: {
@@ -982,7 +976,7 @@ function setupView(view) {
     return { action: 'deny' };
   });
 
-  // ── OAuth-Popup Lifecycle (nur wenn das neue Fenster wirklich OAuth ist) ──
+  // OAuth-Popup Lifecycle (nur wenn das neue Fenster wirklich OAuth ist)
   wc.on('did-create-window', (childWindow, details) => {
     const initialUrl = details && details.url ? details.url : '';
     if (!isOAuthDomain(initialUrl)) return;
@@ -1011,13 +1005,13 @@ function setupView(view) {
     childWindow.webContents.on('did-navigate', onDidNav);
   });
 
-  // ── Navigation Guards ──
+  // Navigation Guards
   wc.on('will-navigate', (event, navUrl) => {
     if (!isAllowedDomain(navUrl) && !isOAuthDomain(navUrl)) {
       event.preventDefault();
       try {
         const p = new URL(navUrl).protocol;
-        if (p === 'https:' || p === 'http:') shell.openExternal(navUrl);
+        if (p === 'https:' || p === 'http:' || p === 'mailto:') shell.openExternal(navUrl);
       } catch {}
     }
   });
@@ -1027,7 +1021,7 @@ function setupView(view) {
     if (!isAllowedDomain(navUrl) && !isOAuthDomain(navUrl)) event.preventDefault();
   });
 
-  // ── Tab-Titel ──
+  // Tab-Titel
   wc.on('page-title-updated', (e, title) => {
     e.preventDefault();
     if (mainWindow && !mainWindow.isDestroyed()) mainWindow.setTitle(`Claude v${version}`);
@@ -1038,16 +1032,16 @@ function setupView(view) {
     }
   });
 
-  // ── Script-Injection bei Page-Load ──
+  // Script-Injection bei Page-Load
   wc.on('did-finish-load', () => {
     updateTitle();
     injectScripts(wc);
   });
 
-  // ── SPA-Navigation (Chat-Wechsel): Scripts re-injizieren ──
+  // SPA-Navigation (Chat-Wechsel): Scripts re-injizieren
   wc.on('did-navigate-in-page', () => reinjectScripts(wc));
 
-  // ── Crash-Recovery ──
+  // Crash-Recovery
   wc.on('render-process-gone', (_, details) => {
     if (details.reason === 'clean-exit' || wc.isDestroyed()) return;
     const tab = tabs.find(tb => tb.view === view);
@@ -1062,9 +1056,7 @@ function setupView(view) {
   });
 }
 
-// ═══════════════════════════════════════════════════════════════════
-//  View-Erstellung + Pool
-// ═══════════════════════════════════════════════════════════════════
+// View-Erstellung + Pool
 
 function createContentView() {
   const view = new WebContentsView({
@@ -1109,9 +1101,7 @@ function getPooledView() {
 }
 
 
-// ═══════════════════════════════════════════════════════════════════
-//  Tab-Operationen
-// ═══════════════════════════════════════════════════════════════════
+// Tab-Operationen
 
 function createTab(url = 'https://claude.ai') {
   if (!mainWindow || mainWindow.isDestroyed()) return null;
@@ -1216,9 +1206,7 @@ function updateTitle() {
   if (mainWindow.getTitle() !== title) mainWindow.setTitle(title);
 }
 
-// ═══════════════════════════════════════════════════════════════════
-//  Design-Toggle
-// ═══════════════════════════════════════════════════════════════════
+// Design-Toggle
 
 function toggleDesign() {
   customDesign = !customDesign;
@@ -1270,9 +1258,7 @@ function toggleDesign() {
   updateMenu(true);
 }
 
-// ═══════════════════════════════════════════════════════════════════
-//  Bug-Report-Dialog
-// ═══════════════════════════════════════════════════════════════════
+// Bug-Report-Dialog
 
 const BUG_EMAIL = 'claudeai.desktop.linux@gmail.com';
 const WEB3FORMS_ACCESS_KEY = 'f72095f3-b338-4fa5-8462-5ddee347eb32';
@@ -1426,7 +1412,7 @@ function showBugReportDialog() {
     mode: getAppMode()
   };
 
-  const brSize = { width: 500, height: 760 };
+  const brSize = { width: 500, height: 860 };
   const brPos = centerOnMainWindow(brSize.width, brSize.height);
   const win = new BrowserWindow({
     ...brSize, ...brPos, resizable: false,
@@ -1673,9 +1659,7 @@ button.secondary:hover{background:${inputBg};color:${fg}}
   win.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html));
 }
 
-// ═══════════════════════════════════════════════════════════════════
-//  Tray, Hintergrund-Modus, globaler Hotkey
-// ═══════════════════════════════════════════════════════════════════
+// Tray, Hintergrund-Modus, globaler Hotkey
 
 function showMainWindow() {
   if (!mainWindow || mainWindow.isDestroyed()) return;
@@ -1969,7 +1953,7 @@ function registerHotkey(accel) {
   return isWayland ? 'failed-wayland' : 'failed';
 }
 
-// ── Feature 6: Clipboard → Chat ──────────────────────────────────
+// Feature 6: Clipboard → Chat
 function openClipboardChat() {
   let text = '';
   try { text = clipboard.readText() || ''; } catch {}
@@ -2001,7 +1985,7 @@ function registerClipboardHotkey(accel) {
   return isWayland ? 'failed-wayland' : 'failed';
 }
 
-// ── Feature 4: Markdown-Export ───────────────────────────────────
+// Feature 4: Markdown-Export
 async function exportActiveConversation() {
   const tab = tabs[activeTabIndex];
   if (!tab || !alive(tab.view)) return;
@@ -2673,9 +2657,7 @@ function openSettingsWindow() {
   settingsWindow.on('closed', () => { settingsWindow = null; });
 }
 
-// ═══════════════════════════════════════════════════════════════════
-//  Custom App-Menü (HTML-Popup statt OS-nativ)
-// ═══════════════════════════════════════════════════════════════════
+// Custom App-Menü (HTML-Popup statt OS-nativ)
 
 function getAppMenuItems() {
   const designLabel = `Design: ${customDesign ? 'Modern' : 'Classic'}`;
@@ -2872,9 +2854,7 @@ function openAppMenuWindow(rendererX, rendererY) {
   });
 }
 
-// ═══════════════════════════════════════════════════════════════════
-//  Custom MessageBox – zentriert über der App statt GTK-nativ
-// ═══════════════════════════════════════════════════════════════════
+// Custom MessageBox – zentriert über der App statt GTK-nativ
 
 let _msgboxCounter = 0;
 
@@ -2982,9 +2962,7 @@ function getMessageBoxHTML({ type, title, message, detail, buttons, defaultId, c
 </html>`;
 }
 
-// ═══════════════════════════════════════════════════════════════════
-//  Menü
-// ═══════════════════════════════════════════════════════════════════
+// Menü
 
 let lastMenuHash = '';
 let menuPending = false;
@@ -3067,9 +3045,7 @@ function updateMenu(force = false) {
   });
 }
 
-// ═══════════════════════════════════════════════════════════════════
-//  Offline-Handling
-// ═══════════════════════════════════════════════════════════════════
+// Offline-Handling
 
 function handleOnlineChange(online) {
   if (online === isOnline) return;
@@ -3108,9 +3084,7 @@ function showOfflinePage() {
   ));
 }
 
-// ═══════════════════════════════════════════════════════════════════
-//  Download-Manager
-// ═══════════════════════════════════════════════════════════════════
+// Download-Manager
 
 function setupDownloadManager() {
   // Echo-Schutz: claude.ai feuert manche Download-Links 2x. event.preventDefault()
@@ -3227,9 +3201,7 @@ function setupDownloadManager() {
   });
 }
 
-// ═══════════════════════════════════════════════════════════════════
-//  Auto-Updater
-// ═══════════════════════════════════════════════════════════════════
+// Auto-Updater
 
 autoUpdater.autoDownload = true;
 autoUpdater.autoInstallOnAppQuit = true;
@@ -3300,9 +3272,7 @@ function setupAutoUpdater() {
   }, UPDATE_CHECK_MS);
 }
 
-// ═══════════════════════════════════════════════════════════════════
-//  Session Security
-// ═══════════════════════════════════════════════════════════════════
+// Session Security
 
 // Snap-Befehl, den der User im Terminal ausführen kann, falls keine GUI greift.
 const SNAP_CONNECT_CMD = 'sudo snap connect claude-ai-desktop:audio-record';
@@ -3615,9 +3585,7 @@ body{font-size:13.5px;display:flex;flex-direction:column}
 </body></html>`;
 }
 
-// ═══════════════════════════════════════════════════════════════════
-//  Live Notifications (GitHub-hosted JSON, polled + on-demand)
-// ═══════════════════════════════════════════════════════════════════
+// Live Notifications (GitHub-hosted JSON, polled + on-demand)
 
 // Test-Override-Pfad für lokale Entwicklung. Hat Vorrang vor dem GitHub-Fetch.
 // Setze CLAUDE_NOTIFICATIONS_OVERRIDE auf einen absoluten Pfad zu einer JSON-Datei.
@@ -3814,9 +3782,7 @@ function setupSession() {
   ses.preconnect({ url: 'https://api.claude.ai', numSockets: 2 });
 }
 
-// ═══════════════════════════════════════════════════════════════════
-//  IPC-Handler
-// ═══════════════════════════════════════════════════════════════════
+// IPC-Handler
 
 // Linux Autostart: schreibt eine .desktop-Datei.
 // AppImage: ~/.config/autostart/claude-ai-desktop.desktop (echtes Home).
@@ -4153,9 +4119,7 @@ ipcMain.on('theme-toggle', () => {
   saveWindowState();
 });
 
-// ═══════════════════════════════════════════════════════════════════
-//  Fenster erstellen
-// ═══════════════════════════════════════════════════════════════════
+// Fenster erstellen
 
 function createWindow() {
   const state = loadWindowState();
@@ -4229,9 +4193,7 @@ function createWindow() {
   });
 }
 
-// ═══════════════════════════════════════════════════════════════════
-//  App Lifecycle
-// ═══════════════════════════════════════════════════════════════════
+// App Lifecycle
 
 app.on('second-instance', () => {
   if (!mainWindow || mainWindow.isDestroyed()) return;

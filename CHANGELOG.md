@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.3.12] – 2026-05-17 — Higgsfield Connector Fix
+
+### Fixed
+- **Higgsfield connector now connects.** Users reported that clicking "Connect" / "Accept" on the Higgsfield MCP connector dialog inside claude.ai did nothing visible. Root cause: `higgsfield.ai` was not listed in the in-app OAuth allowlist (`isOAuthDomain`), so the auth popup was routed to the system browser via `shell.openExternal`. The OAuth callback then arrived in the external browser session instead of the Electron session backing the app, which left claude.ai stuck waiting for a token that never came. `higgsfield.ai` and its subdomains are now treated as OAuth domains: the popup opens inside the app (600×750, shared `persist:claude` partition so the callback reaches claude.ai), same as Google/GitHub/Microsoft/GitLab/Bitbucket/Auth0.
+- **`mailto:` links open the mail client from in-tab navigation too.** Previously only `mailto:` links opened via `window.open()` were forwarded to `shell.openExternal`; a plain `mailto:` link followed in the same tab was silently dropped. Now both paths behave the same.
+- **Bug Report dialog: action buttons no longer clipped at the bottom.** The serverSideHint paragraph added in 1.3.11 made the disclaimer block taller, but the fixed window height (760 px) was not adjusted, so on default scaling "Cancel" and "Send report" were partially or fully cut off. Window height bumped to 860 px.
+
+### Changed
+- **Internal: section header cleanup in `main.js`.** Removed 56 box-drawing separator lines (`// ═══...`) and 12 sub-section dash markers (`// ── X ──`). Headers now read as plain `// Section name` comments. Purely cosmetic, no functional change.
+- **Snap listing copy** trimmed (removed marketing wording).
+
+---
+
 ## [1.3.11] – 2026-05-13 — Cloudflare Verification Loop Fix
 
 ### Fixed

@@ -14,7 +14,7 @@ sudo snap install claude-ai-desktop
 
 [![claude-ai-desktop](https://snapcraft.io/claude-ai-desktop/badge.svg)](https://snapcraft.io/claude-ai-desktop)
 
-> **v1.3.10** – MCP Connectors & Self-Service Diagnostics: Visualize and other MCP apps in claude.ai load again, plus new "Copy diagnostics info" and "Reset claude.ai verification…" entries in the App Menu
+> **v1.3.12** – Higgsfield connector fix: clicking "Connect" / "Accept" on the Higgsfield MCP connector in claude.ai now opens the auth popup inside the app instead of dropping the OAuth callback into the system browser.
 
 ---
 
@@ -34,7 +34,7 @@ sudo snap install claude-ai-desktop
 - **App Settings Window** – Configure hotkeys, minimize-to-tray, autostart, background notifications and templates from `Claude → App Settings…`
 - **Autostart** – Optional launch on system boot (Linux: writes a `.desktop` file to `~/.config/autostart/`; Snap: native autostart directive)
 - **Custom Design System** – Modern gradient theme or Classic mode toggle
-- **Dark/Light Mode Toggle** – Moon/Sun button in the tab bar, seamless theme switching
+- **Dark/Light Mode Toggle** – Moon/Sun button in the tab bar
 - **Auto-Update** – Automatically updates via GitHub Releases (AppImage) or `snapd` (Snap); since v1.3.7 the AppImage also self-heals stale `.desktop` and autostart entries so the menu shortcut keeps working after each update
 - **Manual Update Check** – Menu entry shows a dialog with the result
 - **What's-New Popup** – Shows the changelog once after each version upgrade, including notes for skipped versions
@@ -90,7 +90,7 @@ StartupWMClass=claude-desktop
 EOF
 ```
 
-> **Tip:** If you want the shortcut to survive future updates, point `Exec=` to a stable filename like `Claude-Desktop-latest.AppImage` and create a symlink to the current version after each update.
+If you want the shortcut to survive future updates, point `Exec=` to a stable filename like `Claude-Desktop-latest.AppImage` and create a symlink to the current version after each update.
 
 ### From source
 
@@ -165,6 +165,18 @@ The `--no-sandbox` flag is required for Electron AppImages on Linux because the 
 ---
 
 ## Changelog
+
+### v1.3.12 – Higgsfield Connector Fix (2026-05-17)
+
+- **Higgsfield connector now connects.** `higgsfield.ai` was missing from the OAuth allowlist, so the auth popup was sent to the system browser and the OAuth callback never returned to the app. The domain is now treated like the other OAuth providers (Google, GitHub, Microsoft, GitLab, Bitbucket, Auth0) — popup opens in-app, callback lands in the shared session.
+- **`mailto:` links opened from in-tab navigation** now also reach the system mail client (previously only `window.open()`-style links did).
+- **Bug Report dialog window height** bumped from 760 to 860 px so the action buttons are no longer cut off at the bottom (the serverSideHint added in 1.3.11 had stretched the disclaimer block without a matching size bump).
+- Internal: cleaned up `main.js` section-header comments (cosmetic only).
+
+### v1.3.11 – Cloudflare Verification Loop Fix (2026-05-13)
+
+- **Cloudflare Turnstile no longer loops on "Performing security verification".** Three causes addressed: the challenge iframe (`challenges.cloudflare.com`) was missing from the allowlist; the UA / Sec-Ch-Ua header rewrite was scoped to `*.claude.ai` only, leaving sandbox origins on the default Electron UA; `Sec-Ch-Ua-Full-Version-List` and `Sec-Ch-Ua-Platform-Version` were not being sent (Electron upstream bug #34762).
+- **Bug Report dialog**: added a "does the same error appear in a regular browser?" cross-check hint under the unofficial-app disclaimer.
 
 ### v1.3.10 – MCP Connectors & Self-Service Diagnostics (2026-05-11)
 
@@ -314,7 +326,7 @@ The `--no-sandbox` flag is required for Electron AppImages on Linux because the 
 
 ## Security
 
-**Score: 9.5/10** – Sandbox active on all windows, IPC validated, CSP headers, 0 npm vulnerabilities, Electron 41 current.
+Sandbox active on all windows, IPC validated, CSP headers, Electron 41.
 
 Known limitation: `--no-sandbox` required for AppImage (SUID sandbox incompatibility). Web content sandbox remains active.
 

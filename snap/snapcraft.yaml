@@ -1,33 +1,33 @@
 name: claude-ai-desktop
-version: '1.3.11'
-summary: Fast desktop wrapper for Claude AI – tabs, tray, voice, distraction-free
+version: '1.3.12'
+summary: Desktop wrapper for Claude AI with tabs, tray and voice input
 description: |
-  A fast desktop app for Claude AI – no browser needed.
-  Use Claude directly from your desktop, distraction-free and always at hand.
+  Unofficial desktop app for Claude AI on Linux. Runs claude.ai without
+  a browser tab, with multi-tab support, system tray, voice input and
+  in-app OAuth popups for connectors.
 
-  **What's new in v1.3.11:**
+  **What's new in v1.3.12:**
 
-  * **Cloudflare verification loop fixed** – Users who got stuck on
-    "Performing security verification" / "Verifying you are human" no
-    longer hit a dead end. The Turnstile challenge iframe
-    (challenges.cloudflare.com) is now whitelisted so it can complete,
-    and the user-agent / Sec-Ch-Ua client hints are now sent
-    consistently (including Sec-Ch-Ua-Full-Version-List, which
-    Electron does not send by default) for all claude.ai sandbox
-    origins and Anthropic endpoints. Cloudflare no longer mis-flags
-    the renderer.
-  * **Bug Report: browser cross-check hint** – The Report-a-Bug dialog
-    now shows a quick check under the community-app disclaimer: does
-    the same error appear on claude.ai in a regular browser? If yes,
-    it is an Anthropic server-side issue, not a wrapper bug.
+  * **Higgsfield connector now connects** – Clicking "Connect" /
+    "Accept" on the Higgsfield MCP connector inside claude.ai
+    previously did nothing visible. The app was sending the OAuth
+    popup to the system browser because `higgsfield.ai` was missing
+    from the in-app OAuth allowlist; the callback then arrived in the
+    wrong session. Higgsfield is now treated as an OAuth domain, same
+    as Google/GitHub/Microsoft/GitLab/Bitbucket/Auth0.
+  * **mailto: links** opened from in-tab navigation now reach the
+    system mail client (previously only window.open() links did).
 
-  **Earlier highlights (v1.3.7 – v1.3.10):**
+  **Earlier highlights (v1.3.7 – v1.3.11):**
 
+  * **Cloudflare verification loop fix (v1.3.11)** – Sec-Ch-Ua client
+    hints are now sent consistently for all claude.ai sandbox origins
+    and Anthropic endpoints; challenges.cloudflare.com is whitelisted.
   * **MCP Connectors fixed (v1.3.10)** – Visualize and other MCP apps
     in claude.ai load correctly again.
-  * **Diagnostics & Verification Reset menu (v1.3.10)** – Copy a
-    full system info block for bug reports, or reset cookies/cache
-    for all claude.ai origins to recover from a stuck verification.
+  * **Diagnostics & Verification Reset menu (v1.3.10)** – Copy a full
+    system info block for bug reports, or reset cookies/cache for all
+    claude.ai origins to recover from a stuck verification.
   * **Wayland compatibility (v1.3.9)** – Pop-ups and dialogs land
     where they belong on GNOME / KDE. The app runs through XWayland
     under Wayland, like VS Code, Discord and Signal.
@@ -61,7 +61,7 @@ description: |
   * **Bug Report form** in DE/EN/FR/ES/IT
   * **Auto-update** synced with the GitHub Release
   * **Window memory**, **crash recovery**, **offline page**, **download
-    manager**, **autostart**, sandbox enabled, zero npm vulnerabilities
+    manager**, **autostart**, sandbox enabled
 
   **Snap permissions:**
 
