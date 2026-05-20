@@ -1,7 +1,7 @@
 [Desktop Entry]
 Name=Claude AI Desktop
 GenericName=Claude AI
-Comment=Native Desktop App für Claude AI
+Comment=Unofficial desktop wrapper for Claude AI
 Exec=claude-ai-desktop %U
 Terminal=false
 Type=Application

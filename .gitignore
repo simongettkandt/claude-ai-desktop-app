@@ -17,3 +17,5 @@ notifications.json
 
 # Persoenliche Snap-Release-Anleitung, bleibt lokal.
 SNAP-RELEASE.md
+.backups/
+AppDir/

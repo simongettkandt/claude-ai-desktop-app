@@ -1,69 +1,71 @@
 name: claude-ai-desktop
-version: '1.3.12'
-summary: Desktop wrapper for Claude AI with tabs, tray and voice input
+version: '1.3.13'
+summary: Unofficial desktop wrapper for Claude AI with tabs, tray and voice input
 description: |
   Unofficial desktop app for Claude AI on Linux. Runs claude.ai without
   a browser tab, with multi-tab support, system tray, voice input and
   in-app OAuth popups for connectors.
 
-  **What's new in v1.3.12:**
+  Not affiliated with Anthropic.
 
-  * **Higgsfield connector now connects** – Clicking "Connect" /
-    "Accept" on the Higgsfield MCP connector inside claude.ai
-    previously did nothing visible. The app was sending the OAuth
-    popup to the system browser because `higgsfield.ai` was missing
-    from the in-app OAuth allowlist; the callback then arrived in the
-    wrong session. Higgsfield is now treated as an OAuth domain, same
-    as Google/GitHub/Microsoft/GitLab/Bitbucket/Auth0.
-  * **mailto: links** opened from in-tab navigation now reach the
-    system mail client (previously only window.open() links did).
+  What's new in v1.3.13:
 
-  **Earlier highlights (v1.3.7 – v1.3.11):**
+  * Help banner for stuck verification - If the Cloudflare security
+    check gets stuck in a loop, an in-page banner now appears after a
+    few seconds. One click on Reset clears the claude.ai cookies and
+    cache and reloads the page, so you no longer have to find the
+    hidden menu entry.
+  * About window - the app menu now has "About Claude Desktop" and
+    "What's New" entries.
+  * UI polish - keyboard focus rings on dialog buttons, consistent
+    icons in the bug report form.
 
-  * **Cloudflare verification loop fix (v1.3.11)** – Sec-Ch-Ua client
+  Earlier highlights (v1.3.7 - v1.3.12):
+
+  * Cloudflare verification loop fix (v1.3.11) - Sec-Ch-Ua client
     hints are now sent consistently for all claude.ai sandbox origins
     and Anthropic endpoints; challenges.cloudflare.com is whitelisted.
-  * **MCP Connectors fixed (v1.3.10)** – Visualize and other MCP apps
-    in claude.ai load correctly again.
-  * **Diagnostics & Verification Reset menu (v1.3.10)** – Copy a full
+  * MCP Connectors fixed (v1.3.10) - Visualize and other MCP apps in
+    claude.ai load correctly again.
+  * Diagnostics & Verification Reset menu (v1.3.10) - Copy a full
     system info block for bug reports, or reset cookies/cache for all
     claude.ai origins to recover from a stuck verification.
-  * **Wayland compatibility (v1.3.9)** – Pop-ups and dialogs land
-    where they belong on GNOME / KDE. The app runs through XWayland
-    under Wayland, like VS Code, Discord and Signal.
-  * **Live Snap microphone status (v1.3.8)** – App Settings shows
-    whether the audio-record interface is connected.
-  * **Cloudflare loop fix on Snap (v1.3.7)** – Snap launch uses ANGLE
-    over OpenGL instead of SwiftShader.
+  * Wayland compatibility (v1.3.9) - Pop-ups and dialogs land where
+    they belong on GNOME / KDE. The app runs through XWayland under
+    Wayland, like VS Code, Discord and Signal.
+  * Live Snap microphone status (v1.3.8) - App Settings shows whether
+    the audio-record interface is connected.
+  * Cloudflare loop fix on Snap (v1.3.7) - Snap launch uses ANGLE over
+    OpenGL instead of SwiftShader.
 
-  **System requirements:**
+  System requirements:
 
   Tested on Ubuntu 20.04 (kernel 5.4) and newer, Fedora 32+, and recent
   Arch / Manjaro / openSUSE Tumbleweed. Older kernels (e.g. Ubuntu
   19.10, kernel 5.3) have degraded Snap AppArmor confinement and a
-  broken Mesa userspace ABI for ANGLE – the app may fail to render.
+  broken Mesa userspace ABI for ANGLE - the app may fail to render.
   Please upgrade if you see "App is not responding" on launch.
 
-  **Core features:**
+  Core features:
 
-  * **Tab system** with its own tab bar (Ctrl+T, Ctrl+W, Ctrl+Tab)
-  * **System Tray** with optional minimize-to-tray
-  * **Global Quick-Prompt Hotkey** – frameless prompt window drops your
+  * Tab system with its own tab bar (Ctrl+T, Ctrl+W, Ctrl+Tab)
+  * System tray with optional minimize-to-tray
+  * Global Quick-Prompt hotkey - frameless prompt window drops your
     text straight into a new chat from any app
-  * **Voice Input** – record voice messages directly in claude.ai
-  * **OAuth logins in-app** – Google, GitHub, Drive, GitLab, Bitbucket,
+  * Voice input - record voice messages directly in claude.ai
+  * OAuth logins in-app - Google, GitHub, Drive, GitLab, Bitbucket,
     Microsoft
-  * **Markdown export** of conversations (Ctrl+Shift+E)
-  * **Prompt templates** for the Quick-Prompt window
-  * **Background reply notifications** when Claude finishes answering
-  * **Clipboard & screenshot hotkeys** to start a chat from selection
-  * **Dark/Light mode** plus two design variants (Modern, Classic)
-  * **Bug Report form** in DE/EN/FR/ES/IT
-  * **Auto-update** synced with the GitHub Release
-  * **Window memory**, **crash recovery**, **offline page**, **download
-    manager**, **autostart**, sandbox enabled
+  * Markdown export of conversations (Ctrl+Shift+E)
+  * Prompt templates for the Quick-Prompt window
+  * Background reply notifications when Claude finishes answering
+  * Clipboard & screenshot hotkeys to start a chat from selection
+  * Dark/Light mode plus two design variants (Modern, Classic)
+  * Bug report form in DE/EN/FR/ES/IT
+  * Auto-update synced with the GitHub Release
+  * Window memory, crash recovery, offline page, download manager,
+    autostart, sandbox enabled
 
-  **Snap permissions:**
+  Snap permissions:
 
   For Voice Input the audio-record interface must be connected once:
 
@@ -71,16 +73,14 @@ description: |
 
   The in-app wizard guides you through this on first microphone use.
 
-  **Get in touch:**
+  Get in touch:
 
-  Use the built-in "Report a Bug" button (App Menu → Report a Bug) for
+  Use the built-in "Report a Bug" button (App Menu -> Report a Bug) for
   feedback and bug reports. Or contact:
   claudeai.desktop.linux@gmail.com
 
   Source code: https://github.com/simonlinuxcraft/claude-ai-desktop-app
   (MIT licence)
-
-  **Not affiliated with Anthropic.**
 
   This is an unofficial community wrapper around claude.ai for Linux.
   It is not made by, endorsed by, or affiliated with Anthropic PBC.
@@ -111,6 +111,7 @@ apps:
       - wayland
       - gsettings
       - opengl
+      - screen-inhibit-control
 
 parts:
   electron-app:

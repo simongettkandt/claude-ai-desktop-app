@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.3.13] - 2026-05-20 - Verification Banner & About Window
+
+### Added
+- **Banner on a stuck verification screen.** If the Cloudflare "Performing security verification" page is still up after 18 seconds, a banner appears at the top with Reset and Dismiss buttons. Reset clears claude.ai cookies and cache and reloads the page (the existing `resetClaudeVerification()`); before this the only way out was a hidden menu entry. New injected script `inject/verify-banner.js`. Detection is kept narrow (`<title>Just a moment...</title>`, `#challenge-stage`, `#challenge-running`) so the Turnstile widget on the login page is left alone. The timer is stored in `sessionStorage` so it survives a challenge that reloads itself.
+- **About window.** New "About Claude Desktop" entry in the app menu opens a window with the app version, a short description, links to the GitHub repository and Anthropic support, the trademark/affiliation notice, and a "Show What's New" button. New file `preload-about.js`.
+- **What's New reachable from the app menu.** A "What's New" entry now opens the release notes at any time, not just on first launch after an update. `getFilteredNotes()` takes a `force` flag so the current version's notes show regardless of the last-seen version.
+
+### Changed
+- Keyboard focus rings (`:focus-visible`) on buttons in the Settings, Bug Report, What's New and About windows, plus the hotkey capture field. Keyboard users had no visible focus indicator before.
+- Bug Report success/error icons switched from raw Unicode glyphs to SVG, matching the rest of the app.
+- Snap: added the `screen-inhibit-control` plug so the screensaver is held back during video playback. Snap listing description stripped of Markdown bold markers; `.desktop` `Comment` field set to English.
+- AppImage launch wrapper now clears `GIO_MODULE_DIR`. README documents the FUSE 2 requirement on Ubuntu 22.04 / 24.04.
+
+### Fixed
+- Tab bar IPC listeners no longer accumulate when the tab bar reloads on a theme or design toggle. Listener registration in `preload-tabbar.js` is now idempotent; previously every reload added another listener and events arrived multiple times.
+
+---
+
 ## [1.3.12] – 2026-05-17 — Higgsfield Connector Fix
 
 ### Fixed

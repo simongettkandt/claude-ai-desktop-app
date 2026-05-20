@@ -17,6 +17,11 @@ exports.default = async function afterPack(context) {
   const wrapper = `#!/bin/bash
 DIR="$(dirname "$(readlink -f "$0")")"
 
+# Snap-Terminals (z.B. alacritty als Snap) vererben GIO_MODULE_DIR auf einen
+# Pfad, der hier nicht existiert. Unset, damit glib-basierte Nebenpfade nicht
+# auf GDummyTlsBackend zurueckfallen. Chromium selbst ist davon unabhaengig.
+unset GIO_MODULE_DIR
+
 # Wayland-Bypass: BrowserWindow x/y ist unter nativem Wayland no-op,
 # Pop-ups landen zufaellig. Loesung: ueber XWayland rendern. Switch
 # muss VOR Electron-Init am argv stehen, deshalb hier im Wrapper.

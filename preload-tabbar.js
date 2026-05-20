@@ -8,11 +8,19 @@ function validId(s) {
   return typeof s === 'string' && s.length > 0 && s.length <= 80;
 }
 
+// Tab-Bar-HTML wird bei Theme-/Design-Toggle neu geladen. Wird der Renderer-Prozess
+// wiederverwendet, bleiben alte ipcRenderer-Listener haengen und Events kommen doppelt.
+// removeAllListeners vor jedem on() haelt es bei genau einem Listener pro Kanal.
+function once(channel, handler) {
+  ipcRenderer.removeAllListeners(channel);
+  ipcRenderer.on(channel, handler);
+}
+
 contextBridge.exposeInMainWorld('tabAPI', {
-  onTabsUpdate: (cb) => ipcRenderer.on('tabs-update', (_, data) => cb(data)),
-  onThemeUpdate: (cb) => ipcRenderer.on('theme-update', (_, dark) => cb(dark)),
-  onDesignUpdate: (cb) => ipcRenderer.on('design-update', (_, custom) => cb(custom)),
-  onNotificationsUpdate: (cb) => ipcRenderer.on('notifications-update', (_, list) => cb(list)),
+  onTabsUpdate: (cb) => once('tabs-update', (_, data) => cb(data)),
+  onThemeUpdate: (cb) => once('theme-update', (_, dark) => cb(dark)),
+  onDesignUpdate: (cb) => once('design-update', (_, custom) => cb(custom)),
+  onNotificationsUpdate: (cb) => once('notifications-update', (_, list) => cb(list)),
   newTab: () => ipcRenderer.send('tab-new'),
   switchTab: (i) => { if (validIndex(i)) ipcRenderer.send('tab-switch', i); },
   closeTab: (i) => { if (validIndex(i)) ipcRenderer.send('tab-close', i); },

@@ -14,7 +14,7 @@ sudo snap install claude-ai-desktop
 
 [![claude-ai-desktop](https://snapcraft.io/claude-ai-desktop/badge.svg)](https://snapcraft.io/claude-ai-desktop)
 
-> **v1.3.12** – Higgsfield connector fix: clicking "Connect" / "Accept" on the Higgsfield MCP connector in claude.ai now opens the auth popup inside the app instead of dropping the OAuth callback into the system browser.
+> **v1.3.13** - Verification loop banner: if the Cloudflare security check gets stuck, an in-page banner now appears with a Reset button that clears claude.ai cookies and cache and reloads the page.
 
 ---
 
@@ -67,6 +67,18 @@ chmod +x Claude-Desktop-*.AppImage
 ./Claude-Desktop-*.AppImage --no-sandbox
 ```
 
+This is a type-2 AppImage and needs the FUSE 2 runtime. Ubuntu 22.04 / 24.04 and other recent distros ship FUSE 3 only, so the AppImage may fail with `fuse: device not found` or a missing `libfuse.so.2`. Either install FUSE 2 once:
+
+```bash
+sudo apt install libfuse2        # Debian/Ubuntu
+```
+
+or run the AppImage without FUSE:
+
+```bash
+APPIMAGE_EXTRACT_AND_RUN=1 ./Claude-Desktop-*.AppImage --no-sandbox
+```
+
 Or use the included launch script:
 
 ```bash
@@ -81,7 +93,7 @@ cat > ~/.local/share/applications/claude-desktop.desktop << EOF
 [Desktop Entry]
 Name=Claude Desktop
 Comment=Claude AI Desktop App
-Exec=/path/to/Claude-Desktop-1.3.12.AppImage --no-sandbox
+Exec=/path/to/Claude-Desktop-1.3.13.AppImage --no-sandbox
 Icon=/path/to/icon.png
 Type=Application
 Categories=Utility;
@@ -164,6 +176,10 @@ The `--no-sandbox` flag is required for Electron AppImages on Linux because the 
 ---
 
 ## Changelog
+
+### v1.3.13 - Verification Loop Banner (2026-05-20)
+
+- **In-page banner when the verification screen is stuck.** Land on the Cloudflare "Performing security verification" page and stay there 18 seconds, and a banner shows up at the top with a Reset button. Reset clears claude.ai cookies and cache and reloads the page. Before this the only way out was a hidden menu entry. New injected script `inject/verify-banner.js`; detection is kept narrow so the Turnstile widget on the login page does not trigger it.
 
 ### v1.3.12 – Higgsfield Connector Fix (2026-05-17)
 

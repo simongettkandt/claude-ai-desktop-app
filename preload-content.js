@@ -10,5 +10,6 @@ contextBridge.exposeInMainWorld('claudeDesktop', {
       preview = payload.preview.slice(0, 200);
     }
     ipcRenderer.send('claude-response-done', { preview });
-  }
+  },
+  resetVerification: () => ipcRenderer.send('claude-reset-verification')
 });

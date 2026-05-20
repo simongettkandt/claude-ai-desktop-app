@@ -63,6 +63,7 @@ const MAX_NOTIFICATIONS_VISIBLE = 1;                        // ein Banner gleich
 
 const BRAND_SCRIPT = fs.readFileSync(path.join(__dirname, 'inject', 'brand.js'), 'utf8');
 const NOTIFY_SCRIPT = fs.readFileSync(path.join(__dirname, 'inject', 'notify.js'), 'utf8');
+const VERIFY_SCRIPT = fs.readFileSync(path.join(__dirname, 'inject', 'verify-banner.js'), 'utf8');
 
 // State
 
@@ -317,6 +318,7 @@ let isQuitting = false;
 let settingsWindow = null;
 let quickPromptWindow = null;
 let whatsNewWindow = null;
+let aboutWindow = null;
 let appMenuWindow = null;
 let bugReportWindow = null;
 let appMenuJustClosedAt = 0;
@@ -524,6 +526,18 @@ const RELEASE_NOTES = {
       text: 'Falls die Registrierung eines globalen Hotkeys auf Wayland am Compositor scheitert (GNOME erlaubt es z.B. eingeschr\u00e4nkt), zeigt das App-Einstellungen-Fenster jetzt einen klaren Hinweistext, statt eine generische Fehlermeldung.'
     }
   ],
+  '1.3.13': [
+    {
+      icon: 'check',
+      title: 'Hilfe bei hängender Verifizierungs-Seite',
+      text: 'Bleibt die Cloudflare-Sicherheitsprüfung in einer Schleife hängen, erscheint nach einigen Sekunden ein Banner direkt auf der Seite. Ein Klick auf "Zurücksetzen" leert Cookies und Cache für claude.ai und lädt die Seite neu, ohne dass du den versteckten Menüpunkt suchen musst.'
+    },
+    {
+      icon: 'settings',
+      title: 'Info-Fenster im Menü',
+      text: 'Das Hamburger-Menü hat jetzt die Punkte "Über Claude Desktop" und "Was ist neu?". Das Info-Fenster zeigt Version, eine Kurzbeschreibung, Links zu GitHub und zum Anthropic-Support sowie den Markenhinweis. "Was ist neu?" lässt sich darüber jederzeit öffnen, nicht mehr nur nach einem Update.'
+    }
+  ],
   '1.3.12': [
     {
       icon: 'check',
@@ -572,10 +586,10 @@ const RELEASE_NOTES = {
   ]
 };
 
-function getFilteredNotes(currentVersion, lastSeenVersion) {
+function getFilteredNotes(currentVersion, lastSeenVersion, force = false) {
   const all = Object.keys(RELEASE_NOTES);
   let versionsToShow;
-  if (!lastSeenVersion) {
+  if (force || !lastSeenVersion) {
     versionsToShow = all.includes(currentVersion) ? [currentVersion] : [];
   } else {
     versionsToShow = all
@@ -935,10 +949,24 @@ function sendDesignUpdate() {
 
 // Script-Injection
 
+// Verify-Banner-Script mit lokalisierten Strings befüllen
+function verifyScript() {
+  const i18n = {
+    msg: t(
+      'Die Sicherheitsprüfung hängt in einer Schleife. Zurücksetzen meldet dich von claude.ai ab und lädt die Seite neu.',
+      'The security check is stuck in a loop. Resetting will sign you out of claude.ai and reload the page.'
+    ),
+    reset: t('Zurücksetzen', 'Reset'),
+    dismiss: t('Schließen', 'Dismiss')
+  };
+  return VERIFY_SCRIPT.replace('__VERIFY_I18N__', JSON.stringify(i18n));
+}
+
 function injectScripts(wc) {
   if (!alive(wc)) return;
   if (customDesign) wc.executeJavaScript(BRAND_SCRIPT).catch(() => {});
   wc.executeJavaScript(NOTIFY_SCRIPT).catch(() => {});
+  wc.executeJavaScript(verifyScript()).catch(() => {});
 }
 
 function reinjectScripts(wc) {
@@ -1338,7 +1366,7 @@ async function copyDiagnosticsInfo() {
   });
 }
 
-async function resetClaudeVerification() {
+async function resetClaudeVerification(targetTab) {
   const confirm = await showCustomMessageBox({
     type: 'warning',
     title: 'Claude',
@@ -1381,7 +1409,7 @@ async function resetClaudeVerification() {
     console.error('resetClaudeVerification:', e);
   }
 
-  const active = tabs[activeTabIndex];
+  const active = (targetTab && alive(targetTab.view)) ? targetTab : tabs[activeTabIndex];
   if (active && alive(active.view)) {
     active.view.webContents.loadURL('https://claude.ai');
   }
@@ -1468,6 +1496,7 @@ button.primary:hover:not(:disabled){background:${btnHover}}
 button.primary:disabled{background:${btnDisabled};cursor:not-allowed}
 button.secondary{background:transparent;color:${sub};border:1px solid ${inputBorder}}
 button.secondary:hover{background:${inputBg};color:${fg}}
+button:focus-visible{outline:2px solid ${inputFocus};outline-offset:2px}
 .honeypot{position:absolute;left:-9999px;width:1px;height:1px;opacity:0}
 .disclaimer{display:flex;gap:10px;align-items:flex-start;padding:11px 13px;margin:-2px 0 16px;
   background:${dark ? 'rgba(224,169,62,0.10)' : 'rgba(224,150,40,0.12)'};
@@ -1481,7 +1510,8 @@ button.secondary:hover{background:${inputBg};color:${fg}}
 .status{display:none;flex-direction:column;align-items:center;justify-content:center;
   height:100%;text-align:center;padding:20px}
 .status.visible{display:flex}
-.status .icon{font-size:42px;margin-bottom:14px;line-height:1}
+.status .icon{margin-bottom:14px;line-height:0;color:${sub}}
+.status .icon svg{width:48px;height:48px}
 .status h3{font-size:17px;font-weight:600;margin-bottom:8px}
 .status p{color:${sub};font-size:13px;line-height:1.5;margin-bottom:18px;max-width:380px}
 .status.success .icon{color:${successColor}}
@@ -1531,14 +1561,14 @@ button.secondary:hover{background:${inputBg};color:${fg}}
 </div>
 
 <div class="status success" id="success-view">
-  <div class="icon">✓</div>
+  <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="8 12 11 15 16 9"/></svg></div>
   <h3>${s.successTitle}</h3>
   <p>${s.successMsg}</p>
   <button class="primary" onclick="window.close()">${s.closeBtn}</button>
 </div>
 
 <div class="status" id="error-view">
-  <div class="icon" style="color:${btnBg}">✕</div>
+  <div class="icon" style="color:${btnBg}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg></div>
   <h3>${s.errorTitle}</h3>
   <p>${s.errorHint}</p>
   <div class="email" id="err-email"></div>
@@ -2185,11 +2215,12 @@ label{display:block;margin-bottom:5px;font-weight:500}
 .hotkey-row .lab{font-size:12px;color:${th.text};grid-column:1/-1;margin-bottom:-2px;font-weight:500}
 .capture{padding:8px 12px;background:${th.bgHover};border:1px solid ${th.border};border-radius:6px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;cursor:pointer;color:${th.textActive};outline:none;min-height:34px;display:flex;align-items:center}
 .capture.listening{border-color:${ac.from};background:${th.bgActive}}
-button{background:linear-gradient(135deg,${ac.from},${ac.to});color:#fff;border:none;padding:7px 14px;border-radius:6px;cursor:pointer;font-size:12.5px;font-weight:500;font-family:inherit}
+button{background:linear-gradient(135deg,${ac.from},${ac.to});color:#fff;border:none;padding:7px 14px;border-radius:6px;cursor:pointer;font-size:12.5px;font-weight:500;font-family:inherit;transition:filter .15s ease,border-color .15s ease,color .15s ease}
 button.secondary{background:${th.bgHover};color:${th.textActive};border:1px solid ${th.border}}
 button.danger{background:transparent;color:${th.text};border:1px solid ${th.border};padding:5px 10px;font-size:11.5px}
 button.danger:hover{color:#e05e3e;border-color:#e05e3e}
-button:hover{filter:brightness(1.05)}
+button:hover{filter:brightness(1.08)}
+button:focus-visible,.capture:focus-visible{outline:2px solid ${ac.from};outline-offset:2px}
 button:disabled{opacity:.5;cursor:not-allowed}
 .tpl-add{display:grid;grid-template-columns:1fr auto;gap:8px;margin-bottom:10px}
 .tpl-add input,.tpl-add textarea{background:${th.bgHover};border:1px solid ${th.border};color:${th.textActive};border-radius:6px;padding:7px 10px;font-family:inherit;font-size:12.5px;outline:none;width:100%}
@@ -2532,10 +2563,10 @@ document.addEventListener('keydown', (e) => {
 </body></html>`;
 }
 
-function getWhatsNewHTML() {
+function getWhatsNewHTML(force = false) {
   const th = theme();
   const ac = accent();
-  const notes = getFilteredNotes(version, windowState.lastSeenVersion);
+  const notes = getFilteredNotes(version, windowState.lastSeenVersion, force);
   const icons = {
     tray: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="12" cy="12" r="3"/></svg>',
     bolt: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="13 2 4 14 12 14 11 22 20 10 12 10 13 2"/></svg>',
@@ -2581,7 +2612,8 @@ h1{font-size:22px;font-weight:700;position:relative;z-index:1;margin-bottom:6px}
 .footer{padding:16px 28px 20px;display:flex;justify-content:space-between;align-items:center;gap:10px;border-top:1px solid ${th.border}}
 button{background:linear-gradient(135deg,${ac.from},${ac.to});color:#fff;border:none;padding:10px 22px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600}
 button.secondary{background:${th.bgHover};color:${th.textActive};border:1px solid ${th.border}}
-button:hover{filter:brightness(1.05)}
+button:hover{filter:brightness(1.08)}
+button:focus-visible{outline:2px solid ${ac.from};outline-offset:2px}
 </style></head><body>
 <div class="hero">
   <div class="badge">v${version}</div>
@@ -2601,7 +2633,7 @@ document.addEventListener('keydown', (e) => { if (e.key === 'Escape' || e.key ==
 </body></html>`;
 }
 
-function openWhatsNewWindow() {
+function openWhatsNewWindow(force = false) {
   if (whatsNewWindow && !whatsNewWindow.isDestroyed()) {
     whatsNewWindow.focus();
     return;
@@ -2625,8 +2657,135 @@ function openWhatsNewWindow() {
     ...wnBase, ...centerOnMainWindow(size.width, size.height)
   });
   whatsNewWindow.setMenu(null);
-  whatsNewWindow.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(getWhatsNewHTML()));
+  whatsNewWindow.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(getWhatsNewHTML(force)));
   whatsNewWindow.on('closed', () => { whatsNewWindow = null; });
+}
+
+// About / Info-Fenster
+
+function getAboutHTML() {
+  const th = theme();
+  const ac = accent();
+  const i18n = {
+    tagline: t('Inoffizieller claude.ai-Wrapper für Linux', 'Unofficial claude.ai wrapper for Linux'),
+    secAbout: t('Über die App', 'About this app'),
+    aboutText: t(
+      'Eine inoffizielle Community-App, die claude.ai als native Desktop-Anwendung auf Linux bringt – mit Tabs, Tray, Quick-Prompt, Voice-Input und mehr. Open Source unter MIT-Lizenz.',
+      'An unofficial community app that brings claude.ai to Linux as a native desktop application – with tabs, tray, quick-prompt, voice input and more. Open source under the MIT licence.'
+    ),
+    secLinks: t('Links', 'Links'),
+    linkRepo: t('Quellcode & Issues auf GitHub', 'Source code & issues on GitHub'),
+    linkSupport: t('Anthropic-Support (offizielle Hilfe für claude.ai)', 'Anthropic Support (official help for claude.ai)'),
+    secLegal: t('Rechtliches', 'Legal'),
+    legalText: t(
+      'Diese App ist nicht mit Anthropic verbunden und wird nicht von Anthropic unterstützt. „Claude" und das Claude-Logo sind Markenzeichen von Anthropic PBC. Für Fragen zu Account, Login, Abo oder Bezahlung wende dich bitte direkt an den Anthropic-Support.',
+      'This app is not affiliated with or endorsed by Anthropic. "Claude" and the Claude logo are trademarks of Anthropic PBC. For account, login, subscription or billing questions please contact Anthropic Support directly.'
+    ),
+    btnWhatsNew: t('Neuigkeiten anzeigen', 'Show What’s New'),
+    btnClose: t('Schließen', 'Close')
+  };
+  return `<!DOCTYPE html><html><head>
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:;">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:${th.bg};color:${th.textActive};font-family:system-ui,-apple-system,sans-serif;font-size:13.5px;user-select:none}
+body{display:flex;flex-direction:column;overflow:hidden}
+.hero{position:relative;padding:24px 28px 22px;background:linear-gradient(135deg,${ac.from},${ac.to});color:#fff;overflow:hidden;display:flex;align-items:center;gap:16px}
+.hero::before{content:'';position:absolute;right:-70px;top:-70px;width:210px;height:210px;border-radius:50%;background:rgba(255,255,255,.12);pointer-events:none}
+.hero::after{content:'';position:absolute;right:36px;bottom:-46px;width:126px;height:126px;border-radius:50%;background:rgba(255,255,255,.08);pointer-events:none}
+.hero-logo{width:58px;height:58px;border-radius:14px;flex-shrink:0;position:relative;z-index:1;box-shadow:0 2px 12px rgba(0,0,0,.28)}
+.hero-text{position:relative;z-index:1;flex:1;min-width:0}
+.hero-name{font-size:21px;font-weight:700;letter-spacing:-.2px;margin-bottom:2px}
+.hero-version{font-size:12px;opacity:.85;font-family:ui-monospace,Menlo,Consolas,monospace;margin-bottom:6px}
+.hero-tagline{font-size:13px;opacity:.92}
+.body{flex:1;padding:18px 28px 12px;overflow-y:auto;display:flex;flex-direction:column;gap:16px}
+.body::-webkit-scrollbar{width:8px}
+.body::-webkit-scrollbar-thumb{background:${th.border};border-radius:4px}
+h2{font-size:11px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;color:${th.text};margin-bottom:6px}
+.about-text{font-size:13px;line-height:1.55;color:${th.textActive}}
+.legal-text{font-size:12px;color:${th.text};line-height:1.5}
+.link-list{display:flex;flex-direction:column;gap:6px}
+.link-list a{display:flex;align-items:center;gap:10px;padding:9px 12px;background:${th.bgHover};border:1px solid ${th.border};border-radius:7px;color:${th.textActive};text-decoration:none;font-size:12.5px;cursor:pointer;transition:background .12s,border-color .12s}
+.link-list a:hover{background:${th.bgActive};border-color:${ac.from}}
+.link-list a:focus-visible{outline:2px solid ${ac.from};outline-offset:2px}
+.link-list svg{width:15px;height:15px;flex-shrink:0;color:${ac.from}}
+.footer{padding:14px 28px 18px;display:flex;justify-content:space-between;align-items:center;gap:10px;border-top:1px solid ${th.border}}
+button{background:linear-gradient(135deg,${ac.from},${ac.to});color:#fff;border:none;padding:9px 18px;border-radius:7px;cursor:pointer;font-size:12.5px;font-weight:600;font-family:inherit;transition:filter .15s ease}
+button.secondary{background:${th.bgHover};color:${th.textActive};border:1px solid ${th.border}}
+button:hover{filter:brightness(1.08)}
+button:focus-visible{outline:2px solid ${ac.from};outline-offset:2px}
+</style></head><body>
+<div class="hero">
+  <img class="hero-logo" src="${iconDataUrl()}" alt="Claude Desktop"/>
+  <div class="hero-text">
+    <div class="hero-name">Claude Desktop</div>
+    <div class="hero-version">v${version}</div>
+    <div class="hero-tagline">${i18n.tagline}</div>
+  </div>
+</div>
+<div class="body">
+  <div>
+    <h2>${i18n.secAbout}</h2>
+    <div class="about-text">${i18n.aboutText}</div>
+  </div>
+  <div>
+    <h2>${i18n.secLinks}</h2>
+    <div class="link-list">
+      <a data-href="https://github.com/simonlinuxcraft/claude-ai-desktop-app">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 00-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0020 4.77 5.07 5.07 0 0019.91 1S18.73.65 16 2.48a13.38 13.38 0 00-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 005 4.77a5.44 5.44 0 00-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 009 18.13V22"/></svg>
+        <span>${i18n.linkRepo}</span>
+      </a>
+      <a data-href="https://support.anthropic.com">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+        <span>${i18n.linkSupport}</span>
+      </a>
+    </div>
+  </div>
+  <div>
+    <h2>${i18n.secLegal}</h2>
+    <div class="legal-text">${i18n.legalText}</div>
+  </div>
+</div>
+<div class="footer">
+  <button class="secondary" id="whatsnew-btn">${i18n.btnWhatsNew}</button>
+  <button id="close">${i18n.btnClose}</button>
+</div>
+<script>
+const api = window.aboutAPI;
+document.getElementById('close').addEventListener('click', () => api.close());
+document.getElementById('whatsnew-btn').addEventListener('click', () => api.openWhatsNew());
+document.querySelectorAll('a[data-href]').forEach(a => {
+  a.addEventListener('click', (e) => { e.preventDefault(); api.openExternal(a.dataset.href); });
+});
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') api.close(); });
+</script>
+</body></html>`;
+}
+
+function openAboutWindow() {
+  if (aboutWindow && !aboutWindow.isDestroyed()) {
+    aboutWindow.focus();
+    return;
+  }
+  const size = { width: 540, height: 580 };
+  const base = {
+    ...size,
+    parent: mainWindow && !mainWindow.isDestroyed() ? mainWindow : undefined,
+    modal: false, resizable: false, minimizable: false, maximizable: false,
+    title: t('Über Claude Desktop', 'About Claude Desktop'),
+    backgroundColor: theme().bg,
+    icon: icon(),
+    autoHideMenuBar: true,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload-about.js'),
+      nodeIntegration: false, contextIsolation: true, sandbox: true,
+      spellcheck: false
+    }
+  };
+  aboutWindow = new BrowserWindow({ ...base, ...centerOnMainWindow(size.width, size.height) });
+  aboutWindow.setMenu(null);
+  aboutWindow.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(getAboutHTML()));
+  aboutWindow.on('closed', () => { aboutWindow = null; });
 }
 
 function openSettingsWindow() {
@@ -2676,6 +2835,9 @@ function getAppMenuItems() {
     { type: 'item', action: 'copy-diagnostics', label: t('Diagnose-Info kopieren', 'Copy diagnostics info'), icon: 'info' },
     { type: 'item', action: 'reset-verification', label: t('claude.ai-Verifizierung zurücksetzen…', 'Reset claude.ai verification…'), icon: 'shield' },
     { type: 'sep' },
+    { type: 'item', action: 'whats-new', label: t('Was ist neu?…', 'What’s New…'), icon: 'bolt' },
+    { type: 'item', action: 'about', label: t('Über Claude Desktop…', 'About Claude Desktop…'), icon: 'info' },
+    { type: 'sep' },
     { type: 'item', action: 'quit', label: t('Beenden', 'Quit'), accel: 'Ctrl+Q', icon: 'power' }
   ];
 }
@@ -2694,6 +2856,7 @@ function getAppMenuHTML() {
     cog:     '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.6 1.6 0 00-1.8-.3 1.6 1.6 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.6 1.6 0 00-1-1.5 1.6 1.6 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.6 1.6 0 00.3-1.8 1.6 1.6 0 00-1.5-1H3a2 2 0 110-4h.1a1.6 1.6 0 001.5-1 1.6 1.6 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.6 1.6 0 001.8.3h0a1.6 1.6 0 001-1.5V3a2 2 0 114 0v.1a1.6 1.6 0 001 1.5 1.6 1.6 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.6 1.6 0 00-.3 1.8v0a1.6 1.6 0 001.5 1H21a2 2 0 110 4h-.1a1.6 1.6 0 00-1.5 1z"/>',
     bug:     '<path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>',
     info:    '<circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v5h1"/>',
+    bolt:    '<polyline points="13 2 4 14 12 14 11 22 20 10 12 10 13 2"/>',
     shield:  '<path d="M12 2L4 5v6c0 5 3.5 9.5 8 11 4.5-1.5 8-6 8-11V5l-8-3z"/><path d="M9 12l2 2 4-4"/>',
     power:   '<path d="M18.36 6.64a9 9 0 11-12.73 0M12 2v10"/>'
   };
@@ -4036,6 +4199,14 @@ ipcMain.on('claude-response-done', (event, payload) => {
   } catch {}
 });
 
+ipcMain.on('claude-reset-verification', (event) => {
+  // Nur aus einer echten Tab-View akzeptieren; den Reset auf genau diesen Tab anwenden,
+  // nicht auf den aktiven (der Nutzer kann waehrend des Bestaetigungsdialogs wechseln).
+  const fromTab = tabs.find(tb => tb.view && tb.view.webContents === event.sender);
+  if (!fromTab) return;
+  resetClaudeVerification(fromTab);
+});
+
 ipcMain.on('quickprompt-submit', (event, text) => {
   if (!quickPromptWindow || quickPromptWindow.isDestroyed() || event.sender !== quickPromptWindow.webContents) return;
   quickPromptWindow.close();
@@ -4053,6 +4224,17 @@ ipcMain.on('whatsnew-close', () => {
 ipcMain.on('whatsnew-open-settings', () => {
   if (whatsNewWindow && !whatsNewWindow.isDestroyed()) whatsNewWindow.close();
   openSettingsWindow();
+});
+
+ipcMain.on('about-close', () => {
+  if (aboutWindow && !aboutWindow.isDestroyed()) aboutWindow.close();
+});
+ipcMain.on('about-open-whatsnew', () => {
+  if (aboutWindow && !aboutWindow.isDestroyed()) aboutWindow.close();
+  openWhatsNewWindow(true);
+});
+ipcMain.on('about-open-external', (_event, url) => {
+  if (typeof url === 'string' && /^https:\/\//i.test(url)) shell.openExternal(url);
 });
 
 ipcMain.on('tab-new', () => createTab());
@@ -4092,6 +4274,8 @@ ipcMain.on('appmenu-action', (event, name) => {
     case 'bug-report': showBugReportDialog(); break;
     case 'copy-diagnostics': copyDiagnosticsInfo(); break;
     case 'reset-verification': resetClaudeVerification(); break;
+    case 'whats-new': openWhatsNewWindow(true); break;
+    case 'about': openAboutWindow(); break;
     case 'quit': isQuitting = true; app.quit(); break;
   }
 });
