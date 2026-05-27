@@ -18,7 +18,7 @@ function once(channel, handler) {
 
 contextBridge.exposeInMainWorld('tabAPI', {
   onTabsUpdate: (cb) => once('tabs-update', (_, data) => cb(data)),
-  onThemeUpdate: (cb) => once('theme-update', (_, dark) => cb(dark)),
+  onThemeUpdate: (cb) => once('theme-update', (_, mode) => cb(mode)),
   onDesignUpdate: (cb) => once('design-update', (_, custom) => cb(custom)),
   onNotificationsUpdate: (cb) => once('notifications-update', (_, list) => cb(list)),
   newTab: () => ipcRenderer.send('tab-new'),
@@ -39,5 +39,10 @@ contextBridge.exposeInMainWorld('tabAPI', {
     if (typeof url !== 'string' || !/^https:\/\//i.test(url)) return;
     ipcRenderer.send('notification-link', { id, url });
   },
-  requestNotifications: () => ipcRenderer.send('notifications-request')
+  requestNotifications: () => ipcRenderer.send('notifications-request'),
+  winMinimize: () => ipcRenderer.send('win-minimize'),
+  winToggleMaximize: () => ipcRenderer.send('win-toggle-maximize'),
+  winClose: () => ipcRenderer.send('win-close'),
+  onWindowStateUpdate: (cb) => once('win-state', (_, state) => cb(state)),
+  requestWindowState: () => ipcRenderer.send('win-state-request')
 });

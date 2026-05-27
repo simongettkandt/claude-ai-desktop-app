@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.4.0] - 2026-05-27 - OLED Mode & Frameless Window
+
+### Added
+- **Frameless main window with custom window controls.** The system title bar is gone; the tab bar now hosts its own Minimize, Maximize/Restore and Close buttons on the right (GNOME order). The whole free area of the tab bar is a drag region, double-click toggles maximize. New IPC channels `win-minimize`, `win-toggle-maximize`, `win-close`, `win-state-request` with sender check (only `mainWindow`).
+- **OLED theme as a third theme.** The sun/moon button in the tab bar now cycles Light → Dark → OLED → Light. OLED renders claude.ai on a warm near-black background (`#050306`) with a subtle brand glow overlay (orange top-left, magenta bottom-right). All sub-windows (What's New, About, Settings, Bug Report) follow the same look via a `body::before` overlay. CSS-variable mapping + Tailwind class targeting in `inject/oled.js` recolor the page content; sidebar items become flat with a discreet hover state; popup menus (Radix dropdowns) get a slightly raised background. New state keys `oledMode` and `oledIntroSeen`.
+- **OLED theme is preselected on the first launch of 1.4.0** so the new mode is visible right away. The What's-New entry explains how to switch back with the same sun/moon icon. After the intro the value is persisted and the user choice is respected.
+- **Composer gradient ring.** The chat input field on claude.ai shows a thin animated brand gradient border (orange ↔ magenta, 6 s loop), matching the Quick-Prompt style. Implemented via JS detection of the innermost composer `<fieldset>` plus a `::before` mask-composite border so it sits exactly on the field's radius.
+- **All sub-windows are frameless with a custom title bar.** What's New, About, Settings and Bug Report now use the same compact 36 px title strip (drag region + close button), consistent with the main window.
+- **What's New redesigned.** New bento-grid layout: animated brand gradient hero with version pill, 2-column tile grid for highlights, brand-tinted icon containers with hover lift. Window resized to 640×680.
+- **OLED logo variant** for the in-app spark (About hero, App Menu, Quick-Prompt). The existing icon is embedded into an SVG with a dark tile and two radial brand-glow stops so it does not disappear into the OLED black.
+
+### Changed
+- **Bug Report dialog rebuilt on `theme()` instead of hardcoded dark/light values**, so OLED now applies. Primary button uses the Modern brand gradient (`linear-gradient(135deg, F26A3F, E83B6E)`) like the rest of the app instead of a solid colour.
+- **Settings, Bug Report, What's New, About, App Menu, Message Box and Microphone Consent** all use a shared `customTitlebarCSS` / `customTitlebarHTML` helper. In OLED the helper also paints the brand-glow body overlay, so the windows stay deep black but feel alive.
+- **Tab bar separator removed.** The 1 px line between the tab bar and the WebView is gone for a seamless transition.
+- **Sub-window background colours pinned to `theme().bg`** (a no-op `subTheme()` shim is kept for forward compatibility).
+
+### Fixed
+- `oledIntroSeen` is persisted via `saveWindowStateSync()` immediately after the intro default fires, so a hard crash within the first session cannot re-trigger the intro.
+- `cd-titlebar-close` event binding uses optional chaining in What's New and About; if the title bar ever fails to render the rest of the window still works.
+- Window-control IPC handlers (`win-minimize`, `win-toggle-maximize`, `win-close`, `win-state-request`) check `event.sender === mainWindow.webContents` so other preloads cannot remote-control the main window.
+- `nav` / `aside` items no longer get individual painted backgrounds in OLED (the previous heuristic gave every sidebar entry its own card look). Background flat, hover state at `#181417`, active state at `#1c181b`.
+
+### Internal
+- `inject/oled.js` (new): CSS-variable override, Tailwind class targeting, focus outline recolour, popup menu mapping, brand glow overlay, composer ring helper.
+- `iconDataUrlForCurrentTheme()`: returns the original icon in Light/Dark, returns an SVG with embedded PNG + brand-glow background in OLED.
+
+---
+
 ## [1.3.13] - 2026-05-20 - Verification Banner & About Window
 
 ### Added

@@ -14,7 +14,7 @@ sudo snap install claude-ai-desktop
 
 [![claude-ai-desktop](https://snapcraft.io/claude-ai-desktop/badge.svg)](https://snapcraft.io/claude-ai-desktop)
 
-> **v1.3.13** - Verification loop banner: if the Cloudflare security check gets stuck, an in-page banner now appears with a Reset button that clears claude.ai cookies and cache and reloads the page.
+> **v1.4.0** - OLED theme as a third theme, frameless main window with custom controls in the tab bar, all dialogs (What's New, About, Settings, Bug Report) frameless with a custom title bar, animated brand-gradient ring around the chat composer, redesigned What's New window.
 
 ---
 
@@ -93,7 +93,7 @@ cat > ~/.local/share/applications/claude-desktop.desktop << EOF
 [Desktop Entry]
 Name=Claude Desktop
 Comment=Claude AI Desktop App
-Exec=/path/to/Claude-Desktop-1.3.13.AppImage --no-sandbox
+Exec=/path/to/Claude-Desktop-1.4.0.AppImage --no-sandbox
 Icon=/path/to/icon.png
 Type=Application
 Categories=Utility;
@@ -176,6 +176,17 @@ The `--no-sandbox` flag is required for Electron AppImages on Linux because the 
 ---
 
 ## Changelog
+
+### v1.4.0 - OLED Mode & Frameless Window (2026-05-27)
+
+- **OLED theme as a third theme.** The sun/moon icon in the tab bar cycles Light → Dark → OLED. OLED renders claude.ai on a warm near-black background (`#050306`) with a subtle brand-glow overlay (orange top-left, magenta bottom-right). CSS-variable mapping + Tailwind class targeting in `inject/oled.js` recolor the page content; sidebar items become flat with a discreet hover state; Radix popup menus get a slightly raised background. The mode is preselected on the first launch of 1.4.0; use the same icon to switch back, the choice is then persisted.
+- **Frameless main window with custom window controls.** The system title bar is gone; the tab bar hosts Minimize, Maximize/Restore and Close on the right (GNOME order). The whole free area of the tab bar is a drag region, double-click toggles maximize. New IPC channels `win-minimize`, `win-toggle-maximize`, `win-close`, `win-state-request` with a sender check that restricts them to `mainWindow`.
+- **All sub-windows frameless with a custom title bar.** What's New, About, Settings and Bug Report now use a shared 36 px title strip (drag region + close button), consistent with the main window. Helpers: `customTitlebarCSS()` / `customTitlebarHTML()`. In OLED the helper also paints a brand-glow body overlay so the dialogs stay deep black but feel alive.
+- **Composer gradient ring.** The chat input on claude.ai shows a thin animated brand gradient border (orange ↔ magenta, 6 s loop), matching the Quick-Prompt style. JS detection picks the innermost composer `<fieldset>`, CSS uses a `::before` mask-composite border so it sits exactly on the field's radius.
+- **What's New redesigned.** Bento-grid layout with an animated brand gradient hero (version pill, headline, subtitle) and a 2-column tile grid for highlights; brand-tinted icon containers with hover lift; primary close button gets a shadow that picks up the brand colour. Window resized to 640×680.
+- **Bug Report dialog rebuilt on `theme()` instead of hardcoded dark/light values**, so OLED now applies. Primary button uses the Modern brand gradient (`linear-gradient(135deg, F26A3F, E83B6E)`) like the rest of the app instead of a solid colour.
+- **OLED logo variant** for the in-app spark (About hero, App Menu, Quick-Prompt). The existing icon is embedded into an SVG with a dark tile and two radial brand-glow stops so it does not disappear into the OLED black.
+- **Stability hardening.** `oledIntroSeen` is persisted via `saveWindowStateSync()` immediately after the intro default fires, so a hard crash within the first session cannot re-trigger the intro. `cd-titlebar-close` event binding uses optional chaining so a missing title bar does not break the rest of the window. Sidebar `<a>` / `<button>` entries no longer get individual painted backgrounds in OLED.
 
 ### v1.3.13 - Verification Loop Banner (2026-05-20)
 

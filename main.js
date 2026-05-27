@@ -64,6 +64,17 @@ const MAX_NOTIFICATIONS_VISIBLE = 1;                        // ein Banner gleich
 const BRAND_SCRIPT = fs.readFileSync(path.join(__dirname, 'inject', 'brand.js'), 'utf8');
 const NOTIFY_SCRIPT = fs.readFileSync(path.join(__dirname, 'inject', 'notify.js'), 'utf8');
 const VERIFY_SCRIPT = fs.readFileSync(path.join(__dirname, 'inject', 'verify-banner.js'), 'utf8');
+const OLED_SCRIPT = fs.readFileSync(path.join(__dirname, 'inject', 'oled.js'), 'utf8');
+const OLED_DISABLE_SCRIPT = '(function(){try{window._cdOledDisable&&window._cdOledDisable();}catch(e){}})();';
+
+function oledScriptForCurrentDesign() {
+  const ac = customDesign
+    ? { from: '#F26A3F', to: '#E83B6E' }
+    : { from: '#d4734c', to: '#d4734c' };
+  return `window._cdOledDesign='${customDesign ? 'modern' : 'classic'}';`
+    + `window._cdOledBrand={from:'${ac.from}',to:'${ac.to}'};`
+    + OLED_SCRIPT;
+}
 
 // State
 
@@ -72,6 +83,8 @@ let tabs = [];
 let activeTabIndex = 0;
 let isOnline = true;
 let isDarkMode = true;
+let oledMode = false;
+let oledIntroSeen = false;
 let customDesign = true;
 
 // Tab-Pool (vorgeladene Views)
@@ -350,6 +363,10 @@ const STATE_SCHEMA = [
     set: v => { customDesign = v === true; } },
   { key: 'isDarkMode', optional: true, get: () => isDarkMode,
     set: v => { isDarkMode = v === true; } },
+  { key: 'oledMode', optional: true, get: () => oledMode,
+    set: v => { oledMode = v === true; } },
+  { key: 'oledIntroSeen', optional: true, get: () => oledIntroSeen,
+    set: v => { oledIntroSeen = v === true; } },
   { key: 'minimizeOnClose', get: () => minimizeOnClose,
     set: v => { minimizeOnClose = v === true; } },
   { key: 'hotkey', get: () => currentHotkey,
@@ -526,6 +543,43 @@ const RELEASE_NOTES = {
       text: 'Falls die Registrierung eines globalen Hotkeys auf Wayland am Compositor scheitert (GNOME erlaubt es z.B. eingeschr\u00e4nkt), zeigt das App-Einstellungen-Fenster jetzt einen klaren Hinweistext, statt eine generische Fehlermeldung.'
     }
   ],
+  '1.4.0': [
+    {
+      icon: 'settings',
+      title: 'Rahmenloses Fenster mit eigener Leiste',
+      text: 'Das Hauptfenster läuft jetzt ohne System-Titelleiste. Tab-Bar und Window-Controls (Minimieren, Maximieren, Schließen) liegen direkt nebeneinander, ziehen funktioniert weiterhin überall auf den freien Bereichen der Leiste. Doppelklick auf die Leiste maximiert bzw. stellt wieder her.'
+    },
+    {
+      icon: 'settings',
+      title: 'OLED-Theme als drittes Design',
+      text: 'Das Sonne/Mond-Icon in der Leiste schaltet jetzt zwischen drei Modi um: Hell, Dunkel und OLED. Im OLED-Modus wird claude.ai auf einen warmen schwarzen Untergrund mit Brand-Glow umgefärbt – ideal für OLED-Bildschirme. Mit diesem Update ist OLED einmalig vorausgewählt; wer lieber Hell oder das klassische Dunkel möchte, klickt einfach das Sonne/Mond-Icon weiter, der Wechsel wird wie gewohnt gespeichert.'
+    },
+    {
+      icon: 'bolt',
+      title: 'Animierter Gradient um den Chat-Block',
+      text: 'Das Eingabefeld auf der claude.ai-Startseite bekommt jetzt einen feinen, animierten Verlauf in der Markenfarbe – Orange wandert zu Magenta und zurück, im gleichen Stil wie das Quick-Prompt-Fenster.'
+    },
+    {
+      icon: 'settings',
+      title: 'Alle Dialoge im neuen rahmenlosen Stil',
+      text: '"Was ist neu", "Über Claude Desktop", Einstellungen und Fehler-Report nutzen jetzt dieselbe kompakte Titelleiste wie das Hauptfenster, mit eigenem X-Knopf rechts und im OLED-Modus mit dezentem Brand-Glow im Hintergrund.'
+    },
+    {
+      icon: 'bolt',
+      title: '"Was ist neu" neu gestaltet',
+      text: 'Das Update-Fenster, das du gerade vor dir hast, ist neu: animierter Brand-Hero oben, Highlights als Kacheln im Raster mit Icon-Kachel pro Punkt. Übersichtlicher und passt zum restlichen Design.'
+    },
+    {
+      icon: 'check',
+      title: 'Logo passt sich dem Theme an',
+      text: 'Das App-Logo im "Über"-Fenster, im Hamburger-Menü und im Quick-Prompt erscheint im OLED-Modus auf einer dunklen Kachel mit zarter Brand-Aura, damit das Symbol nicht im Schwarz verschwindet.'
+    },
+    {
+      icon: 'check',
+      title: 'Stabilität und kleinere Fixes',
+      text: 'Window-Controls-IPC prüft jetzt die Absender-WebContents, sodass nur das Hauptfenster sich selbst minimieren/schließen kann. Der OLED-Intro-Status wird sofort persistiert, ein Crash kurz nach App-Start triggert die Voreinstellung nicht erneut. Sidebar-Einträge in claude.ai sind im OLED nicht mehr als einzelne Kacheln sichtbar, sondern flach mit dezentem Hover. Popup-Menüs (Account, Connectors) bekommen einen leicht abgesetzten Untergrund. Das Bug-Report-Fenster nutzt jetzt dieselben Theme-Farben wie die übrige App; der Senden-Knopf hat im "Modern"-Design jetzt den Orange-Magenta-Verlauf wie alle anderen Primary-Buttons.'
+    }
+  ],
   '1.3.13': [
     {
       icon: 'check',
@@ -614,6 +668,18 @@ function loadWindowState() {
   for (const f of STATE_SCHEMA) {
     if (f.optional && windowState[f.key] === undefined) continue;
     f.set(windowState[f.key]);
+  }
+
+  // Einmalige Intro-Aktivierung: OLED als Default beim ersten Start mit dem
+  // OLED-Release. Bei bestehenden Nutzern bleibt customDesign (Modern/Classic)
+  // wie vorher, nur oledMode wird an. Sobald oledIntroSeen=true persistiert ist,
+  // wird oledMode beim Folge-Start aus dem State gelesen.
+  if (!oledIntroSeen) {
+    oledMode = true;
+    oledIntroSeen = true;
+    // Sofort persistieren, damit ein Hard-Crash vor dem ersten Save den User
+    // nicht beim Folge-Start nochmal zwangsweise in OLED schickt.
+    try { saveWindowStateSync(); } catch {}
   }
 
   const result = {
@@ -708,7 +774,8 @@ function isOAuthDomain(url) {
 
 const THEME = {
   dark:  { bg: '#262624', bgHover: '#333330', bgActive: '#3a3a37', text: '#9a9a96', textActive: '#e8e8e4', border: '#333330' },
-  light: { bg: '#f5f2ef', bgHover: '#ede9e4', bgActive: '#faf8f6', text: '#8a7e72', textActive: '#2a2420', border: '#e8e4de' }
+  light: { bg: '#f5f2ef', bgHover: '#ede9e4', bgActive: '#faf8f6', text: '#8a7e72', textActive: '#2a2420', border: '#e8e4de' },
+  oled:  { bg: '#050306', bgHover: '#121013', bgActive: '#1c181b', text: '#9a948f', textActive: '#e8e8e4', border: '#1a1719' }
 };
 
 const ACCENT = {
@@ -720,7 +787,17 @@ const ACCENT = {
 const isBeta = process.env.CLAUDE_BETA === '1'
             || (process.env.APPIMAGE || '').toLowerCase().includes('beta');
 
-function theme()  { return isDarkMode ? THEME.dark : THEME.light; }
+function currentThemeMode() {
+  if (!isDarkMode) return 'light';
+  return oledMode ? 'oled' : 'dark';
+}
+function theme()  { return THEME[currentThemeMode()]; }
+// Sub-Window-Theme: identisch mit theme(). Im OLED-Mode kommt die zusaetzliche
+// Lesbarkeit nicht ueber einen helleren bg, sondern ueber einen Brand-Glow-Overlay
+// (s. customTitlebarCSS), damit das Schwarz erhalten bleibt.
+function subTheme() {
+  return theme();
+}
 function accent() { return customDesign ? ACCENT.custom : ACCENT.original; }
 function icon()   {
   if (isBeta) return path.join(__dirname, customDesign ? 'icon-beta.png' : 'icon-original-beta.png');
@@ -742,13 +819,41 @@ function iconDataUrl() {
   return _iconDataUrlCache[p];
 }
 
+// OLED-Logo: Spark auf warmem schwarzen Untergrund mit Brand-Glow.
+// Im normalen Theme weiter das normale Icon (iconDataUrl). Nur im OLED-Mode
+// wird das Spark auf einem dunklen Tile mit subtilem Verlauf gerahmt, damit das
+// Logo nicht im OLED-Schwarz verschwindet.
+function iconDataUrlForCurrentTheme() {
+  if (!oledMode) return iconDataUrl();
+  const ac = accent();
+  const inner = iconDataUrl();
+  if (!inner) return inner;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">`
+    + `<defs>`
+    + `<radialGradient id="g1" cx="22%" cy="22%" r="78%">`
+    + `<stop offset="0%" stop-color="${ac.from}" stop-opacity="0.42"/>`
+    + `<stop offset="100%" stop-color="${ac.from}" stop-opacity="0"/>`
+    + `</radialGradient>`
+    + `<radialGradient id="g2" cx="80%" cy="82%" r="78%">`
+    + `<stop offset="0%" stop-color="${ac.to}" stop-opacity="0.32"/>`
+    + `<stop offset="100%" stop-color="${ac.to}" stop-opacity="0"/>`
+    + `</radialGradient>`
+    + `</defs>`
+    + `<rect width="100" height="100" rx="22" fill="#0a0709"/>`
+    + `<rect width="100" height="100" rx="22" fill="url(#g1)"/>`
+    + `<rect width="100" height="100" rx="22" fill="url(#g2)"/>`
+    + `<image href="${inner}" x="14" y="14" width="72" height="72"/>`
+    + `</svg>`;
+  return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+}
+
 // Tab-Bar HTML
 
 let _tabBarCache = '';
 let _tabBarKey = '';
 
 function getTabBarHTML() {
-  const key = `${isDarkMode}:${customDesign}`;
+  const key = `${currentThemeMode()}:${customDesign}`;
   if (key === _tabBarKey && _tabBarCache) return _tabBarCache;
   _tabBarKey = key;
   const th = theme();
@@ -785,7 +890,7 @@ body{background:var(--bg);font:500 12px/1 -apple-system,BlinkMacSystemFont,'Sego
 .notif-link:hover{filter:brightness(1.08)}
 .notif-x{flex:0 0 auto;width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t);font-size:18px;line-height:1;border:none;background:transparent;font-family:inherit;transition:background .12s ease}
 .notif-x:hover{background:var(--bga);color:var(--ta)}
-#tab-row{display:flex;align-items:flex-end;height:${TAB_BAR_HEIGHT}px;flex:0 0 ${TAB_BAR_HEIGHT}px;border-bottom:1px solid var(--bd);-webkit-app-region:drag}
+#tab-row{display:flex;align-items:flex-end;height:${TAB_BAR_HEIGHT}px;flex:0 0 ${TAB_BAR_HEIGHT}px;-webkit-app-region:drag}
 .menu-btn{-webkit-app-region:no-drag;width:30px;height:30px;display:flex;align-items:center;justify-content:center;
   cursor:pointer;color:var(--ta);border-radius:8px;margin:0 2px 6px 6px;flex-shrink:0;
   transition:background .15s,color .15s,border-color .15s;border:1px solid transparent;opacity:.85}
@@ -793,11 +898,12 @@ body{background:var(--bg);font:500 12px/1 -apple-system,BlinkMacSystemFont,'Sego
   border-color:color-mix(in srgb,var(--ac-from) 35%,transparent);color:var(--ac-from);opacity:1}
 .menu-btn svg{width:16px;height:16px}
 #tabs{display:flex;align-items:flex-end;height:100%;flex:1;padding:0 4px;gap:2px;
-  -webkit-app-region:no-drag;overflow-x:auto;min-width:0}
+  overflow-x:auto;min-width:0}
 #tabs::-webkit-scrollbar{height:0}
 .tab{display:flex;align-items:center;height:34px;padding:0 14px;border-radius:10px 10px 0 0;
   cursor:pointer;white-space:nowrap;max-width:220px;min-width:60px;gap:8px;
-  position:relative;color:var(--t);transition:background .15s,color .15s;contain:layout style}
+  position:relative;color:var(--t);transition:background .15s,color .15s;contain:layout style;
+  -webkit-app-region:no-drag}
 .tab:hover{background:linear-gradient(180deg,transparent,var(--bgh));color:var(--ta)}
 .tab.active{background:var(--bga);color:var(--ta);
   box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--ac-from) 18%,transparent)}
@@ -824,6 +930,13 @@ body{background:var(--bg);font:500 12px/1 -apple-system,BlinkMacSystemFont,'Sego
   background:var(--bgh);color:var(--t);transition:all .15s;-webkit-app-region:no-drag;margin-right:4px;
   border:1px solid var(--bd)}
 .design-pill:hover{background:linear-gradient(135deg,var(--ac-from),var(--ac-to));color:#fff;border-color:transparent}
+.win-controls{display:flex;align-items:stretch;margin-left:6px;padding-right:2px;-webkit-app-region:no-drag;height:${TAB_BAR_HEIGHT}px}
+.win-btn{width:38px;height:100%;border:none;background:transparent;color:var(--ta);
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:background .12s,color .12s;opacity:.78;font-family:inherit;padding:0}
+.win-btn:hover{background:var(--bgh);opacity:1}
+.win-btn svg{width:11px;height:11px;display:block}
+#win-close:hover{background:#e05e3e;color:#fff}
 </style></head><body>
 <div id="notif-bar"></div>
 <div id="tab-row">
@@ -840,12 +953,25 @@ body{background:var(--bg);font:500 12px/1 -apple-system,BlinkMacSystemFont,'Sego
     <svg viewBox="0 0 24 24" fill="none"><path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
   </div>
   <div class="ctrl-btn" id="theme-toggle" title="${t('Theme wechseln', 'Toggle theme')}">
-    <svg id="theme-icon-dark" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
-    <svg id="theme-icon-light" viewBox="0 0 24 24" style="display:none"><circle cx="12" cy="12" r="5" stroke="currentColor" stroke-width="2" fill="none"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>
+    <svg id="theme-icon-dark" viewBox="0 0 24 24"${currentThemeMode() === 'dark' ? '' : ' style="display:none"'}><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+    <svg id="theme-icon-light" viewBox="0 0 24 24"${currentThemeMode() === 'light' ? '' : ' style="display:none"'}><circle cx="12" cy="12" r="5" stroke="currentColor" stroke-width="2" fill="none"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>
+    <svg id="theme-icon-oled" viewBox="0 0 24 24"${currentThemeMode() === 'oled' ? '' : ' style="display:none"'}><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z" fill="currentColor"/></svg>
   </div>
   <div class="ctrl-btn" id="new-tab" title="${t('Neuer Tab', 'New Tab')} (Ctrl+T)">
     <svg viewBox="0 0 16 16"><path d="M8 2v12M2 8h12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"/></svg>
   </div>
+</div>
+<div class="win-controls">
+  <button class="win-btn" id="win-min" title="${t('Minimieren', 'Minimize')}" aria-label="Minimize">
+    <svg viewBox="0 0 12 12"><rect x="2" y="5.5" width="8" height="1" fill="currentColor"/></svg>
+  </button>
+  <button class="win-btn" id="win-max" title="${t('Maximieren', 'Maximize')}" aria-label="Maximize">
+    <svg id="win-max-icon" viewBox="0 0 12 12"><rect x="2.5" y="2.5" width="7" height="7" fill="none" stroke="currentColor" stroke-width="1"/></svg>
+    <svg id="win-restore-icon" viewBox="0 0 12 12" style="display:none"><rect x="2.5" y="4" width="5.5" height="5.5" fill="none" stroke="currentColor" stroke-width="1"/><path d="M4.5 4V2.5H10V8H8" fill="none" stroke="currentColor" stroke-width="1"/></svg>
+  </button>
+  <button class="win-btn" id="win-close" title="${t('Schließen', 'Close')}" aria-label="Close">
+    <svg viewBox="0 0 12 12"><path d="M2.5 2.5L9.5 9.5M9.5 2.5L2.5 9.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+  </button>
 </div>
 </div>
 <script>
@@ -860,6 +986,15 @@ document.getElementById('app-menu').addEventListener('click',(e)=>{
   const r=e.currentTarget.getBoundingClientRect();
   window.tabAPI.openAppMenu(Math.round(r.left),Math.round(r.bottom));
 });
+document.getElementById('win-min').addEventListener('click',()=>window.tabAPI.winMinimize());
+document.getElementById('win-max').addEventListener('click',()=>window.tabAPI.winToggleMaximize());
+document.getElementById('win-close').addEventListener('click',()=>window.tabAPI.winClose());
+window.tabAPI.onWindowStateUpdate(s=>{
+  const m=!!(s&&s.maximized);
+  document.getElementById('win-max-icon').style.display=m?'none':'';
+  document.getElementById('win-restore-icon').style.display=m?'':'none';
+});
+window.tabAPI.requestWindowState();
 
 window.tabAPI.onDesignUpdate(custom=>{
   document.getElementById('design-toggle').textContent=custom?'Modern':'Classic';
@@ -888,18 +1023,21 @@ window.tabAPI.onTabsUpdate(data=>{
   }
 });
 
-window.tabAPI.onThemeUpdate(dark=>{
+const THEME_VARS={
+  light:['#f5f2ef','#ede9e4','#faf8f6','#8a7e72','#2a2420','#e8e4de'],
+  dark: ['#262624','#333330','#3a3a37','#9a9a96','#e8e8e4','#333330'],
+  oled: ['#000000','#121212','#1c1c1a','#8a8a86','#e8e8e4','#181816']
+};
+window.tabAPI.onThemeUpdate(mode=>{
+  const m=(mode==='light'||mode==='oled')?mode:'dark';
+  const v=THEME_VARS[m];
   const r=document.documentElement.style;
-  if(dark){
-    r.setProperty('--bg','#262624');r.setProperty('--bgh','#333330');r.setProperty('--bga','#3a3a37');
-    r.setProperty('--t','#9a9a96');r.setProperty('--ta','#e8e8e4');r.setProperty('--bd','#333330');
-  }else{
-    r.setProperty('--bg','#f5f2ef');r.setProperty('--bgh','#ede9e4');r.setProperty('--bga','#faf8f6');
-    r.setProperty('--t','#8a7e72');r.setProperty('--ta','#2a2420');r.setProperty('--bd','#e8e4de');
-  }
+  r.setProperty('--bg',v[0]);r.setProperty('--bgh',v[1]);r.setProperty('--bga',v[2]);
+  r.setProperty('--t',v[3]);r.setProperty('--ta',v[4]);r.setProperty('--bd',v[5]);
   document.body.style.background='';
-  document.getElementById('theme-icon-dark').style.display=dark?'':'none';
-  document.getElementById('theme-icon-light').style.display=dark?'none':'';
+  document.getElementById('theme-icon-dark').style.display=m==='dark'?'':'none';
+  document.getElementById('theme-icon-light').style.display=m==='light'?'':'none';
+  document.getElementById('theme-icon-oled').style.display=m==='oled'?'':'none';
 });
 
 const notifBar=document.getElementById('notif-bar');
@@ -940,7 +1078,7 @@ const sendTabsUpdate = throttle(() => {
 }, 100);
 
 function sendThemeUpdate() {
-  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('theme-update', isDarkMode);
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('theme-update', currentThemeMode());
 }
 
 function sendDesignUpdate() {
@@ -967,6 +1105,7 @@ function injectScripts(wc) {
   if (customDesign) wc.executeJavaScript(BRAND_SCRIPT).catch(() => {});
   wc.executeJavaScript(NOTIFY_SCRIPT).catch(() => {});
   wc.executeJavaScript(verifyScript()).catch(() => {});
+  if (oledMode) wc.executeJavaScript(oledScriptForCurrentDesign()).catch(() => {});
 }
 
 function reinjectScripts(wc) {
@@ -981,6 +1120,24 @@ function reinjectScripts(wc) {
   wc.executeJavaScript('!!window._cdNotify').then(active => {
     if (!active) wc.executeJavaScript(NOTIFY_SCRIPT).catch(() => {});
   }).catch(() => {});
+  if (oledMode) {
+    wc.executeJavaScript('!!window._cdOled').then(active => {
+      if (!active) wc.executeJavaScript(oledScriptForCurrentDesign()).catch(() => {});
+    }).catch(() => {});
+  }
+}
+
+function applyOledToAllViews() {
+  for (const tab of tabs) {
+    if (!tab || !alive(tab.view)) continue;
+    const wc = tab.view.webContents;
+    if (oledMode) {
+      // Erst disablen falls schon aktiv mit altem Design, dann frisch injizieren
+      wc.executeJavaScript(OLED_DISABLE_SCRIPT + oledScriptForCurrentDesign()).catch(() => {});
+    } else {
+      wc.executeJavaScript(OLED_DISABLE_SCRIPT).catch(() => {});
+    }
+  }
 }
 
 // View Setup (Security + Events)
@@ -1280,6 +1437,7 @@ function toggleDesign() {
     tabs[activeTabIndex].view.webContents.reload();
   }
   tabs.forEach((tab, i) => { if (i !== activeTabIndex) tab.needsReload = true; });
+  if (oledMode) applyOledToAllViews();
 
   setTimeout(fillPool, 3000);
   saveWindowState();
@@ -1421,16 +1579,18 @@ function showBugReportDialog() {
     return;
   }
   const s = { ...bugReportStrings.en, ...(bugReportStrings[sysLang] || {}) };
+  const th = subTheme();
+  const ac = accent();
   const dark = isDarkMode;
-  const bg = dark ? '#1a1a18' : '#faf8f6';
-  const fg = dark ? '#e8e0d8' : '#2a2420';
-  const sub = dark ? '#9a9a96' : '#8a7e72';
-  const inputBg = dark ? '#252522' : '#ffffff';
-  const inputBorder = dark ? '#3a3a36' : '#d8d0c8';
-  const inputFocus = '#E8524F';
-  const btnBg = '#E8524F';
-  const btnHover = '#F0635C';
-  const btnDisabled = dark ? '#3a3a36' : '#c8bfb6';
+  const bg = th.bg;
+  const fg = th.textActive;
+  const sub = th.text;
+  const inputBg = th.bgHover;
+  const inputBorder = th.border;
+  const inputFocus = ac.from;
+  const btnBg = ac.from;
+  const btnHover = ac.to;
+  const btnDisabled = th.bgActive;
   const successColor = '#3da66a';
 
   const meta = {
@@ -1447,6 +1607,8 @@ function showBugReportDialog() {
     parent: mainWindow, modal: true,
     title: s.title, icon: icon(),
     backgroundColor: bg,
+    autoHideMenuBar: true,
+    frame: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload-bugreport.js'),
       nodeIntegration: false, contextIsolation: true, sandbox: true
@@ -1469,7 +1631,7 @@ function showBugReportDialog() {
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:${bg};color:${fg};font-family:system-ui,-apple-system,sans-serif;font-size:14px;
-  display:flex;flex-direction:column;height:100vh;padding:24px;overflow:hidden}
+  display:flex;flex-direction:column;height:100vh;padding:0;overflow:hidden}
 h2{font-size:18px;font-weight:600;margin-bottom:8px}
 .intro{color:${sub};font-size:13px;line-height:1.5;margin-bottom:18px}
 .field{margin-bottom:14px;display:flex;flex-direction:column}
@@ -1490,13 +1652,13 @@ textarea.errcodes{min-height:70px;line-height:1.45;font-family:ui-monospace,Menl
 .auto-info-row .hint{font-size:11.5px;color:${sub};line-height:1.4}
 .actions{display:flex;gap:10px;justify-content:flex-end;margin-top:auto;padding-top:8px}
 button{border:none;padding:10px 20px;border-radius:9px;font-size:13.5px;cursor:pointer;
-  font-weight:500;font-family:inherit;transition:background .15s,opacity .15s}
-button.primary{background:${btnBg};color:#fff}
-button.primary:hover:not(:disabled){background:${btnHover}}
-button.primary:disabled{background:${btnDisabled};cursor:not-allowed}
+  font-weight:500;font-family:inherit;transition:filter .15s,background .15s,opacity .15s}
+button.primary{background:linear-gradient(135deg,${ac.from},${ac.to});color:#fff}
+button.primary:hover:not(:disabled){filter:brightness(1.08)}
+button.primary:disabled{background:${btnDisabled};cursor:not-allowed;filter:none}
 button.secondary{background:transparent;color:${sub};border:1px solid ${inputBorder}}
 button.secondary:hover{background:${inputBg};color:${fg}}
-button:focus-visible{outline:2px solid ${inputFocus};outline-offset:2px}
+button:focus-visible{outline:2px solid ${ac.from};outline-offset:2px}
 .honeypot{position:absolute;left:-9999px;width:1px;height:1px;opacity:0}
 .disclaimer{display:flex;gap:10px;align-items:flex-start;padding:11px 13px;margin:-2px 0 16px;
   background:${dark ? 'rgba(224,169,62,0.10)' : 'rgba(224,150,40,0.12)'};
@@ -1518,8 +1680,12 @@ button:focus-visible{outline:2px solid ${inputFocus};outline-offset:2px}
 .status .email{font-size:14px;font-weight:600;color:${fg};margin-bottom:14px;word-break:break-all;
   background:${inputBg};padding:8px 14px;border-radius:6px;border:1px solid ${inputBorder}}
 .error-row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+${customTitlebarCSS()}
+.bugreport-main{flex:1;padding:18px 24px 24px;overflow:hidden;display:flex;flex-direction:column;min-height:0}
+.status-host{flex:1;display:flex;align-items:center;justify-content:center}
 </style></head><body>
-
+${customTitlebarHTML(s.title)}
+<div class="bugreport-main">
 <div id="form-view">
   <h2>${s.title}</h2>
   <p class="intro">${s.intro}</p>
@@ -1577,6 +1743,7 @@ button:focus-visible{outline:2px solid ${inputFocus};outline-offset:2px}
     <button class="primary" id="copy-btn"></button>
   </div>
 </div>
+</div>
 
 <script>
 (function(){
@@ -1605,6 +1772,8 @@ button:focus-visible{outline:2px solid ${inputFocus};outline-offset:2px}
   });
 
   cancelBtn.addEventListener('click', () => window.close());
+  const tbClose = document.getElementById('cd-titlebar-close');
+  if (tbClose) tbClose.addEventListener('click', () => window.close());
 
   const anthropicLink = document.getElementById('anthropic-link');
   if (anthropicLink) {
@@ -1718,7 +1887,7 @@ function getQuickPromptHTML() {
     noTemplate: t('Kein Template', 'No template'),
     templates: t('Template', 'Template')
   };
-  const logoUrl = iconDataUrl();
+  const logoUrl = iconDataUrlForCurrentTheme();
   // XSS-safe: </script> in Template-Namen würde sonst aus dem Script-Kontext brechen
   const tpls = JSON.stringify(promptTemplates.map(t => ({ id: t.id, name: t.name, prefix: t.prefix })))
     .replace(/<\//g, '<\\/');
@@ -1879,6 +2048,43 @@ function submitQuickPrompt(text) {
   wc.once('did-finish-load', inject);
 }
 
+function customTitlebarCSS() {
+  const th = subTheme();
+  let glow = '';
+  if (oledMode) {
+    const ac = accent();
+    glow = `
+body{position:relative}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:radial-gradient(ellipse 80% 55% at 0% 0%,${ac.from}26,transparent 62%),
+             radial-gradient(ellipse 80% 55% at 100% 100%,${ac.to}1f,transparent 62%)}
+body > *{position:relative;z-index:1}`;
+  }
+  return `${glow}
+.cd-titlebar{height:36px;-webkit-app-region:drag;display:flex;align-items:center;
+  padding:0 0 0 14px;background:transparent;color:${th.textActive};
+  font-size:12.5px;flex-shrink:0;user-select:none}
+.cd-titlebar-title{flex:1;font-weight:500;letter-spacing:.2px;color:${th.textActive};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:8px}
+.cd-titlebar-controls{display:flex;-webkit-app-region:no-drag;height:100%}
+.cd-titlebar-btn{width:38px;height:36px;display:flex;align-items:center;justify-content:center;
+  cursor:pointer;color:${th.textActive};border:0;background:transparent;
+  transition:background .12s,color .12s;opacity:.78;padding:0;font-family:inherit}
+.cd-titlebar-btn:hover{background:${th.bgHover};opacity:1}
+.cd-titlebar-btn.cd-close:hover{background:#e05e3e;color:#fff}
+.cd-titlebar-btn svg{width:11px;height:11px;display:block}`;
+}
+
+function customTitlebarHTML(titleText) {
+  return `<div class="cd-titlebar">
+    <span class="cd-titlebar-title">${titleText}</span>
+    <div class="cd-titlebar-controls">
+      <button class="cd-titlebar-btn cd-close" id="cd-titlebar-close" aria-label="Close">
+        <svg viewBox="0 0 12 12"><path d="M2.5 2.5L9.5 9.5M9.5 2.5L2.5 9.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+  </div>`;
+}
+
 function centerOnMainDisplay(width, height) {
   try {
     let display;
@@ -1926,7 +2132,7 @@ function createDialogWindow(opts) {
     modal: !!parentWin,
     resizable: false, minimizable: false, maximizable: false,
     title: opts.title || '',
-    backgroundColor: theme().bg,
+    backgroundColor: subTheme().bg,
     icon: icon(),
     autoHideMenuBar: true,
     webPreferences: {
@@ -2140,7 +2346,7 @@ async function exportActiveConversation() {
 
 
 function getSettingsHTML() {
-  const th = theme();
+  const th = subTheme();
   const ac = accent();
   const i18n = {
     title: t('Einstellungen', 'Settings'),
@@ -2247,7 +2453,9 @@ button:disabled{opacity:.5;cursor:not-allowed}
 .snap-status-pill[data-status="disconnected"]{background:rgba(224,94,62,.15);border-color:rgba(224,94,62,.4);color:#e05e3e}
 .snap-status-pill[data-status="disconnected"] .dot{background:#e05e3e}
 @keyframes dotpulse{0%{box-shadow:0 0 0 0 rgba(58,175,82,.6)}70%{box-shadow:0 0 0 6px rgba(58,175,82,0)}100%{box-shadow:0 0 0 0 rgba(58,175,82,0)}}
+${customTitlebarCSS()}
 </style></head><body>
+${customTitlebarHTML(t('Claude – Einstellungen', 'Claude – Settings'))}
 <div class="head">
   <h1>${i18n.title}</h1>
   <div class="sub">${i18n.subtitle}</div>
@@ -2556,6 +2764,8 @@ tplAdd.addEventListener('click', () => {
 });
 
 closeBtn.addEventListener('click', () => api.close());
+const titlebarClose = document.getElementById('cd-titlebar-close');
+if (titlebarClose) titlebarClose.addEventListener('click', () => api.close());
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && !listeningKey && document.activeElement.tagName !== 'TEXTAREA' && document.activeElement.tagName !== 'INPUT') api.close();
 });
@@ -2564,7 +2774,7 @@ document.addEventListener('keydown', (e) => {
 }
 
 function getWhatsNewHTML(force = false) {
-  const th = theme();
+  const th = subTheme();
   const ac = accent();
   const notes = getFilteredNotes(version, windowState.lastSeenVersion, force);
   const icons = {
@@ -2581,12 +2791,10 @@ function getWhatsNewHTML(force = false) {
     openSettings: t('App-Einstellungen \u00f6ffnen', 'Open app settings')
   };
   const items = notes.map(n => `
-    <div class="item">
-      <div class="ic">${icons[n.icon] || icons.check}</div>
-      <div>
-        <div class="it">${n.title}</div>
-        <div class="ix">${n.text}</div>
-      </div>
+    <div class="tile">
+      <div class="tile-ic">${icons[n.icon] || icons.check}</div>
+      <div class="tile-title">${n.title}</div>
+      <div class="tile-text">${n.text}</div>
     </div>`).join('');
   return `<!DOCTYPE html><html><head>
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:;">
@@ -2594,39 +2802,54 @@ function getWhatsNewHTML(force = false) {
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;background:${th.bg};color:${th.textActive};font-family:system-ui,-apple-system,sans-serif;font-size:14px;user-select:none}
 body{display:flex;flex-direction:column;overflow:hidden}
-.hero{position:relative;padding:28px 28px 24px;background:linear-gradient(135deg,${ac.from},${ac.to});color:#fff;overflow:hidden}
-.hero::before{content:'';position:absolute;right:-60px;top:-60px;width:200px;height:200px;border-radius:50%;background:rgba(255,255,255,.12)}
-.hero::after{content:'';position:absolute;right:30px;bottom:-40px;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,.08)}
-.badge{display:inline-block;background:rgba(255,255,255,.2);padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;margin-bottom:10px;position:relative;z-index:1}
-h1{font-size:22px;font-weight:700;position:relative;z-index:1;margin-bottom:6px}
-.hs{font-size:13px;opacity:.9;position:relative;z-index:1}
-.body{flex:1;padding:22px 28px;overflow-y:auto;display:flex;flex-direction:column;gap:16px}
+${customTitlebarCSS()}
+@keyframes wnGradShift{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+.hero{position:relative;padding:30px 32px 28px;overflow:hidden;color:#fff;flex-shrink:0;
+  background:linear-gradient(135deg,${ac.from},${ac.to},${ac.from},${ac.to});
+  background-size:300% 300%;
+  animation:wnGradShift 9s ease-in-out infinite}
+.hero::before{content:'';position:absolute;right:-90px;top:-90px;width:240px;height:240px;border-radius:50%;background:rgba(255,255,255,.10);pointer-events:none}
+.hero::after{content:'';position:absolute;right:40px;bottom:-70px;width:160px;height:160px;border-radius:50%;background:rgba(255,255,255,.06);pointer-events:none}
+.hero-pill{display:inline-flex;align-items:center;gap:6px;background:rgba(0,0,0,.22);padding:5px 12px;border-radius:999px;font-size:11px;font-weight:600;letter-spacing:.5px;margin-bottom:14px;position:relative;z-index:1;backdrop-filter:blur(4px)}
+.hero-pill::before{content:'';width:6px;height:6px;border-radius:50%;background:#fff;box-shadow:0 0 8px rgba(255,255,255,.65)}
+.hero-title{font-size:28px;font-weight:700;letter-spacing:-.6px;margin-bottom:6px;position:relative;z-index:1;line-height:1.1}
+.hero-sub{font-size:13.5px;line-height:1.5;opacity:.92;position:relative;z-index:1;max-width:80%}
+.body{flex:1;overflow-y:auto;padding:18px}
 .body::-webkit-scrollbar{width:8px}
 .body::-webkit-scrollbar-thumb{background:${th.border};border-radius:4px}
-.item{display:flex;gap:14px;align-items:flex-start}
-.ic{width:36px;height:36px;flex-shrink:0;border-radius:9px;background:${th.bgHover};border:1px solid ${th.border};display:flex;align-items:center;justify-content:center;color:${ac.from}}
-.ic svg{width:18px;height:18px}
-.it{font-weight:600;font-size:14px;margin-bottom:2px}
-.ix{color:${th.text};font-size:12px;line-height:1.5}
-.ix code{display:inline-block;margin:4px 0;padding:3px 7px;background:${th.bgHover};border:1px solid ${th.border};border-radius:4px;font-family:monospace;font-size:11px;color:${th.textActive};user-select:text}
-.footer{padding:16px 28px 20px;display:flex;justify-content:space-between;align-items:center;gap:10px;border-top:1px solid ${th.border}}
-button{background:linear-gradient(135deg,${ac.from},${ac.to});color:#fff;border:none;padding:10px 22px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600}
-button.secondary{background:${th.bgHover};color:${th.textActive};border:1px solid ${th.border}}
-button:hover{filter:brightness(1.08)}
-button:focus-visible{outline:2px solid ${ac.from};outline-offset:2px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.tile{padding:18px 18px 16px;border-radius:14px;background:${th.bgHover};border:1px solid ${th.border};
+  display:flex;flex-direction:column;gap:8px;transition:border-color .15s,transform .15s,background .15s}
+.tile:hover{border-color:color-mix(in srgb,${ac.from} 50%,${th.border});background:${th.bgActive}}
+.tile-ic{width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,color-mix(in srgb,${ac.from} 18%,transparent),color-mix(in srgb,${ac.to} 14%,transparent));
+  border:1px solid color-mix(in srgb,${ac.from} 35%,transparent);
+  display:flex;align-items:center;justify-content:center;color:${ac.from};margin-bottom:2px}
+.tile-ic svg{width:18px;height:18px}
+.tile-title{font-weight:600;font-size:13.5px;color:${th.textActive};letter-spacing:-.1px;line-height:1.3}
+.tile-text{color:${th.text};font-size:12px;line-height:1.55}
+.tile-text code{display:inline-block;margin:2px 0;padding:2px 6px;background:${th.bgActive};border:1px solid ${th.border};border-radius:4px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;color:${th.textActive};user-select:text}
+.footer{padding:14px 24px 20px;display:flex;justify-content:space-between;align-items:center;gap:10px;border-top:1px solid ${th.border};flex-shrink:0}
+.footer button{font-family:inherit;cursor:pointer;border:none;border-radius:8px;font-size:12.5px;font-weight:600;transition:filter .15s,color .15s,background .15s}
+.footer button.secondary{background:transparent;color:${th.text};padding:6px 0}
+.footer button.secondary:hover{color:${th.textActive}}
+.footer button.primary{background:linear-gradient(135deg,${ac.from},${ac.to});color:#fff;padding:11px 26px;box-shadow:0 4px 14px ${ac.from}33}
+.footer button.primary:hover{filter:brightness(1.08)}
+.footer button:focus-visible{outline:2px solid ${ac.from};outline-offset:2px}
 </style></head><body>
+${customTitlebarHTML(t('Neu in Claude', 'What’s new in Claude'))}
 <div class="hero">
-  <div class="badge">v${version}</div>
-  <h1>${i18n.header}</h1>
-  <div class="hs">${i18n.sub}</div>
+  <div class="hero-pill">v${version}</div>
+  <div class="hero-title">${t('Was ist neu', 'What’s new')}</div>
+  <div class="hero-sub">${i18n.sub}</div>
 </div>
-<div class="body">${items}</div>
+<div class="body"><div class="grid">${items}</div></div>
 <div class="footer">
   <button class="secondary" id="opts">${i18n.openSettings}</button>
-  <button id="close">${i18n.close}</button>
+  <button class="primary" id="close">${i18n.close}</button>
 </div>
 <script>
 document.getElementById('close').addEventListener('click', () => window.whatsNewAPI.close());
+document.getElementById('cd-titlebar-close')?.addEventListener('click', () => window.whatsNewAPI.close());
 document.getElementById('opts').addEventListener('click', () => window.whatsNewAPI.openSettings());
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' || e.key === 'Enter') window.whatsNewAPI.close(); });
 </script>
@@ -2638,15 +2861,16 @@ function openWhatsNewWindow(force = false) {
     whatsNewWindow.focus();
     return;
   }
-  const size = { width: 520, height: 560 };
+  const size = { width: 640, height: 680 };
   const wnBase = {
     ...size,
     parent: mainWindow && !mainWindow.isDestroyed() ? mainWindow : undefined,
     modal: false, resizable: false, minimizable: false, maximizable: false,
     title: t('Neu in Claude', 'What\u2019s new in Claude'),
-    backgroundColor: theme().bg,
+    backgroundColor: subTheme().bg,
     icon: icon(),
     autoHideMenuBar: true,
+    frame: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload-whatsnew.js'),
       nodeIntegration: false, contextIsolation: true, sandbox: true,
@@ -2664,7 +2888,7 @@ function openWhatsNewWindow(force = false) {
 // About / Info-Fenster
 
 function getAboutHTML() {
-  const th = theme();
+  const th = subTheme();
   const ac = accent();
   const i18n = {
     tagline: t('Inoffizieller claude.ai-Wrapper für Linux', 'Unofficial claude.ai wrapper for Linux'),
@@ -2714,9 +2938,11 @@ button{background:linear-gradient(135deg,${ac.from},${ac.to});color:#fff;border:
 button.secondary{background:${th.bgHover};color:${th.textActive};border:1px solid ${th.border}}
 button:hover{filter:brightness(1.08)}
 button:focus-visible{outline:2px solid ${ac.from};outline-offset:2px}
+${customTitlebarCSS()}
 </style></head><body>
+${customTitlebarHTML(t('Über Claude Desktop', 'About Claude Desktop'))}
 <div class="hero">
-  <img class="hero-logo" src="${iconDataUrl()}" alt="Claude Desktop"/>
+  <img class="hero-logo" src="${iconDataUrlForCurrentTheme()}" alt="Claude Desktop"/>
   <div class="hero-text">
     <div class="hero-name">Claude Desktop</div>
     <div class="hero-version">v${version}</div>
@@ -2753,6 +2979,7 @@ button:focus-visible{outline:2px solid ${ac.from};outline-offset:2px}
 <script>
 const api = window.aboutAPI;
 document.getElementById('close').addEventListener('click', () => api.close());
+document.getElementById('cd-titlebar-close')?.addEventListener('click', () => api.close());
 document.getElementById('whatsnew-btn').addEventListener('click', () => api.openWhatsNew());
 document.querySelectorAll('a[data-href]').forEach(a => {
   a.addEventListener('click', (e) => { e.preventDefault(); api.openExternal(a.dataset.href); });
@@ -2773,9 +3000,10 @@ function openAboutWindow() {
     parent: mainWindow && !mainWindow.isDestroyed() ? mainWindow : undefined,
     modal: false, resizable: false, minimizable: false, maximizable: false,
     title: t('Über Claude Desktop', 'About Claude Desktop'),
-    backgroundColor: theme().bg,
+    backgroundColor: subTheme().bg,
     icon: icon(),
     autoHideMenuBar: true,
+    frame: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload-about.js'),
       nodeIntegration: false, contextIsolation: true, sandbox: true,
@@ -2799,9 +3027,10 @@ function openSettingsWindow() {
     parent: mainWindow && !mainWindow.isDestroyed() ? mainWindow : undefined,
     modal: false, resizable: false, minimizable: false, maximizable: false,
     title: t('Claude \u2013 Einstellungen', 'Claude \u2013 Settings'),
-    backgroundColor: theme().bg,
+    backgroundColor: subTheme().bg,
     icon: icon(),
     autoHideMenuBar: true,
+    frame: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload-settings.js'),
       nodeIntegration: false, contextIsolation: true, sandbox: true,
@@ -2843,7 +3072,7 @@ function getAppMenuItems() {
 }
 
 function getAppMenuHTML() {
-  const th = theme();
+  const th = subTheme();
   const ac = accent();
   const dark = isDarkMode;
   const items = getAppMenuItems();
@@ -2906,7 +3135,7 @@ body{padding:8px}
 </style></head><body>
 <div class="card" id="card">
   <div class="head">
-    <img class="logo" src="${iconDataUrl()}" alt="Claude" draggable="false"/>
+    <img class="logo" src="${iconDataUrlForCurrentTheme()}" alt="Claude" draggable="false"/>
     <div class="meta">
       <div class="name">Claude</div>
       <div class="ver">v${version}</div>
@@ -3062,7 +3291,7 @@ function showCustomMessageBox(opts) {
 }
 
 function getMessageBoxHTML({ type, title, message, detail, buttons, defaultId, cancelId, channel }) {
-  const th = theme();
+  const th = subTheme();
   const ac = accent();
   const esc = (s) => String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
   const iconColor = type === 'error' ? '#e05e3e' : (type === 'warning' ? '#e0a93e' : ac.from);
@@ -3488,7 +3717,7 @@ function checkSnapAudioRecordStatus(cb) {
 // in JSON-Strings escapen, damit der HTML-Parser sie nicht als Tag-Ende erkennt.
 // Gemeinsames CSS für Dialog-Fenster (showCustomMessageBox + requestMicrophoneConsent).
 function sharedDialogCSS() {
-  const th = theme();
+  const th = subTheme();
   const ac = accent();
   return `
     *{box-sizing:border-box}
@@ -3582,7 +3811,7 @@ async function requestMicrophoneConsent() {
 }
 
 function getMicConsentHTML({ respondChannel, snapOpenChannel, statusChannel, copyCmdChannel, showSnapPanel, initialStatus }) {
-  const th = theme();
+  const th = subTheme();
   const ac = accent();
   const i18n = {
     title: t('Mikrofon-Zugriff', 'Microphone access'),
@@ -4237,6 +4466,24 @@ ipcMain.on('about-open-external', (_event, url) => {
   if (typeof url === 'string' && /^https:\/\//i.test(url)) shell.openExternal(url);
 });
 
+function sendWindowState() {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  try {
+    mainWindow.webContents.send('win-state', { maximized: mainWindow.isMaximized() });
+  } catch (_) {}
+}
+function fromMainWindow(event) {
+  return mainWindow && !mainWindow.isDestroyed() && event.sender === mainWindow.webContents;
+}
+ipcMain.on('win-minimize', (event) => { if (fromMainWindow(event)) mainWindow.minimize(); });
+ipcMain.on('win-toggle-maximize', (event) => {
+  if (!fromMainWindow(event)) return;
+  if (mainWindow.isMaximized()) mainWindow.unmaximize();
+  else mainWindow.maximize();
+});
+ipcMain.on('win-close', (event) => { if (fromMainWindow(event)) mainWindow.close(); });
+ipcMain.on('win-state-request', (event) => { if (fromMainWindow(event)) sendWindowState(); });
+
 ipcMain.on('tab-new', () => createTab());
 ipcMain.on('tab-switch', (_, i) => {
   if (typeof i === 'number' && Number.isInteger(i) && i >= 0 && i < tabs.length) switchToTab(i);
@@ -4285,8 +4532,12 @@ ipcMain.on('appmenu-close', (event) => {
   }
 });
 ipcMain.on('theme-toggle', () => {
-  isDarkMode = !isDarkMode;
+  // Cycle: light -> dark -> oled -> light
+  if (!isDarkMode) { isDarkMode = true; oledMode = false; }
+  else if (!oledMode) { oledMode = true; }
+  else { isDarkMode = false; oledMode = false; }
   drainPool();
+  applyOledToAllViews();
 
   const bg = theme().bg;
   const active = tabs[activeTabIndex]?.view;
@@ -4315,6 +4566,7 @@ function createWindow() {
     icon: icon(),
     backgroundColor: theme().bg,
     autoHideMenuBar: true,
+    frame: false,
     show: false,
     webPreferences: {
       nodeIntegration: false, contextIsolation: true, sandbox: true,
@@ -4338,8 +4590,8 @@ function createWindow() {
 
   mainWindow.on('resize', () => { saveWindowState(); resizeActiveView(); });
   mainWindow.on('move', saveWindowState);
-  mainWindow.on('maximize', () => { saveWindowState(); lastViewBounds = ''; resizeActiveView(); });
-  mainWindow.on('unmaximize', () => { saveWindowState(); lastViewBounds = ''; resizeActiveView(); });
+  mainWindow.on('maximize', () => { saveWindowState(); lastViewBounds = ''; resizeActiveView(); sendWindowState(); });
+  mainWindow.on('unmaximize', () => { saveWindowState(); lastViewBounds = ''; resizeActiveView(); sendWindowState(); });
   mainWindow.on('enter-full-screen', () => { lastViewBounds = ''; resizeActiveView(); });
   mainWindow.on('leave-full-screen', () => { lastViewBounds = ''; resizeActiveView(); });
   mainWindow.on('show', () => { lastViewBounds = ''; resizeActiveView(); throttleActiveView(false); });
