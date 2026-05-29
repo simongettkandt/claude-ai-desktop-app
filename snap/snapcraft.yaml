@@ -10,17 +10,15 @@ description: |
 
   What's new in v1.4.1:
 
-  * Desktop notifications work in the Snap build - The Snap manifest
-    was missing the desktop-notifications plug, so AppArmor blocked
-    every DBus call to org.freedesktop.Notifications. Both the app's
-    own toasts and the notifications claude.ai triggers itself were
-    silent. Plug now declared.
   * "What's New" window follows the system language - Release notes
     used to be hard-coded German for the whole release-notes object,
     so users on non-German systems kept seeing German text. All notes
     now carry both German and English text. As a one-time catch-up,
     upgrading to 1.4.1 also shows the 1.4.0 highlights again, this
     time in your language.
+  * Small i18n cleanup in the live-notifications tab-bar template:
+    the "More" link label and the close-button tooltip now follow the
+    system language too.
 
   Highlights from v1.4.0:
 
@@ -107,7 +105,6 @@ apps:
       - audio-playback
       - audio-record
       - desktop
-      - desktop-notifications
       - home
       - x11
       - wayland

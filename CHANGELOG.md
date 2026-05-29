@@ -7,15 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [1.4.1] - 2026-05-29 - Localized Notes & Snap Notifications
+## [1.4.1] - 2026-05-29 - Localized Release Notes
 
 ### Fixed
 - **"What's New" window now follows the system language.** Release-note titles and bodies were hard-coded in German, so users on non-German systems kept seeing the German strings even though the rest of the UI was localized. All entries from 1.3.0 through 1.4.0 now carry both `de` and `en` text, resolved through a new `localize()` helper at render time.
-- **Notifications in the Snap build.** The Snap manifest was missing the `desktop-notifications` plug, so AppArmor blocked every DBus call to `org.freedesktop.Notifications` — both the app's own toasts (background-tab reply notice, downloads, network state) and the native notifications that claude.ai itself triggers fell silent. Plug now declared.
 
 ### Added
 - **`RELEASE_NOTES_REVISIT` map.** When the current version is listed, its referenced predecessors are added to the What's New view. 1.4.1 carries 1.4.0 along so non-German users can read the previously garbled 1.4.0 highlights in their language.
 - Small i18n cleanup in the live-notifications tab-bar template: the "More" link label and the close-button tooltip now use `t()` instead of hardcoded German.
+
+### Notes
+- An earlier draft of 1.4.1 also declared a `desktop-notifications` plug in the Snap manifest, billed as a fix for the v1.3.13 report that notifications from claude.ai were not coming through. The plug does not exist as a snapd interface (snapd dropped it silently with an `unknown interface` warning at install). The required interfaces for `org.freedesktop.Notifications` DBus access (`desktop`, `desktop-legacy`) are already provided by the `gnome` extension and were already connected on every previous Snap release. The plug entry has been removed; the underlying notification report remains under investigation.
 
 ---
 

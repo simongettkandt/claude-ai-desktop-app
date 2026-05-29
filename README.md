@@ -14,7 +14,7 @@ sudo snap install claude-ai-desktop
 
 [![claude-ai-desktop](https://snapcraft.io/claude-ai-desktop/badge.svg)](https://snapcraft.io/claude-ai-desktop)
 
-> **v1.4.1** - Hotfix. Desktop notifications work in the Snap build again (the `desktop-notifications` plug was missing from the Snap manifest). The "What's New" window now follows the system language instead of always rendering German. As a one-time catch-up, upgrading to 1.4.1 also re-shows the 1.4.0 highlights in your language.
+> **v1.4.1** - Hotfix. The "What's New" window now follows the system language instead of always rendering German; release notes for every version through 1.4.0 carry both `de` and `en` text. As a one-time catch-up, upgrading to 1.4.1 also re-shows the 1.4.0 highlights in your language.
 
 ---
 
@@ -177,12 +177,12 @@ The `--no-sandbox` flag is required for Electron AppImages on Linux because the 
 
 ## Changelog
 
-### v1.4.1 - Localized Notes & Snap Notifications (2026-05-29)
+### v1.4.1 - Localized Release Notes (2026-05-29)
 
-- **Notifications work in the Snap build again.** The Snap manifest was missing the `desktop-notifications` plug, so AppArmor blocked every DBus call to `org.freedesktop.Notifications`. Both the app's own toasts (background-tab reply notice, downloads, network state) and the native notifications that claude.ai triggers itself were silent. The plug is now declared.
 - **"What's New" window respects the system language.** Release-note titles and bodies were hard-coded German, so users on non-German systems kept seeing German strings even though the rest of the UI was localized. All entries from 1.3.0 through 1.4.0 now carry both `de` and `en` text, resolved through a `localize()` helper at render time.
 - **One-time catch-up on 1.4.0 highlights.** A new `RELEASE_NOTES_REVISIT` map carries 1.4.0 along when 1.4.1 is shown, so non-German users get to read what 1.4.0 actually changed in their language.
 - Small i18n cleanup in the live-notifications tab-bar template: the "More" link label and the close-button tooltip now use `t()` instead of hardcoded German.
+- **Walked back:** an earlier draft of 1.4.1 added a `desktop-notifications` plug to the Snap manifest, billed as a fix for the user report that notifications were not coming through in v1.3.13 Snap. That plug name does not exist as a snapd interface (snapd dropped it with an `unknown interface` warning at install). The interfaces needed for `org.freedesktop.Notifications` DBus access (`desktop`, `desktop-legacy`) are already provided by the `gnome` extension and were connected on every prior Snap revision. The plug entry has been removed; the underlying report remains under investigation.
 
 ### v1.4.0 - OLED Mode & Frameless Window (2026-05-27)
 

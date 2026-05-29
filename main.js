@@ -424,18 +424,6 @@ const RELEASE_NOTES = {
         de: 'Auf englischsprachigen Systemen erschienen die Update-Hinweise bislang weiterhin auf Deutsch, weil die Notes-Texte hartkodiert deutsch waren. Sie respektieren jetzt die System-Sprache. Als Nachreichung siehst du unten die Highlights aus 1.4.0 in deiner Sprache.',
         en: 'On non-German systems the update window kept showing German text because the note strings were hard-coded. Notes now follow the system language, and as a one-time catch-up you can read the 1.4.0 highlights below in your language.'
       }
-    },
-    {
-      icon: 'bolt',
-      title: {
-        de: 'Benachrichtigungen in der Snap-Version',
-        en: 'Notifications in the Snap build'
-      },
-      text: {
-        de: 'Die Snap-Version konnte bisher keine Desktop-Benachrichtigungen anzeigen, weil der `desktop-notifications`-Plug im Snap-Manifest fehlte. AppArmor blockierte den DBus-Aufruf an org.freedesktop.Notifications, sowohl für die App-eigenen Hinweise als auch für native Notifications, die claude.ai selbst auslöst. Der Plug ist jetzt deklariert.',
-        en: 'The Snap build could not display desktop notifications because the `desktop-notifications` plug was missing from the Snap manifest. AppArmor blocked the DBus call to org.freedesktop.Notifications for both the app’s own toasts and the native notifications that claude.ai triggers itself. The plug is now declared.'
-      },
-      if: 'snap'
     }
   ],
   '1.3.0': [
