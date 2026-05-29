@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.4.1] - 2026-05-29 - Localized Notes & Snap Notifications
+
+### Fixed
+- **"What's New" window now follows the system language.** Release-note titles and bodies were hard-coded in German, so users on non-German systems kept seeing the German strings even though the rest of the UI was localized. All entries from 1.3.0 through 1.4.0 now carry both `de` and `en` text, resolved through a new `localize()` helper at render time.
+- **Notifications in the Snap build.** The Snap manifest was missing the `desktop-notifications` plug, so AppArmor blocked every DBus call to `org.freedesktop.Notifications` — both the app's own toasts (background-tab reply notice, downloads, network state) and the native notifications that claude.ai itself triggers fell silent. Plug now declared.
+
+### Added
+- **`RELEASE_NOTES_REVISIT` map.** When the current version is listed, its referenced predecessors are added to the What's New view. 1.4.1 carries 1.4.0 along so non-German users can read the previously garbled 1.4.0 highlights in their language.
+- Small i18n cleanup in the live-notifications tab-bar template: the "More" link label and the close-button tooltip now use `t()` instead of hardcoded German.
+
+---
+
 ## [1.4.0] - 2026-05-27 - OLED Mode & Frameless Window
 
 ### Added

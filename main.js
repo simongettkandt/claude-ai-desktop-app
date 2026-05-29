@@ -149,6 +149,15 @@ const sysLang = (() => {
 
 const isDE = sysLang === 'de';
 function t(de, en) { return isDE ? de : en; }
+// Release-Notes-Strings dürfen entweder ein String (legacy: nur Deutsch) oder
+// ein { de, en } Objekt sein. localize() bevorzugt en für non-DE-Locales und
+// fällt zurück auf de, wenn das englische Pendant fehlt.
+function localize(field) {
+  if (field == null) return '';
+  if (typeof field === 'string') return field;
+  if (isDE) return field.de || field.en || '';
+  return field.en || field.de || '';
+}
 
 // Lokalisierte Strings für den Bug-Report-Dialog
 const bugReportStrings = {
@@ -395,247 +404,426 @@ const STATE_SCHEMA = [
     set: () => { /* eigene Logik in What's-New, hier nur passthrough */ } }
 ];
 
+// Wenn die aktuelle Version in dieser Map steht, werden die hier gelisteten
+// älteren Versionen beim "Was ist neu"-Fenster zusätzlich gezeigt. Gedacht für
+// Hotfixes, in denen die Notes der Vorgängerversion in einer fehlerhaften Form
+// (z.B. falscher Sprache) angezeigt wurden und nachgereicht werden sollen.
+const RELEASE_NOTES_REVISIT = {
+  '1.4.1': ['1.4.0']
+};
+
 const RELEASE_NOTES = {
+  '1.4.1': [
+    {
+      icon: 'check',
+      title: {
+        de: '"Was ist neu" jetzt auch auf Englisch',
+        en: '"What’s new" now also localized'
+      },
+      text: {
+        de: 'Auf englischsprachigen Systemen erschienen die Update-Hinweise bislang weiterhin auf Deutsch, weil die Notes-Texte hartkodiert deutsch waren. Sie respektieren jetzt die System-Sprache. Als Nachreichung siehst du unten die Highlights aus 1.4.0 in deiner Sprache.',
+        en: 'On non-German systems the update window kept showing German text because the note strings were hard-coded. Notes now follow the system language, and as a one-time catch-up you can read the 1.4.0 highlights below in your language.'
+      }
+    },
+    {
+      icon: 'bolt',
+      title: {
+        de: 'Benachrichtigungen in der Snap-Version',
+        en: 'Notifications in the Snap build'
+      },
+      text: {
+        de: 'Die Snap-Version konnte bisher keine Desktop-Benachrichtigungen anzeigen, weil der `desktop-notifications`-Plug im Snap-Manifest fehlte. AppArmor blockierte den DBus-Aufruf an org.freedesktop.Notifications, sowohl für die App-eigenen Hinweise als auch für native Notifications, die claude.ai selbst auslöst. Der Plug ist jetzt deklariert.',
+        en: 'The Snap build could not display desktop notifications because the `desktop-notifications` plug was missing from the Snap manifest. AppArmor blocked the DBus call to org.freedesktop.Notifications for both the app’s own toasts and the native notifications that claude.ai triggers itself. The plug is now declared.'
+      },
+      if: 'snap'
+    }
+  ],
   '1.3.0': [
-    { icon: 'tray', title: 'Systemtray & Hintergrund-Modus', text: 'Claude l\u00e4uft jetzt im Hintergrund weiter und ist \u00fcber das Tray-Symbol erreichbar.' },
-    { icon: 'bolt', title: 'Globaler Quick-Prompt', text: 'Ein frei w\u00e4hlbarer Hotkey \u00f6ffnet ein Eingabefenster f\u00fcr neue Chats \u2013 direkt aus jeder App.' },
-    { icon: 'check', title: 'Update-Check mit Feedback', text: 'Das Men\u00fc zeigt jetzt klar an, ob ein Update bereitsteht oder die App aktuell ist.' },
-    { icon: 'settings', title: 'App-Einstellungen', text: 'Neuer Dialog f\u00fcr Tray-Verhalten und Hotkey \u2013 jederzeit \u00fcber das Men\u00fc erreichbar.' }
+    {
+      icon: 'tray',
+      title: { de: 'Systemtray & Hintergrund-Modus', en: 'System tray & background mode' },
+      text: { de: 'Claude l\u00e4uft jetzt im Hintergrund weiter und ist \u00fcber das Tray-Symbol erreichbar.', en: 'Claude now keeps running in the background and is reachable via the tray icon.' }
+    },
+    {
+      icon: 'bolt',
+      title: { de: 'Globaler Quick-Prompt', en: 'Global Quick-Prompt' },
+      text: { de: 'Ein frei w\u00e4hlbarer Hotkey \u00f6ffnet ein Eingabefenster f\u00fcr neue Chats \u2013 direkt aus jeder App.', en: 'A configurable hotkey opens an input window for new chats, from any app.' }
+    },
+    {
+      icon: 'check',
+      title: { de: 'Update-Check mit Feedback', en: 'Update check with feedback' },
+      text: { de: 'Das Men\u00fc zeigt jetzt klar an, ob ein Update bereitsteht oder die App aktuell ist.', en: 'The menu now clearly shows whether an update is available or the app is up to date.' }
+    },
+    {
+      icon: 'settings',
+      title: { de: 'App-Einstellungen', en: 'App settings' },
+      text: { de: 'Neuer Dialog f\u00fcr Tray-Verhalten und Hotkey \u2013 jederzeit \u00fcber das Men\u00fc erreichbar.', en: 'New dialog for tray behavior and hotkey, reachable from the menu any time.' }
+    }
   ],
   '1.3.1': [
-    { icon: 'check', title: 'Download-Dialog nicht mehr doppelt', text: 'Beim Speichern von Dateien aus Chats erscheint der Dialog jetzt zuverl\u00e4ssig nur einmal \u2013 auch bei Blob- und Redirect-Downloads.' },
-    { icon: 'bolt', title: 'Quick-Prompt sendet nicht mehr automatisch', text: 'Der Text wird ins Eingabefeld \u00fcbernommen und der Cursor ans Ende gesetzt. Du dr\u00fcckst selbst Enter zum Absenden.' },
-    { icon: 'settings', title: 'Dialoge zentriert \u00fcber der App', text: 'Update- und Hinweis-Dialoge \u00f6ffnen sich jetzt zuverl\u00e4ssig zentriert \u00fcber dem App-Fenster \u2013 auch auf Multi-Monitor-Setups.' },
-    { icon: 'check', title: 'Code-Tab in der Sidebar funktioniert', text: 'Der Klick auf \u201eCode\u201c in der Sidebar \u00f6ffnet die Seite jetzt korrekt in einem neuen Fenster, statt sich sofort wieder zu schlie\u00dfen.' },
-    { icon: 'tray', title: 'Tray-Icon besser erkennbar', text: 'Das Symbol in der Systemleiste zeigt jetzt das Sparkle-Logo gr\u00f6\u00dfer und transparent \u2013 deutlich sichtbar auf hellen wie dunklen Tray-Hintergr\u00fcnden.' },
-    { icon: 'bolt', title: 'Autostart beim Anmelden', text: 'Optional kann Claude jetzt automatisch beim Hochfahren des Systems starten \u2013 ein- und ausschaltbar in den App-Einstellungen.' }
+    {
+      icon: 'check',
+      title: { de: 'Download-Dialog nicht mehr doppelt', en: 'Download dialog no longer duplicated' },
+      text: { de: 'Beim Speichern von Dateien aus Chats erscheint der Dialog jetzt zuverl\u00e4ssig nur einmal \u2013 auch bei Blob- und Redirect-Downloads.', en: 'When saving files from chats, the dialog now reliably appears only once, including for blob and redirect downloads.' }
+    },
+    {
+      icon: 'bolt',
+      title: { de: 'Quick-Prompt sendet nicht mehr automatisch', en: 'Quick-Prompt no longer sends automatically' },
+      text: { de: 'Der Text wird ins Eingabefeld \u00fcbernommen und der Cursor ans Ende gesetzt. Du dr\u00fcckst selbst Enter zum Absenden.', en: 'The text is placed in the input box with the cursor at the end. You press Enter yourself to send.' }
+    },
+    {
+      icon: 'settings',
+      title: { de: 'Dialoge zentriert \u00fcber der App', en: 'Dialogs centered over the app' },
+      text: { de: 'Update- und Hinweis-Dialoge \u00f6ffnen sich jetzt zuverl\u00e4ssig zentriert \u00fcber dem App-Fenster \u2013 auch auf Multi-Monitor-Setups.', en: 'Update and notice dialogs now reliably open centered over the app window, including on multi-monitor setups.' }
+    },
+    {
+      icon: 'check',
+      title: { de: 'Code-Tab in der Sidebar funktioniert', en: 'Code tab in the sidebar works' },
+      text: { de: 'Der Klick auf \u201eCode" in der Sidebar \u00f6ffnet die Seite jetzt korrekt in einem neuen Fenster, statt sich sofort wieder zu schlie\u00dfen.', en: 'Clicking "Code" in the sidebar now correctly opens the page in a new window instead of closing immediately.' }
+    },
+    {
+      icon: 'tray',
+      title: { de: 'Tray-Icon besser erkennbar', en: 'Tray icon more visible' },
+      text: { de: 'Das Symbol in der Systemleiste zeigt jetzt das Sparkle-Logo gr\u00f6\u00dfer und transparent \u2013 deutlich sichtbar auf hellen wie dunklen Tray-Hintergr\u00fcnden.', en: 'The system tray icon now shows the sparkle logo larger and transparent, clearly visible on light and dark tray backgrounds.' }
+    },
+    {
+      icon: 'bolt',
+      title: { de: 'Autostart beim Anmelden', en: 'Autostart at login' },
+      text: { de: 'Optional kann Claude jetzt automatisch beim Hochfahren des Systems starten \u2013 ein- und ausschaltbar in den App-Einstellungen.', en: 'Optionally Claude can now launch automatically when the system starts, toggled in the app settings.' }
+    }
   ],
   '1.3.3': [
-    { icon: 'check', title: 'Artifact-Vorschauen werden wieder angezeigt', text: 'HTML-, React- und Wireframe-Vorschauen aus Chats erscheinen jetzt wieder im Vorschau-Panel \u2013 vorher blieb es leer, weil die App den separaten Anzeige-Server (claudeusercontent.com) blockiert hat.' }
+    {
+      icon: 'check',
+      title: { de: 'Artifact-Vorschauen werden wieder angezeigt', en: 'Artifact previews render again' },
+      text: { de: 'HTML-, React- und Wireframe-Vorschauen aus Chats erscheinen jetzt wieder im Vorschau-Panel \u2013 vorher blieb es leer, weil die App den separaten Anzeige-Server (claudeusercontent.com) blockiert hat.', en: 'HTML, React and wireframe previews from chats now show up in the preview panel again. Previously the panel stayed empty because the app blocked the separate display origin (claudeusercontent.com).' }
+    }
   ],
   '1.3.4': [
     {
       icon: 'bolt',
-      title: 'Direkt aus der App Fehler melden',
-      text: 'Statt eine E-Mail zu schreiben kannst du jetzt einen kurzen Bericht direkt im Fenster ausf\u00fcllen \u2013 mit optionalen Fehlercodes und Kontakt-Mail. App-Version, OS und Sprache werden auf Wunsch automatisch mitgesendet.'
+      title: { de: 'Direkt aus der App Fehler melden', en: 'Report bugs straight from the app' },
+      text: { de: 'Statt eine E-Mail zu schreiben kannst du jetzt einen kurzen Bericht direkt im Fenster ausf\u00fcllen \u2013 mit optionalen Fehlercodes und Kontakt-Mail. App-Version, OS und Sprache werden auf Wunsch automatisch mitgesendet.', en: 'Instead of writing an email you can now fill in a short report directly in the window, with optional error codes and contact mail. App version, OS and language are sent along on request.' }
     },
     {
       icon: 'settings',
-      title: 'Dialoge erscheinen \u00fcber der App',
-      text: 'App-Einstellungen, Bug-Report und Update-Hinweise zentrieren sich jetzt auf dem Hauptfenster \u2013 egal wo du die App auf dem Bildschirm hast.'
+      title: { de: 'Dialoge erscheinen \u00fcber der App', en: 'Dialogs appear over the app' },
+      text: { de: 'App-Einstellungen, Bug-Report und Update-Hinweise zentrieren sich jetzt auf dem Hauptfenster \u2013 egal wo du die App auf dem Bildschirm hast.', en: 'App settings, Bug Report and update notices now center on the main window, no matter where the app sits on screen.' }
     },
     {
       icon: 'check',
-      title: 'Autostart funktioniert jetzt automatisch',
-      text: 'Der Autostart-Schalter in den App-Einstellungen funktioniert ab sofort ohne manuellen Setup-Schritt \u2013 einfach umlegen, fertig.',
+      title: { de: 'Autostart funktioniert jetzt automatisch', en: 'Autostart now works out of the box' },
+      text: { de: 'Der Autostart-Schalter in den App-Einstellungen funktioniert ab sofort ohne manuellen Setup-Schritt \u2013 einfach umlegen, fertig.', en: 'The autostart toggle in app settings now works without a manual setup step \u2013 just flip it and you\u2019re done.' },
       if: 'snap'
     }
   ],
   '1.3.5': [
     {
       icon: 'settings',
-      title: 'Neue Tab-Leiste mit App-Men\u00fc',
-      text: 'Das Men\u00fc-Icon ganz links (\u2261) \u00f6ffnet ein eigenes App-Men\u00fc mit allen wichtigen Funktionen. Zus\u00e4tzlich hat die Tab-Leiste jetzt direkten Zugriff auf Konversations-Export und Bug-Report.'
+      title: { de: 'Neue Tab-Leiste mit App-Men\u00fc', en: 'New tab bar with app menu' },
+      text: { de: 'Das Men\u00fc-Icon ganz links (\u2261) \u00f6ffnet ein eigenes App-Men\u00fc mit allen wichtigen Funktionen. Zus\u00e4tzlich hat die Tab-Leiste jetzt direkten Zugriff auf Konversations-Export und Bug-Report.', en: 'The menu icon on the far left (\u2261) opens a dedicated app menu with all the important actions. The tab bar also gives you direct access to conversation export and Bug Report.' }
     },
     {
       icon: 'bolt',
-      title: 'Konversation als Markdown exportieren',
-      text: 'Mit Strg+Shift+E (oder \u00fcber das Men\u00fc) speicherst du den aktuellen Chat als .md-Datei \u2013 inklusive Code-Bl\u00f6cken, Listen und \u00dcberschriften.'
+      title: { de: 'Konversation als Markdown exportieren', en: 'Export conversation as Markdown' },
+      text: { de: 'Mit Strg+Shift+E (oder \u00fcber das Men\u00fc) speicherst du den aktuellen Chat als .md-Datei \u2013 inklusive Code-Bl\u00f6cken, Listen und \u00dcberschriften.', en: 'Ctrl+Shift+E (or via the menu) saves the current chat as an .md file, including code blocks, lists and headings.' }
     },
     {
       icon: 'bolt',
-      title: 'Prompt-Templates f\u00fcr den Quick-Prompt',
-      text: 'In den App-Einstellungen legst du eigene Prefix-Texte an (z.B. \u201e\u00dcbersetze ins Englische:"). Im Quick-Prompt-Fenster w\u00e4hlst du sie per Tab aus und tippst nur noch deinen Inhalt.'
+      title: { de: 'Prompt-Templates f\u00fcr den Quick-Prompt', en: 'Prompt templates for the Quick-Prompt' },
+      text: { de: 'In den App-Einstellungen legst du eigene Prefix-Texte an (z.B. \u201e\u00dcbersetze ins Englische:"). Im Quick-Prompt-Fenster w\u00e4hlst du sie per Tab aus und tippst nur noch deinen Inhalt.', en: 'In app settings you can define your own prefix texts (e.g. "Translate to English:"). In the Quick-Prompt window you pick one with Tab and only type your content.' }
     },
     {
       icon: 'tray',
-      title: 'Benachrichtigung f\u00fcr Hintergrund-Tabs',
-      text: 'Optional schickt Claude eine native Notification, sobald die Antwort in einem nicht aktiven Tab fertig ist. Aktivierbar in den App-Einstellungen.'
+      title: { de: 'Benachrichtigung f\u00fcr Hintergrund-Tabs', en: 'Notification for background tabs' },
+      text: { de: 'Optional schickt Claude eine native Notification, sobald die Antwort in einem nicht aktiven Tab fertig ist. Aktivierbar in den App-Einstellungen.', en: 'Optionally Claude sends a native notification as soon as a response finishes in an inactive tab. Enabled in app settings.' }
     },
     {
       icon: 'bolt',
-      title: 'Zwischenablage als neuer Chat',
-      text: 'Ein eigener globaler Hotkey \u00f6ffnet einen frischen Chat und f\u00fcgt automatisch den Text aus der Zwischenablage als Prompt ein.'
+      title: { de: 'Zwischenablage als neuer Chat', en: 'Clipboard as a new chat' },
+      text: { de: 'Ein eigener globaler Hotkey \u00f6ffnet einen frischen Chat und f\u00fcgt automatisch den Text aus der Zwischenablage als Prompt ein.', en: 'A dedicated global hotkey opens a fresh chat and pastes the clipboard text as the prompt.' }
     },
     {
       icon: 'check',
-      title: 'Copy & Paste im Snap funktioniert wieder',
-      text: 'Auf Wayland-Sessions konnte die Snap-Version Inhalte nicht zuverl\u00e4ssig zwischen Apps kopieren. Mit dem neuen Launch-Pfad (native Wayland-Clipboard) klappt Kopieren und Einf\u00fcgen jetzt sauber.',
+      title: { de: 'Copy & Paste im Snap funktioniert wieder', en: 'Copy & paste works again in the Snap' },
+      text: { de: 'Auf Wayland-Sessions konnte die Snap-Version Inhalte nicht zuverl\u00e4ssig zwischen Apps kopieren. Mit dem neuen Launch-Pfad (native Wayland-Clipboard) klappt Kopieren und Einf\u00fcgen jetzt sauber.', en: 'On Wayland sessions the Snap build could not reliably copy between apps. With the new launch path (native Wayland clipboard) copy and paste now work cleanly.' },
       if: 'snap'
     },
     {
       icon: 'heart',
-      title: 'Danke f\u00fcrs Nutzen!',
-      text: 'St\u00f6\u00dft du auf einen Fehler? Bitte \u00fcber das K\u00e4fer-Symbol oben in der Tab-Leiste melden \u2013 jeder Bericht hilft mir, die App zu verbessern. Vielen Dank f\u00fcr deinen Support.'
+      title: { de: 'Danke f\u00fcrs Nutzen!', en: 'Thanks for using the app!' },
+      text: { de: 'St\u00f6\u00dft du auf einen Fehler? Bitte \u00fcber das K\u00e4fer-Symbol oben in der Tab-Leiste melden \u2013 jeder Bericht hilft mir, die App zu verbessern. Vielen Dank f\u00fcr deinen Support.', en: 'Hit a bug? Please report it via the bug icon at the top of the tab bar \u2013 every report helps me improve the app. Thanks for your support.' }
     }
   ],
   '1.3.6': [
     {
       icon: 'bolt',
-      title: 'Spracheingabe per Mikrofon',
-      text: 'Beim ersten Klick auf das Mikrofon-Symbol in claude.ai fragt die App einmal um Erlaubnis. Du kannst die Berechtigung jederzeit in den App-Einstellungen unter \u201eMikrofon" wieder ausschalten.'
+      title: { de: 'Spracheingabe per Mikrofon', en: 'Voice input via microphone' },
+      text: { de: 'Beim ersten Klick auf das Mikrofon-Symbol in claude.ai fragt die App einmal um Erlaubnis. Du kannst die Berechtigung jederzeit in den App-Einstellungen unter \u201eMikrofon" wieder ausschalten.', en: 'The first time you click the microphone icon in claude.ai, the app asks once for permission. You can disable it again any time in app settings under "Microphone".' }
     },
     {
       icon: 'settings',
-      title: 'Snap: Mikrofon mit einem Klick freigeben',
-      text: 'Im Hinweis-Dialog zeigt dir die App den Snap-Berechtigungs-Status live. \u201eIm Snap-Store \u00f6ffnen" springt direkt in den Store \u2013 oder du kopierst den Terminal-Befehl mit einem Klick. Der Dialog erkennt die Aktivierung automatisch, egal welchen Weg du nimmst.',
+      title: { de: 'Snap: Mikrofon mit einem Klick freigeben', en: 'Snap: enable the microphone in one click' },
+      text: { de: 'Im Hinweis-Dialog zeigt dir die App den Snap-Berechtigungs-Status live. \u201eIm Snap-Store \u00f6ffnen" springt direkt in den Store \u2013 oder du kopierst den Terminal-Befehl mit einem Klick. Der Dialog erkennt die Aktivierung automatisch, egal welchen Weg du nimmst.', en: 'The consent dialog shows the live Snap permission status. "Open in Snap Store" jumps straight to the store, or you copy the terminal command with one click. The dialog detects the activation automatically either way.' },
       if: 'snap'
     },
     {
       icon: 'bolt',
-      title: 'Live-Hinweise direkt in der App',
-      text: 'Wichtige Hinweise (z.B. zu bekannten Problemen oder Updates) erscheinen jetzt als Banner \u00fcber der Tab-Leiste. Sie kommen direkt vom Projekt-Repo und k\u00f6nnen jederzeit per Klick auf das \u00d7 weggeschoben werden.'
+      title: { de: 'Live-Hinweise direkt in der App', en: 'Live notices directly in the app' },
+      text: { de: 'Wichtige Hinweise (z.B. zu bekannten Problemen oder Updates) erscheinen jetzt als Banner \u00fcber der Tab-Leiste. Sie kommen direkt vom Projekt-Repo und k\u00f6nnen jederzeit per Klick auf das \u00d7 weggeschoben werden.', en: 'Important notices (e.g. known issues or updates) now appear as banners above the tab bar. They come straight from the project repo and can be dismissed any time by clicking \u00d7.' }
     }
   ],
   '1.3.7': [
     {
       icon: 'check',
-      title: 'App startet nach Auto-Update wieder zuverl\u00e4ssig',
-      text: 'Nach einem automatischen Update startete die App beim n\u00e4chsten Aufruf \u00fcber den Men\u00fc-Eintrag manchmal nicht mehr, weil die Verkn\u00fcpfung noch auf die alte Datei zeigte. Das ist behoben \u2013 die Verkn\u00fcpfungen werden jetzt bei jedem Start gepr\u00fcft und bei Bedarf automatisch auf die aktuelle Version umgebogen.'
+      title: { de: 'App startet nach Auto-Update wieder zuverl\u00e4ssig', en: 'App launches reliably again after auto-update' },
+      text: { de: 'Nach einem automatischen Update startete die App beim n\u00e4chsten Aufruf \u00fcber den Men\u00fc-Eintrag manchmal nicht mehr, weil die Verkn\u00fcpfung noch auf die alte Datei zeigte. Das ist behoben \u2013 die Verkn\u00fcpfungen werden jetzt bei jedem Start gepr\u00fcft und bei Bedarf automatisch auf die aktuelle Version umgebogen.', en: 'After an automatic update, launching via the menu entry sometimes failed because the shortcut still pointed to the old file. Fixed \u2013 shortcuts are now checked on every start and silently retargeted to the current version when needed.' }
     },
     {
       icon: 'check',
-      title: 'Stabiler Start aus dem App-Men\u00fc',
-      text: 'Beim Start aus dem System-App-Men\u00fc oder per Doppelklick aus dem Dateimanager kam es nach Updates teils zu Sandbox-Fehlern. Die App setzt das n\u00f6tige Flag jetzt selbst, der Start ist wieder stabil.'
+      title: { de: 'Stabiler Start aus dem App-Men\u00fc', en: 'Stable launch from the system menu' },
+      text: { de: 'Beim Start aus dem System-App-Men\u00fc oder per Doppelklick aus dem Dateimanager kam es nach Updates teils zu Sandbox-Fehlern. Die App setzt das n\u00f6tige Flag jetzt selbst, der Start ist wieder stabil.', en: 'Launching from the system app menu or by double-click from the file manager occasionally hit sandbox errors after updates. The app now sets the required flag itself, so launch is stable again.' }
     }
   ],
   '1.3.8': [
     {
       icon: 'check',
-      title: 'Snap: Mikrofon-Status live im Settings sichtbar',
-      text: 'In den App-Einstellungen unter \u201eMikrofon" zeigt eine kleine farbige Anzeige jetzt direkt, ob die Audio-Record-Berechtigung im Snap aktiv ist. Wenn du den Schalter aktivierst und die Berechtigung noch fehlt, ploppt der Hilfedialog automatisch auf.'
+      title: { de: 'Snap: Mikrofon-Status live im Settings sichtbar', en: 'Snap: microphone status visible live in settings' },
+      text: { de: 'In den App-Einstellungen unter \u201eMikrofon" zeigt eine kleine farbige Anzeige jetzt direkt, ob die Audio-Record-Berechtigung im Snap aktiv ist. Wenn du den Schalter aktivierst und die Berechtigung noch fehlt, ploppt der Hilfedialog automatisch auf.', en: 'In app settings under "Microphone" a small colored indicator now shows directly whether the Snap audio-record permission is active. If you toggle the switch and the permission is still missing, the help dialog opens automatically.' }
     },
     {
       icon: 'bolt',
-      title: 'Hinweis-Dialog merkt, wenn du die Snap-Berechtigung aktivierst',
-      text: 'Sobald du im Snap-Store \u201eAudio Record" einschaltest oder den Befehl im Terminal ausf\u00fchrst, blinkt der Erlauben-Knopf im Mikrofon-Hinweis kurz auf \u2013 du musst nicht raten, ob alles geklappt hat.'
+      title: { de: 'Hinweis-Dialog merkt, wenn du die Snap-Berechtigung aktivierst', en: 'Consent dialog notices when you enable the Snap permission' },
+      text: { de: 'Sobald du im Snap-Store \u201eAudio Record" einschaltest oder den Befehl im Terminal ausf\u00fchrst, blinkt der Erlauben-Knopf im Mikrofon-Hinweis kurz auf \u2013 du musst nicht raten, ob alles geklappt hat.', en: 'The moment you enable "Audio Record" in the Snap Store or run the terminal command, the Allow button in the microphone notice briefly flashes \u2013 no guessing whether it took effect.' }
     },
     {
       icon: 'settings',
-      title: 'Robustere Antwort-Erkennung',
-      text: 'Die Hintergrund-Benachrichtigung \u201eClaude ist fertig" pr\u00fcft jetzt mehrere Strategien parallel. Wenn claude.ai sein Layout \u00e4ndert, greift einer der Fallbacks und die Notifications bleiben am Laufen.'
+      title: { de: 'Robustere Antwort-Erkennung', en: 'More robust response detection' },
+      text: { de: 'Die Hintergrund-Benachrichtigung \u201eClaude ist fertig" pr\u00fcft jetzt mehrere Strategien parallel. Wenn claude.ai sein Layout \u00e4ndert, greift einer der Fallbacks und die Notifications bleiben am Laufen.', en: 'The background "Claude is done" notification now checks several strategies in parallel. When claude.ai changes its layout, one of the fallbacks takes over and notifications keep working.' }
     },
     {
       icon: 'bug',
-      title: 'Klarer Hinweis im Bug-Report',
-      text: 'Im Fehler-melden-Fenster steht jetzt ein deutlicher Hinweis: das hier ist ein inoffizieller Community-Wrapper, kein offizieller Anthropic-Support. Bei Account-, Login-, Abo- oder Bezahl-Fragen f\u00fchrt ein Link direkt zu support.anthropic.com.'
+      title: { de: 'Klarer Hinweis im Bug-Report', en: 'Clear notice in the Bug Report' },
+      text: { de: 'Im Fehler-melden-Fenster steht jetzt ein deutlicher Hinweis: das hier ist ein inoffizieller Community-Wrapper, kein offizieller Anthropic-Support. Bei Account-, Login-, Abo- oder Bezahl-Fragen f\u00fchrt ein Link direkt zu support.anthropic.com.', en: 'The Bug Report window now carries a clear notice: this is an unofficial community wrapper, not official Anthropic support. A link points to support.anthropic.com for account, login, subscription or billing questions.' }
     }
   ],
   '1.3.9': [
     {
       icon: 'check',
-      title: 'Wayland: Fenster landen wieder dort, wo sie hingeh\u00f6ren',
-      text: 'Auf Wayland-Sitzungen (GNOME, KDE Plasma) sind App-Men\u00fc, Einstellungen, Bug-Report und das Quick-Prompt-Fenster zuvor an zuf\u00e4lligen Stellen \u00fcber den Bildschirm verteilt aufgeploppt \u2013 weil Wayland clientseitige Fenster-Positionierung nicht erlaubt. Die App startet auf Wayland jetzt automatisch \u00fcber XWayland (so wie es VS Code, Discord und Signal auch machen). Dialoge sitzen wieder zentriert, das App-Men\u00fc \u00f6ffnet direkt unter dem Hamburger-Button.'
+      title: { de: 'Wayland: Fenster landen wieder dort, wo sie hingeh\u00f6ren', en: 'Wayland: windows land where they should again' },
+      text: { de: 'Auf Wayland-Sitzungen (GNOME, KDE Plasma) sind App-Men\u00fc, Einstellungen, Bug-Report und das Quick-Prompt-Fenster zuvor an zuf\u00e4lligen Stellen \u00fcber den Bildschirm verteilt aufgeploppt \u2013 weil Wayland clientseitige Fenster-Positionierung nicht erlaubt. Die App startet auf Wayland jetzt automatisch \u00fcber XWayland (so wie es VS Code, Discord und Signal auch machen). Dialoge sitzen wieder zentriert, das App-Men\u00fc \u00f6ffnet direkt unter dem Hamburger-Button.', en: 'On Wayland sessions (GNOME, KDE Plasma) the app menu, settings, Bug Report and the Quick-Prompt window used to pop up at random positions across the screen because Wayland does not allow client-side window positioning. On Wayland the app now starts via XWayland automatically (like VS Code, Discord and Signal do). Dialogs are centered again, and the app menu opens directly under the hamburger button.' }
     },
     {
       icon: 'bug',
-      title: 'Bug-Report-Fenster nicht mehr mehrfach aufrufbar',
-      text: 'Mehrfach-Klick auf das K\u00e4fer-Symbol hat zuvor mehrere identische Bug-Report-Fenster nebeneinander ge\u00f6ffnet. Jetzt fokussiert die App das bestehende Fenster, statt ein neues zu spawnen.'
+      title: { de: 'Bug-Report-Fenster nicht mehr mehrfach aufrufbar', en: 'Bug Report window can no longer open multiple times' },
+      text: { de: 'Mehrfach-Klick auf das K\u00e4fer-Symbol hat zuvor mehrere identische Bug-Report-Fenster nebeneinander ge\u00f6ffnet. Jetzt fokussiert die App das bestehende Fenster, statt ein neues zu spawnen.', en: 'Multi-clicking the bug icon used to open multiple identical Bug Report windows side by side. The app now focuses the existing window instead of spawning a new one.' }
     },
     {
       icon: 'settings',
-      title: 'Hamburger-Men\u00fc \u00f6ffnet sich nur noch einmal',
-      text: 'Schnelles Mehrfach-Klicken auf das Men\u00fc-Icon konnte zuvor mehrere Men\u00fc-Fenster gleichzeitig erzeugen. Der Cooldown greift jetzt sofort beim Klick, nicht erst nach dem Schlie\u00dfen.'
+      title: { de: 'Hamburger-Men\u00fc \u00f6ffnet sich nur noch einmal', en: 'Hamburger menu only opens once' },
+      text: { de: 'Schnelles Mehrfach-Klicken auf das Men\u00fc-Icon konnte zuvor mehrere Men\u00fc-Fenster gleichzeitig erzeugen. Der Cooldown greift jetzt sofort beim Klick, nicht erst nach dem Schlie\u00dfen.', en: 'Rapidly multi-clicking the menu icon could previously create several menu windows at once. The cooldown now kicks in on click, not only after closing.' }
     },
     {
       icon: 'bolt',
-      title: 'Hinweis bei nicht registrierbarem Hotkey',
-      text: 'Falls die Registrierung eines globalen Hotkeys auf Wayland am Compositor scheitert (GNOME erlaubt es z.B. eingeschr\u00e4nkt), zeigt das App-Einstellungen-Fenster jetzt einen klaren Hinweistext, statt eine generische Fehlermeldung.'
+      title: { de: 'Hinweis bei nicht registrierbarem Hotkey', en: 'Note when a hotkey cannot be registered' },
+      text: { de: 'Falls die Registrierung eines globalen Hotkeys auf Wayland am Compositor scheitert (GNOME erlaubt es z.B. eingeschr\u00e4nkt), zeigt das App-Einstellungen-Fenster jetzt einen klaren Hinweistext, statt eine generische Fehlermeldung.', en: 'If registering a global hotkey on Wayland fails at the compositor (GNOME, for example, only allows it in a limited way), the app settings window now shows a clear hint text instead of a generic error.' }
     }
   ],
   '1.4.0': [
     {
       icon: 'settings',
-      title: 'Rahmenloses Fenster mit eigener Leiste',
-      text: 'Das Hauptfenster läuft jetzt ohne System-Titelleiste. Tab-Bar und Window-Controls (Minimieren, Maximieren, Schließen) liegen direkt nebeneinander, ziehen funktioniert weiterhin überall auf den freien Bereichen der Leiste. Doppelklick auf die Leiste maximiert bzw. stellt wieder her.'
+      title: {
+        de: 'Rahmenloses Fenster mit eigener Leiste',
+        en: 'Frameless window with a custom bar'
+      },
+      text: {
+        de: 'Das Hauptfenster läuft jetzt ohne System-Titelleiste. Tab-Bar und Window-Controls (Minimieren, Maximieren, Schließen) liegen direkt nebeneinander, ziehen funktioniert weiterhin überall auf den freien Bereichen der Leiste. Doppelklick auf die Leiste maximiert bzw. stellt wieder her.',
+        en: 'The main window now runs without the system title bar. The tab bar and window controls (Minimize, Maximize, Close) sit next to each other; dragging still works on any free area of the bar. Double-clicking the bar toggles maximize.'
+      }
     },
     {
       icon: 'settings',
-      title: 'OLED-Theme als drittes Design',
-      text: 'Das Sonne/Mond-Icon in der Leiste schaltet jetzt zwischen drei Modi um: Hell, Dunkel und OLED. Im OLED-Modus wird claude.ai auf einen warmen schwarzen Untergrund mit Brand-Glow umgefärbt – ideal für OLED-Bildschirme. Mit diesem Update ist OLED einmalig vorausgewählt; wer lieber Hell oder das klassische Dunkel möchte, klickt einfach das Sonne/Mond-Icon weiter, der Wechsel wird wie gewohnt gespeichert.'
+      title: {
+        de: 'OLED-Theme als drittes Design',
+        en: 'OLED theme as a third mode'
+      },
+      text: {
+        de: 'Das Sonne/Mond-Icon in der Leiste schaltet jetzt zwischen drei Modi um: Hell, Dunkel und OLED. Im OLED-Modus wird claude.ai auf einen warmen schwarzen Untergrund mit Brand-Glow umgefärbt – ideal für OLED-Bildschirme. Mit diesem Update ist OLED einmalig vorausgewählt; wer lieber Hell oder das klassische Dunkel möchte, klickt einfach das Sonne/Mond-Icon weiter, der Wechsel wird wie gewohnt gespeichert.',
+        en: 'The sun/moon icon in the bar now cycles through three modes: Light, Dark and OLED. In OLED mode claude.ai is rendered on a warm near-black background with a subtle brand glow, ideal for OLED screens. OLED is preselected on the first launch after the update; click the sun/moon icon to switch back to Light or the classic Dark, and your choice is remembered as usual.'
+      }
     },
     {
       icon: 'bolt',
-      title: 'Animierter Gradient um den Chat-Block',
-      text: 'Das Eingabefeld auf der claude.ai-Startseite bekommt jetzt einen feinen, animierten Verlauf in der Markenfarbe – Orange wandert zu Magenta und zurück, im gleichen Stil wie das Quick-Prompt-Fenster.'
+      title: {
+        de: 'Animierter Gradient um den Chat-Block',
+        en: 'Animated gradient around the chat box'
+      },
+      text: {
+        de: 'Das Eingabefeld auf der claude.ai-Startseite bekommt jetzt einen feinen, animierten Verlauf in der Markenfarbe – Orange wandert zu Magenta und zurück, im gleichen Stil wie das Quick-Prompt-Fenster.',
+        en: 'The composer on the claude.ai home screen now gets a thin animated brand-color gradient, orange shifting to magenta and back, matching the Quick-Prompt window style.'
+      }
     },
     {
       icon: 'settings',
-      title: 'Alle Dialoge im neuen rahmenlosen Stil',
-      text: '"Was ist neu", "Über Claude Desktop", Einstellungen und Fehler-Report nutzen jetzt dieselbe kompakte Titelleiste wie das Hauptfenster, mit eigenem X-Knopf rechts und im OLED-Modus mit dezentem Brand-Glow im Hintergrund.'
+      title: {
+        de: 'Alle Dialoge im neuen rahmenlosen Stil',
+        en: 'All dialogs in the new frameless style'
+      },
+      text: {
+        de: '"Was ist neu", "Über Claude Desktop", Einstellungen und Fehler-Report nutzen jetzt dieselbe kompakte Titelleiste wie das Hauptfenster, mit eigenem X-Knopf rechts und im OLED-Modus mit dezentem Brand-Glow im Hintergrund.',
+        en: '"What’s new", "About Claude Desktop", Settings and Bug Report now use the same compact title bar as the main window, with their own close button on the right and a subtle brand glow in the background while in OLED mode.'
+      }
     },
     {
       icon: 'bolt',
-      title: '"Was ist neu" neu gestaltet',
-      text: 'Das Update-Fenster, das du gerade vor dir hast, ist neu: animierter Brand-Hero oben, Highlights als Kacheln im Raster mit Icon-Kachel pro Punkt. Übersichtlicher und passt zum restlichen Design.'
+      title: {
+        de: '"Was ist neu" neu gestaltet',
+        en: '"What’s new" redesigned'
+      },
+      text: {
+        de: 'Das Update-Fenster, das du gerade vor dir hast, ist neu: animierter Brand-Hero oben, Highlights als Kacheln im Raster mit Icon-Kachel pro Punkt. Übersichtlicher und passt zum restlichen Design.',
+        en: 'The update window you are looking at is new: an animated brand hero at the top, highlights laid out as a grid of tiles with an icon per entry. Cleaner and consistent with the rest of the design.'
+      }
     },
     {
       icon: 'check',
-      title: 'Logo passt sich dem Theme an',
-      text: 'Das App-Logo im "Über"-Fenster, im Hamburger-Menü und im Quick-Prompt erscheint im OLED-Modus auf einer dunklen Kachel mit zarter Brand-Aura, damit das Symbol nicht im Schwarz verschwindet.'
+      title: {
+        de: 'Logo passt sich dem Theme an',
+        en: 'Logo adapts to the theme'
+      },
+      text: {
+        de: 'Das App-Logo im "Über"-Fenster, im Hamburger-Menü und im Quick-Prompt erscheint im OLED-Modus auf einer dunklen Kachel mit zarter Brand-Aura, damit das Symbol nicht im Schwarz verschwindet.',
+        en: 'In OLED mode the app logo in the About window, hamburger menu and Quick-Prompt sits on a dark tile with a soft brand aura, so the icon stays visible against the near-black background.'
+      }
     },
     {
       icon: 'check',
-      title: 'Stabilität und kleinere Fixes',
-      text: 'Window-Controls-IPC prüft jetzt die Absender-WebContents, sodass nur das Hauptfenster sich selbst minimieren/schließen kann. Der OLED-Intro-Status wird sofort persistiert, ein Crash kurz nach App-Start triggert die Voreinstellung nicht erneut. Sidebar-Einträge in claude.ai sind im OLED nicht mehr als einzelne Kacheln sichtbar, sondern flach mit dezentem Hover. Popup-Menüs (Account, Connectors) bekommen einen leicht abgesetzten Untergrund. Das Bug-Report-Fenster nutzt jetzt dieselben Theme-Farben wie die übrige App; der Senden-Knopf hat im "Modern"-Design jetzt den Orange-Magenta-Verlauf wie alle anderen Primary-Buttons.'
+      title: {
+        de: 'Stabilität und kleinere Fixes',
+        en: 'Stability and small fixes'
+      },
+      text: {
+        de: 'Window-Controls-IPC prüft jetzt die Absender-WebContents, sodass nur das Hauptfenster sich selbst minimieren/schließen kann. Der OLED-Intro-Status wird sofort persistiert, ein Crash kurz nach App-Start triggert die Voreinstellung nicht erneut. Sidebar-Einträge in claude.ai sind im OLED nicht mehr als einzelne Kacheln sichtbar, sondern flach mit dezentem Hover. Popup-Menüs (Account, Connectors) bekommen einen leicht abgesetzten Untergrund. Das Bug-Report-Fenster nutzt jetzt dieselben Theme-Farben wie die übrige App; der Senden-Knopf hat im "Modern"-Design jetzt den Orange-Magenta-Verlauf wie alle anderen Primary-Buttons.',
+        en: 'Window-controls IPC now verifies the sender WebContents, so only the main window can minimize/close itself. The OLED intro flag is persisted immediately so a crash shortly after launch does not trigger the preselect again. claude.ai sidebar entries no longer appear as separate tiles in OLED, but render flat with a subtle hover. Popup menus (Account, Connectors) get a slightly offset background. The Bug Report window now uses the same theme colors as the rest of the app; the Send button in the "Modern" design gets the same orange-magenta gradient as all other primary buttons.'
+      }
     }
   ],
   '1.3.13': [
     {
       icon: 'check',
-      title: 'Hilfe bei hängender Verifizierungs-Seite',
-      text: 'Bleibt die Cloudflare-Sicherheitsprüfung in einer Schleife hängen, erscheint nach einigen Sekunden ein Banner direkt auf der Seite. Ein Klick auf "Zurücksetzen" leert Cookies und Cache für claude.ai und lädt die Seite neu, ohne dass du den versteckten Menüpunkt suchen musst.'
+      title: {
+        de: 'Hilfe bei hängender Verifizierungs-Seite',
+        en: 'In-page help when verification gets stuck'
+      },
+      text: {
+        de: 'Bleibt die Cloudflare-Sicherheitsprüfung in einer Schleife hängen, erscheint nach einigen Sekunden ein Banner direkt auf der Seite. Ein Klick auf "Zurücksetzen" leert Cookies und Cache für claude.ai und lädt die Seite neu, ohne dass du den versteckten Menüpunkt suchen musst.',
+        en: 'If the Cloudflare check loops, a banner now appears directly on the page after a few seconds. Clicking "Reset" clears claude.ai cookies and cache and reloads the page, no hidden menu entry required.'
+      }
     },
     {
       icon: 'settings',
-      title: 'Info-Fenster im Menü',
-      text: 'Das Hamburger-Menü hat jetzt die Punkte "Über Claude Desktop" und "Was ist neu?". Das Info-Fenster zeigt Version, eine Kurzbeschreibung, Links zu GitHub und zum Anthropic-Support sowie den Markenhinweis. "Was ist neu?" lässt sich darüber jederzeit öffnen, nicht mehr nur nach einem Update.'
+      title: {
+        de: 'Info-Fenster im Menü',
+        en: 'About window in the menu'
+      },
+      text: {
+        de: 'Das Hamburger-Menü hat jetzt die Punkte "Über Claude Desktop" und "Was ist neu?". Das Info-Fenster zeigt Version, eine Kurzbeschreibung, Links zu GitHub und zum Anthropic-Support sowie den Markenhinweis. "Was ist neu?" lässt sich darüber jederzeit öffnen, nicht mehr nur nach einem Update.',
+        en: 'The hamburger menu now has "About Claude Desktop" and "What’s new?" entries. The About window shows the version, a short description, links to GitHub and Anthropic Support, plus the trademark notice. "What’s new?" can be opened any time from there, not just after an update.'
+      }
     }
   ],
   '1.3.12': [
     {
       icon: 'check',
-      title: 'Higgsfield-Connector lässt sich verbinden',
-      text: 'Beim Klick auf "Connect" / "Accept" im Higgsfield-Connector-Dialog auf claude.ai passierte vorher nichts Sichtbares. Ursache: `higgsfield.ai` war in der OAuth-Allowlist nicht eingetragen, daher wurde das Auth-Popup in den Systembrowser umgeleitet, wo der Callback zurück zur App nicht ankam. `higgsfield.ai` und Subdomains gelten jetzt als OAuth-Domain — das Popup öffnet in der App, Callback landet in derselben Session.'
+      title: {
+        de: 'Higgsfield-Connector lässt sich verbinden',
+        en: 'Higgsfield connector can be linked'
+      },
+      text: {
+        de: 'Beim Klick auf "Connect" / "Accept" im Higgsfield-Connector-Dialog auf claude.ai passierte vorher nichts Sichtbares. Ursache: `higgsfield.ai` war in der OAuth-Allowlist nicht eingetragen, daher wurde das Auth-Popup in den Systembrowser umgeleitet, wo der Callback zurück zur App nicht ankam. `higgsfield.ai` und Subdomains gelten jetzt als OAuth-Domain — das Popup öffnet in der App, Callback landet in derselben Session.',
+        en: 'Clicking "Connect" / "Accept" in the Higgsfield connector dialog on claude.ai previously did nothing visible. Cause: `higgsfield.ai` was not in the OAuth allowlist, so the auth popup was redirected to the system browser where the callback never reached the app. `higgsfield.ai` and its subdomains now count as OAuth domains, the popup opens inside the app, and the callback lands in the same session.'
+      }
     },
     {
       icon: 'check',
-      title: 'Bug-Report-Dialog: Buttons nicht mehr abgeschnitten',
-      text: 'Der in 1.3.11 hinzugefügte Browser-Gegencheck-Hinweis hat den Disclaimer-Block länger gemacht, die Fensterhöhe (760 px) blieb aber gleich – "Abbrechen" und "Bericht senden" waren je nach Skalierung halb oder ganz unten weggeschnitten. Höhe von 760 auf 860 px erhöht.'
+      title: {
+        de: 'Bug-Report-Dialog: Buttons nicht mehr abgeschnitten',
+        en: 'Bug Report dialog: buttons no longer cut off'
+      },
+      text: {
+        de: 'Der in 1.3.11 hinzugefügte Browser-Gegencheck-Hinweis hat den Disclaimer-Block länger gemacht, die Fensterhöhe (760 px) blieb aber gleich – "Abbrechen" und "Bericht senden" waren je nach Skalierung halb oder ganz unten weggeschnitten. Höhe von 760 auf 860 px erhöht.',
+        en: 'The browser-cross-check note added in 1.3.11 made the disclaimer block longer, but the window height (760 px) stayed the same, so "Cancel" and "Send report" were partly or fully cut off depending on scaling. Height bumped from 760 to 860 px.'
+      }
     },
     {
       icon: 'bug',
-      title: 'Kleine Aufräumarbeiten',
-      text: 'mailto:-Links aus claude.ai öffnen jetzt auch dann den Mail-Client, wenn sie aus der Navigation kommen (vorher nur aus `window.open()`). Außerdem interne Kommentar-Aufräumung in main.js; rein kosmetisch.'
+      title: {
+        de: 'Kleine Aufräumarbeiten',
+        en: 'Small cleanups'
+      },
+      text: {
+        de: 'mailto:-Links aus claude.ai öffnen jetzt auch dann den Mail-Client, wenn sie aus der Navigation kommen (vorher nur aus `window.open()`). Außerdem interne Kommentar-Aufräumung in main.js; rein kosmetisch.',
+        en: 'mailto: links from claude.ai now open the mail client even when they come from navigation events (previously only from `window.open()`). Plus internal comment cleanup in main.js; cosmetic only.'
+      }
     }
   ],
   '1.3.11': [
     {
       icon: 'check',
-      title: 'Cloudflare-Verifizierungsschleife behoben',
-      text: 'Manche Nutzer blieben auf der Seite "Performing security verification" / "Verifying you are human" hängen. Drei Ursachen wurden gefixt: (1) Der Cloudflare-Turnstile-iframe (`challenges.cloudflare.com`) war in der internen Allowlist nicht eingetragen und wurde von `will-frame-navigate` blockiert – die Challenge konnte nie fertig werden. (2) Die UA-Header (inkl. Sec-Ch-Ua) wurden nur für `claude.ai` gesetzt, nicht für Sandbox-Origins, `*.anthropic.com` oder den Challenge-Endpunkt – was Cloudflare als Bot-Signal wertet. (3) `Sec-Ch-Ua-Full-Version-List` und `Sec-Ch-Ua-Platform-Version` fehlten (bekannter Electron-Bug #34762) und werden nun konsistent mit identischer Brand-Reihenfolge mitgesendet.'
+      title: {
+        de: 'Cloudflare-Verifizierungsschleife behoben',
+        en: 'Cloudflare verification loop fixed'
+      },
+      text: {
+        de: 'Manche Nutzer blieben auf der Seite "Performing security verification" / "Verifying you are human" hängen. Drei Ursachen wurden gefixt: (1) Der Cloudflare-Turnstile-iframe (`challenges.cloudflare.com`) war in der internen Allowlist nicht eingetragen und wurde von `will-frame-navigate` blockiert – die Challenge konnte nie fertig werden. (2) Die UA-Header (inkl. Sec-Ch-Ua) wurden nur für `claude.ai` gesetzt, nicht für Sandbox-Origins, `*.anthropic.com` oder den Challenge-Endpunkt – was Cloudflare als Bot-Signal wertet. (3) `Sec-Ch-Ua-Full-Version-List` und `Sec-Ch-Ua-Platform-Version` fehlten (bekannter Electron-Bug #34762) und werden nun konsistent mit identischer Brand-Reihenfolge mitgesendet.',
+        en: 'Some users got stuck on the "Performing security verification" / "Verifying you are human" page. Three root causes were fixed: (1) The Cloudflare Turnstile iframe (`challenges.cloudflare.com`) was missing from the internal allowlist and was blocked by `will-frame-navigate`, so the challenge could never finish. (2) UA headers (incl. Sec-Ch-Ua) were only set for `claude.ai`, not for sandbox origins, `*.anthropic.com` or the challenge endpoint, which Cloudflare treats as a bot signal. (3) `Sec-Ch-Ua-Full-Version-List` and `Sec-Ch-Ua-Platform-Version` were missing (known Electron bug #34762) and are now sent consistently with identical brand ordering.'
+      }
     },
     {
       icon: 'bug',
-      title: 'Bug-Report: Hinweis zum Browser-Gegencheck',
-      text: 'Der Bug-Report-Dialog zeigt jetzt unter dem Community-App-Hinweis einen kurzen Gegencheck: "Tritt der gleiche Fehler auch auf claude.ai in einem normalen Browser auf? Dann ist es ein serverseitiges Problem bei Anthropic und kein Wrapper-Bug." Reduziert Berichte zu Problemen wie der jüngsten "Could not load connectors directory"-Meldung, die auch im offiziellen Claude-Desktop und in regulären Browsern auftritt.'
+      title: {
+        de: 'Bug-Report: Hinweis zum Browser-Gegencheck',
+        en: 'Bug Report: browser cross-check note'
+      },
+      text: {
+        de: 'Der Bug-Report-Dialog zeigt jetzt unter dem Community-App-Hinweis einen kurzen Gegencheck: "Tritt der gleiche Fehler auch auf claude.ai in einem normalen Browser auf? Dann ist es ein serverseitiges Problem bei Anthropic und kein Wrapper-Bug." Reduziert Berichte zu Problemen wie der jüngsten "Could not load connectors directory"-Meldung, die auch im offiziellen Claude-Desktop und in regulären Browsern auftritt.',
+        en: 'The Bug Report dialog now shows a quick cross-check below the community-app note: "Does the same error also happen on claude.ai in a regular browser? Then it is a server-side issue at Anthropic, not a wrapper bug." Cuts down on reports like the recent "Could not load connectors directory" message, which also shows up in the official Claude Desktop and in plain browsers.'
+      }
     }
   ],
   '1.3.10': [
     {
       icon: 'check',
-      title: 'MCP-Connectoren (Visualize & Co.) funktionieren wieder',
-      text: 'Wer in claude.ai einen MCP-Connector wie Visualize oder \u00e4hnliche aktiviert hat, sah zuvor die Fehlermeldung \u201eFailed to set up MCP app \u2013 check that claudemcpcontent.com is not blocked by your network or browser". Ursache war keine Netzsperre, sondern die App selbst: die Domain `claudemcpcontent.com` (separater Sandbox-Origin f\u00fcr MCP-Inhalte, analog zu `claudeusercontent.com` f\u00fcr Artifacts) war in der internen Allowlist nicht eingetragen. Behoben \u2013 MCP-iframes laden wieder, prophylaktisch auch `claudemcp.com` mit drin.'
+      title: {
+        de: 'MCP-Connectoren (Visualize & Co.) funktionieren wieder',
+        en: 'MCP connectors (Visualize & co.) work again'
+      },
+      text: {
+        de: 'Wer in claude.ai einen MCP-Connector wie Visualize oder \u00e4hnliche aktiviert hat, sah zuvor die Fehlermeldung \u201eFailed to set up MCP app \u2013 check that claudemcpcontent.com is not blocked by your network or browser". Ursache war keine Netzsperre, sondern die App selbst: die Domain `claudemcpcontent.com` (separater Sandbox-Origin f\u00fcr MCP-Inhalte, analog zu `claudeusercontent.com` f\u00fcr Artifacts) war in der internen Allowlist nicht eingetragen. Behoben \u2013 MCP-iframes laden wieder, prophylaktisch auch `claudemcp.com` mit drin.',
+        en: 'Anyone who enabled an MCP connector like Visualize in claude.ai previously saw the error "Failed to set up MCP app \u2013 check that claudemcpcontent.com is not blocked by your network or browser". The cause was not a network block but the app itself: the domain `claudemcpcontent.com` (a separate sandbox origin for MCP content, like `claudeusercontent.com` for Artifacts) was missing from the internal allowlist. Fixed \u2013 MCP iframes load again, with `claudemcp.com` added preemptively.'
+      }
     },
     {
       icon: 'bug',
-      title: 'Neue Diagnose-Funktion im App-Men\u00fc',
-      text: 'Im Hamburger-Men\u00fc gibt es jetzt den Punkt \u201eDiagnose-Info kopieren". Er sammelt App-Version, Electron/Chrome-Build, Kernel, Display-Session, GPU-Vendor und WebGL-Renderer in einem Block und kopiert ihn in die Zwischenablage \u2013 hilfreich, wenn z.B. eine Cloudflare-Verifizierungs-Seite h\u00e4ngen bleibt und der Fehler genauer reproduziert werden soll.'
+      title: {
+        de: 'Neue Diagnose-Funktion im App-Men\u00fc',
+        en: 'New diagnostics action in the app menu'
+      },
+      text: {
+        de: 'Im Hamburger-Men\u00fc gibt es jetzt den Punkt \u201eDiagnose-Info kopieren". Er sammelt App-Version, Electron/Chrome-Build, Kernel, Display-Session, GPU-Vendor und WebGL-Renderer in einem Block und kopiert ihn in die Zwischenablage \u2013 hilfreich, wenn z.B. eine Cloudflare-Verifizierungs-Seite h\u00e4ngen bleibt und der Fehler genauer reproduziert werden soll.',
+        en: 'The hamburger menu now has a "Copy diagnostics info" entry. It gathers app version, Electron/Chrome build, kernel, display session, GPU vendor and WebGL renderer into one block and copies it to the clipboard \u2013 useful when, for example, a Cloudflare verification page hangs and the error needs to be reproduced in detail.'
+      }
     },
     {
       icon: 'check',
-      title: 'Selbsthilfe bei h\u00e4ngender claude.ai-Verifizierung',
-      text: 'Ebenfalls neu im Men\u00fc: \u201eclaude.ai-Verifizierung zur\u00fccksetzen". L\u00f6scht Cookies und Cache f\u00fcr alle claude.ai-Origins und l\u00e4dt die Seite neu. Sinnvoll, falls die Cloudflare-Sicherheits\u00fcberpr\u00fcfung (\u201ePerforming security verification") in einer Schleife stecken bleibt. Erfordert anschlie\u00dfend einen erneuten Login.'
+      title: {
+        de: 'Selbsthilfe bei h\u00e4ngender claude.ai-Verifizierung',
+        en: 'Self-help for stuck claude.ai verification'
+      },
+      text: {
+        de: 'Ebenfalls neu im Men\u00fc: \u201eclaude.ai-Verifizierung zur\u00fccksetzen". L\u00f6scht Cookies und Cache f\u00fcr alle claude.ai-Origins und l\u00e4dt die Seite neu. Sinnvoll, falls die Cloudflare-Sicherheits\u00fcberpr\u00fcfung (\u201ePerforming security verification") in einer Schleife stecken bleibt. Erfordert anschlie\u00dfend einen erneuten Login.',
+        en: 'Also new in the menu: "Reset claude.ai verification". Clears cookies and cache for all claude.ai origins and reloads the page. Useful when the Cloudflare security check ("Performing security verification") gets stuck in a loop. Requires you to sign in again afterwards.'
+      }
     }
   ]
 };
@@ -649,6 +837,15 @@ function getFilteredNotes(currentVersion, lastSeenVersion, force = false) {
     versionsToShow = all
       .filter(v => compareVersions(v, lastSeenVersion) > 0 && compareVersions(v, currentVersion) <= 0)
       .sort(compareVersions);
+  }
+  // Revisit: wenn die aktuelle Version in unserer Map steht und auch tatsächlich
+  // angezeigt wird, ziehen wir die referenzierten älteren Versionen mit rein.
+  const revisit = RELEASE_NOTES_REVISIT[currentVersion];
+  if (Array.isArray(revisit) && versionsToShow.includes(currentVersion)) {
+    for (const r of revisit) {
+      if (!versionsToShow.includes(r) && RELEASE_NOTES[r]) versionsToShow.push(r);
+    }
+    versionsToShow.sort(compareVersions);
   }
   const notes = [];
   for (const v of versionsToShow) {
@@ -1052,8 +1249,8 @@ window.tabAPI.onNotificationsUpdate(list=>{
       '<span class="notif-dot"></span>'+
       '<div class="notif-text"><strong>'+escTxt(n.title)+'</strong>'+
         (n.body?'<span>'+escTxt(n.body)+'</span>':'')+'</div>'+
-      (n.link?'<button class="notif-link" data-act="link">'+escTxt(n.linkLabel||'Mehr')+'</button>':'')+
-      (n.dismissible!==false?'<button class="notif-x" data-act="dismiss" title="Schließen">×</button>':'');
+      (n.link?'<button class="notif-link" data-act="link">'+escTxt(n.linkLabel||'${t('Mehr', 'More')}')+'</button>':'')+
+      (n.dismissible!==false?'<button class="notif-x" data-act="dismiss" title="${t('Schließen', 'Close')}">×</button>':'');
     row.addEventListener('click',e=>{
       const a=e.target&&e.target.dataset?e.target.dataset.act:null;
       if(a==='link'&&n.link)window.tabAPI.openNotificationLink(n.id,n.link);
@@ -2793,8 +2990,8 @@ function getWhatsNewHTML(force = false) {
   const items = notes.map(n => `
     <div class="tile">
       <div class="tile-ic">${icons[n.icon] || icons.check}</div>
-      <div class="tile-title">${n.title}</div>
-      <div class="tile-text">${n.text}</div>
+      <div class="tile-title">${localize(n.title)}</div>
+      <div class="tile-text">${localize(n.text)}</div>
     </div>`).join('');
   return `<!DOCTYPE html><html><head>
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:;">

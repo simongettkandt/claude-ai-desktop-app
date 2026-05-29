@@ -1,5 +1,5 @@
 name: claude-ai-desktop
-version: '1.4.0'
+version: '1.4.1'
 summary: Unofficial desktop wrapper for Claude AI with tabs, tray and voice input
 description: |
   Unofficial desktop app for Claude AI on Linux. Runs claude.ai without
@@ -8,13 +8,25 @@ description: |
 
   Not affiliated with Anthropic.
 
-  What's new in v1.4.0:
+  What's new in v1.4.1:
+
+  * Desktop notifications work in the Snap build - The Snap manifest
+    was missing the desktop-notifications plug, so AppArmor blocked
+    every DBus call to org.freedesktop.Notifications. Both the app's
+    own toasts and the notifications claude.ai triggers itself were
+    silent. Plug now declared.
+  * "What's New" window follows the system language - Release notes
+    used to be hard-coded German for the whole release-notes object,
+    so users on non-German systems kept seeing German text. All notes
+    now carry both German and English text. As a one-time catch-up,
+    upgrading to 1.4.1 also shows the 1.4.0 highlights again, this
+    time in your language.
+
+  Highlights from v1.4.0:
 
   * OLED theme as a third theme - The sun/moon icon in the tab bar now
     cycles Light, Dark, OLED. OLED renders claude.ai on a warm near-
-    black background with a subtle brand-glow overlay. The mode is
-    preselected on the first launch of 1.4.0; use the same icon to
-    switch back. The choice is then remembered.
+    black background with a subtle brand-glow overlay.
   * Frameless main window with custom controls - The system title bar
     is replaced by the tab bar; Minimize, Maximize and Close sit on
     the right. The free area of the tab bar is a drag region, double-
@@ -112,6 +124,7 @@ apps:
       - audio-playback
       - audio-record
       - desktop
+      - desktop-notifications
       - home
       - x11
       - wayland
