@@ -39,23 +39,6 @@ description: |
   * What's New redesigned - New layout with a brand gradient hero and
     a 2-column tile grid for highlights.
 
-  Earlier highlights (v1.3.10 - v1.3.13):
-
-  * Verification banner (v1.3.13) - If the Cloudflare check gets stuck
-    in a loop, an in-page banner now appears with a Reset button that
-    clears claude.ai cookies and cache and reloads the page.
-  * Higgsfield connector fix (v1.3.12) - The OAuth popup for the
-    Higgsfield MCP connector now opens inside the app, so the callback
-    reaches claude.ai instead of the system browser.
-  * Cloudflare verification loop fix (v1.3.11) - Sec-Ch-Ua client
-    hints are now sent consistently for all claude.ai sandbox origins
-    and Anthropic endpoints; challenges.cloudflare.com is whitelisted.
-  * MCP Connectors fixed (v1.3.10) - Visualize and other MCP apps in
-    claude.ai load correctly again.
-  * Diagnostics & Verification Reset menu (v1.3.10) - Copy a full
-    system info block for bug reports, or reset cookies/cache for all
-    claude.ai origins to recover from a stuck verification.
-
   System requirements:
 
   Tested on Ubuntu 20.04 (kernel 5.4) and newer, Fedora 32+, and recent
