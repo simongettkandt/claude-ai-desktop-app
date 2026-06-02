@@ -1,5 +1,5 @@
 name: claude-ai-desktop
-version: '1.4.1'
+version: '1.4.2'
 summary: Unofficial desktop wrapper for Claude AI with tabs, tray and voice input
 description: |
   Unofficial desktop app for Claude AI on Linux. Runs claude.ai without
@@ -8,34 +8,37 @@ description: |
 
   Not affiliated with Anthropic.
 
-  What's new in v1.4.1:
+  What's new in v1.4.2:
 
-  * "What's New" window follows the system language - Release notes
-    used to be hard-coded German for the whole release-notes object,
-    so users on non-German systems kept seeing German text. All notes
-    now carry both German and English text. As a one-time catch-up,
-    upgrading to 1.4.1 also shows the 1.4.0 highlights again, this
-    time in your language.
-  * Small i18n cleanup in the live-notifications tab-bar template:
-    the "More" link label and the close-button tooltip now follow the
-    system language too.
+  * Italian and French - The whole app interface is now available in
+    Italian and French in addition to German and English. It follows
+    your system language and stays on English when your language is
+    not one of the four.
+  * Notifications on Snap - The app now identifies itself to GNOME as
+    the sender via the CHROME_DESKTOP desktop-entry hint. Without it
+    GNOME Shell could not map a notification to the app and dropped it
+    under strict confinement, so reply and download notices went
+    missing. They are attributed to the app again.
+  * OLED tab bar colour is now consistent - The tab bar used a
+    slightly different near-black when you toggled OLED live versus
+    starting up in OLED. Both now use the same palette.
+  * Smaller download - The bundled Chromium licence dump (19 MB) is
+    no longer shipped in the Snap, trimming the compressed download by
+    about 2 MB.
+
+  Highlights from v1.4.1:
+
+  * "What's New" window follows the system language - All release
+    notes now carry both German and English text.
 
   Highlights from v1.4.0:
 
-  * OLED theme as a third theme - The sun/moon icon in the tab bar now
-    cycles Light, Dark, OLED. OLED renders claude.ai on a warm near-
-    black background with a subtle brand-glow overlay.
+  * OLED theme as a third theme - The sun/moon icon in the tab bar
+    cycles Light, Dark, OLED, on a warm near-black background with a
+    subtle brand-glow overlay.
   * Frameless main window with custom controls - The system title bar
     is replaced by the tab bar; Minimize, Maximize and Close sit on
-    the right. The free area of the tab bar is a drag region, double-
-    click toggles maximize.
-  * All dialogs are frameless too - What's New, About, Settings and
-    Bug Report use the same compact custom title bar with a close
-    button.
-  * Composer gradient - The chat input on claude.ai gets a thin
-    animated brand gradient border, matching the Quick-Prompt style.
-  * What's New redesigned - New layout with a brand gradient hero and
-    a 2-column tile grid for highlights.
+    the right.
 
   System requirements:
 
@@ -99,6 +102,10 @@ apps:
     command: app/electron-launch
     extensions: [gnome]
     autostart: claude-ai-desktop.desktop
+    environment:
+      # Electron liest CHROME_DESKTOP fuer den desktop-entry-Hint der Notifications;
+      # ohne ihn ordnet GNOME Shell sie keiner App zu und filtert sie unter strict confinement
+      CHROME_DESKTOP: claude-ai-desktop.desktop
     plugs:
       - browser-support
       - network
@@ -118,6 +125,10 @@ parts:
     source: dist/linux-unpacked
     organize:
       '*': app/
+    stage:
+      # Chromium-Lizenz-Dump (19 MB) wird im Snap nicht gebraucht, spart ~8 MB komprimiert.
+      # Nur Excludes: snapcraft nimmt '*' als Default-Include an.
+      - -app/LICENSES.chromium.html
     stage-packages:
       - libnotify4
       - libnss3

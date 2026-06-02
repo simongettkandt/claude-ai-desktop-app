@@ -148,14 +148,23 @@ const sysLang = (() => {
 })();
 
 const isDE = sysLang === 'de';
-function t(de, en) { return isDE ? de : en; }
-// Release-Notes-Strings dürfen entweder ein String (legacy: nur Deutsch) oder
-// ein { de, en } Objekt sein. localize() bevorzugt en für non-DE-Locales und
-// fällt zurück auf de, wenn das englische Pendant fehlt.
+// Sprachwahl nach Systemsprache: de/fr/it wenn vorhanden, sonst Englisch-Fallback.
+// fr/it sind optional - fehlt die Uebersetzung an einem Aufruf, greift en statt undefined.
+function t(de, en, fr, it) {
+  if (sysLang === 'de') return de;
+  if (sysLang === 'fr') return fr != null ? fr : en;
+  if (sysLang === 'it') return it != null ? it : en;
+  return en;
+}
+// Release-Notes-Strings dürfen ein String (legacy: nur Deutsch) oder ein
+// { de, en, fr?, it? } Objekt sein. localize() wählt nach Systemsprache und
+// fällt auf en (sonst de) zurück, wenn die passende Übersetzung fehlt.
 function localize(field) {
   if (field == null) return '';
   if (typeof field === 'string') return field;
-  if (isDE) return field.de || field.en || '';
+  if (sysLang === 'de') return field.de || field.en || '';
+  if (sysLang === 'fr') return field.fr || field.en || field.de || '';
+  if (sysLang === 'it') return field.it || field.en || field.de || '';
   return field.en || field.de || '';
 }
 
@@ -413,6 +422,54 @@ const RELEASE_NOTES_REVISIT = {
 };
 
 const RELEASE_NOTES = {
+  '1.4.2': [
+    {
+      icon: 'bolt',
+      title: {
+        de: 'Italienisch und Französisch',
+        en: 'Italian and French',
+        fr: 'Italien et français',
+        it: 'Italiano e francese'
+      },
+      text: {
+        de: 'Die App-Oberfläche gibt es jetzt auch auf Italienisch und Französisch. Sie richtet sich nach deiner Systemsprache; ist deine Sprache nicht dabei, bleibt es bei Englisch.',
+        en: 'The app interface is now also available in Italian and French. It follows your system language; if your language is not available, it stays in English.',
+        fr: 'L’interface de l’application est désormais disponible en italien et en français. Elle suit la langue de votre système ; si votre langue n’est pas disponible, elle reste en anglais.',
+        it: 'L’interfaccia dell’app è ora disponibile anche in italiano e francese. Segue la lingua del sistema; se la tua lingua non è disponibile, resta in inglese.'
+      }
+    },
+    {
+      icon: 'settings',
+      title: {
+        de: 'OLED-Tableiste jetzt einheitlich',
+        en: 'OLED tab bar now consistent',
+        fr: 'Barre d’onglets OLED uniforme',
+        it: 'Barra delle schede OLED uniforme'
+      },
+      text: {
+        de: 'Die Tab-Leiste nutzte beim Live-Umschalten auf OLED einen leicht anderen Schwarzton als beim Start direkt im OLED-Modus. Beide verwenden jetzt denselben Wert.',
+        en: 'The tab bar used a slightly different black when you switched to OLED live versus starting up in OLED. Both now use the same value.',
+        fr: 'La barre d’onglets utilisait un noir légèrement différent selon que vous passiez en OLED en cours d’usage ou au démarrage. Les deux utilisent désormais la même valeur.',
+        it: 'La barra delle schede usava un nero leggermente diverso a seconda che passassi a OLED durante l’uso o all’avvio. Ora entrambe usano lo stesso valore.'
+      }
+    },
+    {
+      icon: 'tray',
+      title: {
+        de: 'Snap: Benachrichtigungen und kleinerer Download',
+        en: 'Snap: notifications and a smaller download',
+        fr: 'Snap : notifications et téléchargement plus léger',
+        it: 'Snap: notifiche e download più leggero'
+      },
+      text: {
+        de: 'Die App meldet sich gegenüber GNOME jetzt korrekt als Absender, damit Antwort- und Download-Benachrichtigungen unter Snap nicht mehr ausgefiltert werden. Außerdem ist der Download etwas kleiner.',
+        en: 'The app now identifies itself to GNOME as the sender so reply and download notifications are no longer filtered out on Snap. The download is also a little smaller.',
+        fr: 'L’application s’identifie désormais correctement auprès de GNOME, afin que les notifications de réponse et de téléchargement ne soient plus filtrées sous Snap. Le téléchargement est aussi un peu plus léger.',
+        it: 'L’app ora si identifica correttamente con GNOME, così le notifiche di risposta e download non vengono più filtrate su Snap. Il download è anche un po’ più leggero.'
+      },
+      if: 'snap'
+    }
+  ],
   '1.4.1': [
     {
       icon: 'check',
@@ -1125,36 +1182,36 @@ body{background:var(--bg);font:500 12px/1 -apple-system,BlinkMacSystemFont,'Sego
 </style></head><body>
 <div id="notif-bar"></div>
 <div id="tab-row">
-<div class="menu-btn" id="app-menu" title="${t('Menü', 'Menu')}">
+<div class="menu-btn" id="app-menu" title="${t('Menü', 'Menu', 'Menu', 'Menu')}">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
 </div>
 <div id="tabs"></div>
 <div class="controls">
-  <div class="design-pill" id="design-toggle" title="${t('Design wechseln', 'Toggle design')}">${customDesign ? 'Modern' : 'Classic'}</div>
-  <div class="ctrl-btn" id="export-btn" title="${t('Konversation als Markdown exportieren', 'Export conversation as Markdown')}">
+  <div class="design-pill" id="design-toggle" title="${t('Design wechseln', 'Toggle design', 'Changer de design', 'Cambia design')}">${customDesign ? 'Modern' : 'Classic'}</div>
+  <div class="ctrl-btn" id="export-btn" title="${t('Konversation als Markdown exportieren', 'Export conversation as Markdown', 'Exporter la conversation en Markdown', 'Esporta la conversazione in Markdown')}">
     <svg viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
   </div>
   <div class="ctrl-btn" id="bug-report" title="${(bugReportStrings[sysLang] || bugReportStrings.en).title}">
     <svg viewBox="0 0 24 24" fill="none"><path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
   </div>
-  <div class="ctrl-btn" id="theme-toggle" title="${t('Theme wechseln', 'Toggle theme')}">
+  <div class="ctrl-btn" id="theme-toggle" title="${t('Theme wechseln', 'Toggle theme', 'Changer de thème', 'Cambia tema')}">
     <svg id="theme-icon-dark" viewBox="0 0 24 24"${currentThemeMode() === 'dark' ? '' : ' style="display:none"'}><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
     <svg id="theme-icon-light" viewBox="0 0 24 24"${currentThemeMode() === 'light' ? '' : ' style="display:none"'}><circle cx="12" cy="12" r="5" stroke="currentColor" stroke-width="2" fill="none"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>
     <svg id="theme-icon-oled" viewBox="0 0 24 24"${currentThemeMode() === 'oled' ? '' : ' style="display:none"'}><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z" fill="currentColor"/></svg>
   </div>
-  <div class="ctrl-btn" id="new-tab" title="${t('Neuer Tab', 'New Tab')} (Ctrl+T)">
+  <div class="ctrl-btn" id="new-tab" title="${t('Neuer Tab', 'New Tab', 'Nouvel onglet', 'Nuova scheda')} (Ctrl+T)">
     <svg viewBox="0 0 16 16"><path d="M8 2v12M2 8h12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"/></svg>
   </div>
 </div>
 <div class="win-controls">
-  <button class="win-btn" id="win-min" title="${t('Minimieren', 'Minimize')}" aria-label="Minimize">
+  <button class="win-btn" id="win-min" title="${t('Minimieren', 'Minimize', 'Réduire', 'Riduci a icona')}" aria-label="Minimize">
     <svg viewBox="0 0 12 12"><rect x="2" y="5.5" width="8" height="1" fill="currentColor"/></svg>
   </button>
-  <button class="win-btn" id="win-max" title="${t('Maximieren', 'Maximize')}" aria-label="Maximize">
+  <button class="win-btn" id="win-max" title="${t('Maximieren', 'Maximize', 'Agrandir', 'Ingrandisci')}" aria-label="Maximize">
     <svg id="win-max-icon" viewBox="0 0 12 12"><rect x="2.5" y="2.5" width="7" height="7" fill="none" stroke="currentColor" stroke-width="1"/></svg>
     <svg id="win-restore-icon" viewBox="0 0 12 12" style="display:none"><rect x="2.5" y="4" width="5.5" height="5.5" fill="none" stroke="currentColor" stroke-width="1"/><path d="M4.5 4V2.5H10V8H8" fill="none" stroke="currentColor" stroke-width="1"/></svg>
   </button>
-  <button class="win-btn" id="win-close" title="${t('Schließen', 'Close')}" aria-label="Close">
+  <button class="win-btn" id="win-close" title="${t('Schließen', 'Close', 'Fermer', 'Chiudi')}" aria-label="Close">
     <svg viewBox="0 0 12 12"><path d="M2.5 2.5L9.5 9.5M9.5 2.5L2.5 9.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
   </button>
 </div>
@@ -1211,7 +1268,7 @@ window.tabAPI.onTabsUpdate(data=>{
 const THEME_VARS={
   light:['#f5f2ef','#ede9e4','#faf8f6','#8a7e72','#2a2420','#e8e4de'],
   dark: ['#262624','#333330','#3a3a37','#9a9a96','#e8e8e4','#333330'],
-  oled: ['#000000','#121212','#1c1c1a','#8a8a86','#e8e8e4','#181816']
+  oled: ['#050306','#121013','#1c181b','#9a948f','#e8e8e4','#1a1719']
 };
 window.tabAPI.onThemeUpdate(mode=>{
   const m=(mode==='light'||mode==='oled')?mode:'dark';
@@ -1237,8 +1294,8 @@ window.tabAPI.onNotificationsUpdate(list=>{
       '<span class="notif-dot"></span>'+
       '<div class="notif-text"><strong>'+escTxt(n.title)+'</strong>'+
         (n.body?'<span>'+escTxt(n.body)+'</span>':'')+'</div>'+
-      (n.link?'<button class="notif-link" data-act="link">'+escTxt(n.linkLabel||'${t('Mehr', 'More')}')+'</button>':'')+
-      (n.dismissible!==false?'<button class="notif-x" data-act="dismiss" title="${t('Schließen', 'Close')}">×</button>':'');
+      (n.link?'<button class="notif-link" data-act="link">'+escTxt(n.linkLabel||'${t('Mehr', 'More', 'Plus', 'Altro')}')+'</button>':'')+
+      (n.dismissible!==false?'<button class="notif-x" data-act="dismiss" title="${t('Schließen', 'Close', 'Fermer', 'Chiudi')}">×</button>':'');
     row.addEventListener('click',e=>{
       const a=e.target&&e.target.dataset?e.target.dataset.act:null;
       if(a==='link'&&n.link)window.tabAPI.openNotificationLink(n.id,n.link);
@@ -1277,10 +1334,12 @@ function verifyScript() {
   const i18n = {
     msg: t(
       'Die Sicherheitsprüfung hängt in einer Schleife. Zurücksetzen meldet dich von claude.ai ab und lädt die Seite neu.',
-      'The security check is stuck in a loop. Resetting will sign you out of claude.ai and reload the page.'
+      'The security check is stuck in a loop. Resetting will sign you out of claude.ai and reload the page.',
+      'La vérification de sécurité tourne en boucle. La réinitialisation vous déconnecte de claude.ai et recharge la page.',
+      'Il controllo di sicurezza è bloccato in un ciclo. La reimpostazione disconnette da claude.ai e ricarica la pagina.'
     ),
-    reset: t('Zurücksetzen', 'Reset'),
-    dismiss: t('Schließen', 'Dismiss')
+    reset: t('Zurücksetzen', 'Reset', 'Réinitialiser', 'Reimposta'),
+    dismiss: t('Schließen', 'Dismiss', 'Ignorer', 'Ignora')
   };
   return VERIFY_SCRIPT.replace('__VERIFY_I18N__', JSON.stringify(i18n));
 }
@@ -1334,7 +1393,7 @@ function setupView(view) {
   wc.setWindowOpenHandler(({ url }) => {
     if (isOAuthDomain(url)) {
       return { action: 'allow', overrideBrowserWindowOptions: {
-        width: 600, height: 750, title: t('Anmeldung', 'Sign In'),
+        width: 600, height: 750, title: t('Anmeldung', 'Sign In', 'Connexion', 'Accesso'),
         webPreferences: { nodeIntegration: false, contextIsolation: true, sandbox: true, partition: 'persist:claude' }
       }};
     }
@@ -1397,7 +1456,7 @@ function setupView(view) {
     if (mainWindow && !mainWindow.isDestroyed()) mainWindow.setTitle(`Claude v${version}`);
     const idx = tabs.findIndex(tab => tab.view === view);
     if (idx >= 0) {
-      const clean = title.replace(/\s*[-\u2013]\s*Claude.*$/, '') || t('Neuer Chat', 'New Chat');
+      const clean = title.replace(/\s*[-\u2013]\s*Claude.*$/, '') || t('Neuer Chat', 'New Chat', 'Nouvelle conversation', 'Nuova chat');
       if (tabs[idx].title !== clean) { tabs[idx].title = clean; sendTabsUpdate(); }
     }
   });
@@ -1484,7 +1543,7 @@ function createTab(url = 'https://claude.ai') {
   }
 
   mainWindow.contentView.addChildView(view);
-  tabs.push({ view, title: t('Neuer Chat', 'New Chat'), url, crashCount: 0 });
+  tabs.push({ view, title: t('Neuer Chat', 'New Chat', 'Nouvelle conversation', 'Nuova chat'), url, crashCount: 0 });
   switchToTab(tabs.length - 1);
   updateMenu();
   return tabs[tabs.length - 1];
@@ -1588,11 +1647,14 @@ function toggleDesign() {
       tray.setImage(img.isEmpty() ? trayIcon() : img);
     } catch {}
   }
-  try { fs.copyFileSync(icon(), path.join(app.getPath('home'), 'Apps', 'claude-desktop-icon.png')); } catch {}
+  // Snap liefert sein Icon ueber die gebundelte .desktop, Schreiben in ~/ ist no-op und macht journalctl-Laerm
+  if (!process.env.SNAP) {
+    try { fs.copyFileSync(icon(), path.join(app.getPath('home'), 'Apps', 'claude-desktop-icon.png')); } catch {}
+  }
 
   // Pinned-Icon im Dock/Taskleiste mit-switchen (Linux: GNOME/Plasma lesen aus icon-theme)
   // Beta-Build überschreibt nur claude-desktop-beta.png, nicht das Stable-Icon
-  if (process.platform === 'linux') {
+  if (process.platform === 'linux' && !process.env.SNAP) {
     const iconFile = isBeta ? 'claude-desktop-beta.png' : 'claude-desktop.png';
     const sizes = ['512x512', '256x256', '128x128', '64x64', '48x48', '32x32', '16x16'];
     for (const sz of sizes) {
@@ -1704,7 +1766,7 @@ async function copyDiagnosticsInfo() {
   showCustomMessageBox({
     type: 'info',
     title: 'Claude',
-    message: t('Diagnose-Info in Zwischenablage kopiert', 'Diagnostics info copied to clipboard'),
+    message: t('Diagnose-Info in Zwischenablage kopiert', 'Diagnostics info copied to clipboard', 'Infos de diagnostic copiées dans le presse-papiers', 'Informazioni di diagnostica copiate negli appunti'),
     detail: text
   });
 }
@@ -1715,13 +1777,17 @@ async function resetClaudeVerification(targetTab) {
     title: 'Claude',
     message: t(
       'claude.ai-Cache und -Cookies zurücksetzen?',
-      'Reset claude.ai cache and cookies?'
+      'Reset claude.ai cache and cookies?',
+      'Réinitialiser le cache et les cookies de claude.ai ?',
+      'Reimpostare cache e cookie di claude.ai?'
     ),
     detail: t(
       'Du wirst danach erneut bei claude.ai angemeldet sein müssen. Hilft, wenn die Verifizierungs-Seite („Performing security verification") in einer Schleife hängt.',
-      'You will need to sign in to claude.ai again afterwards. This helps when the verification page ("Performing security verification") gets stuck in a loop.'
+      'You will need to sign in to claude.ai again afterwards. This helps when the verification page ("Performing security verification") gets stuck in a loop.',
+      'Vous devrez ensuite vous reconnecter à claude.ai. Utile lorsque la page de vérification (« Performing security verification ») tourne en boucle.',
+      'Dopodiché sarà necessario accedere di nuovo a claude.ai. Utile quando la pagina di verifica ("Performing security verification") rimane bloccata in un ciclo.'
     ),
-    buttons: [t('Abbrechen', 'Cancel'), t('Zurücksetzen', 'Reset')],
+    buttons: [t('Abbrechen', 'Cancel', 'Annuler', 'Annulla'), t('Zurücksetzen', 'Reset', 'Réinitialiser', 'Reimposta')],
     defaultId: 1,
     cancelId: 0
   });
@@ -2067,10 +2133,10 @@ function getQuickPromptHTML() {
   const th = theme();
   const ac = accent();
   const i18n = {
-    placeholder: t('Frage an Claude\u2026', 'Ask Claude\u2026'),
-    hint: t('Enter zum Senden \u00b7 Shift+Enter neue Zeile \u00b7 Esc abbrechen \u00b7 Tab Template', 'Enter to send \u00b7 Shift+Enter new line \u00b7 Esc to cancel \u00b7 Tab template'),
-    noTemplate: t('Kein Template', 'No template'),
-    templates: t('Template', 'Template')
+    placeholder: t('Frage an Claude\u2026', 'Ask Claude\u2026', 'Poser une question \u00e0 Claude\u2026', 'Chiedi a Claude\u2026'),
+    hint: t('Enter zum Senden \u00b7 Shift+Enter neue Zeile \u00b7 Esc abbrechen \u00b7 Tab Template', 'Enter to send \u00b7 Shift+Enter new line \u00b7 Esc to cancel \u00b7 Tab template', 'Entr\u00e9e pour envoyer \u00b7 Maj+Entr\u00e9e nouvelle ligne \u00b7 \u00c9chap annuler \u00b7 Tab mod\u00e8le', 'Invio per inviare \u00b7 Maiusc+Invio nuova riga \u00b7 Esc annulla \u00b7 Tab modello'),
+    noTemplate: t('Kein Template', 'No template', 'Aucun modèle', 'Nessun modello'),
+    templates: t('Template', 'Template', 'Modèle', 'Modello')
   };
   const logoUrl = iconDataUrlForCurrentTheme();
   // XSS-safe: </script> in Template-Namen würde sonst aus dem Script-Kontext brechen
@@ -2348,12 +2414,12 @@ function updateTrayMenu() {
   if (!tray) return;
   try {
     tray.setContextMenu(Menu.buildFromTemplate([
-      { label: t('\u00d6ffnen', 'Open'), click: showMainWindow },
-      { label: t('Neuer Chat', 'New Chat'), click: openNewChatFromHotkey },
+      { label: t('\u00d6ffnen', 'Open', 'Ouvrir', 'Apri'), click: showMainWindow },
+      { label: t('Neuer Chat', 'New Chat', 'Nouvelle conversation', 'Nuova chat'), click: openNewChatFromHotkey },
       { type: 'separator' },
-      { label: t('App-Einstellungen\u2026', 'App Settings\u2026'), click: () => openSettingsWindow() },
+      { label: t('App-Einstellungen\u2026', 'App Settings\u2026', 'Paramètres de l’application…', 'Impostazioni dell’app…'), click: () => openSettingsWindow() },
       { type: 'separator' },
-      { label: t('Beenden', 'Quit'), click: () => { isQuitting = true; app.quit(); } }
+      { label: t('Beenden', 'Quit', 'Quitter', 'Esci'), click: () => { isQuitting = true; app.quit(); } }
     ]));
   } catch {}
 }
@@ -2382,7 +2448,7 @@ function openClipboardChat() {
   if (!text) {
     new Notification({
       title: 'Claude',
-      body: t('Zwischenablage ist leer.', 'Clipboard is empty.')
+      body: t('Zwischenablage ist leer.', 'Clipboard is empty.', 'Le presse-papiers est vide.', 'Gli appunti sono vuoti.')
     }).show();
     return;
   }
@@ -2415,7 +2481,7 @@ async function exportActiveConversation() {
   if (!/^https:\/\/(?:[a-z0-9-]+\.)?claude\.ai\//i.test(url)) {
     showCustomMessageBox({
       type: 'info', title: 'Claude',
-      message: t('Export nur in claude.ai-Tabs verfügbar.', 'Export only available in claude.ai tabs.')
+      message: t('Export nur in claude.ai-Tabs verfügbar.', 'Export only available in claude.ai tabs.', 'Export disponible uniquement dans les onglets claude.ai.', 'Esportazione disponibile solo nelle schede claude.ai.')
     });
     return;
   }
@@ -2491,18 +2557,18 @@ async function exportActiveConversation() {
   if (!payload || !payload.blocks || !payload.blocks.length) {
     showCustomMessageBox({
       type: 'info', title: 'Claude',
-      message: t('Konnte keine Konversation finden.', 'Could not find a conversation on this page.'),
-      detail: t('Stelle sicher, dass du in einem Chat bist (nicht auf der Übersicht).', 'Make sure you are inside a chat (not on the overview).')
+      message: t('Konnte keine Konversation finden.', 'Could not find a conversation on this page.', 'Impossible de trouver une conversation sur cette page.', 'Impossibile trovare una conversazione in questa pagina.'),
+      detail: t('Stelle sicher, dass du in einem Chat bist (nicht auf der Übersicht).', 'Make sure you are inside a chat (not on the overview).', 'Assurez-vous d’être dans une conversation (pas sur la vue d’ensemble).', 'Assicurati di essere in una chat (non nella panoramica).')
     });
     return;
   }
 
   const today = new Date().toISOString().slice(0, 10);
   let md = `# ${payload.title}\n\n`;
-  md += `_${t('Quelle', 'Source')}: ${payload.url}_\n`;
-  md += `_${t('Exportiert', 'Exported')}: ${today}_\n\n---\n\n`;
+  md += `_${t('Quelle', 'Source', 'Source', 'Fonte')}: ${payload.url}_\n`;
+  md += `_${t('Exportiert', 'Exported', 'Exporté', 'Esportato')}: ${today}_\n\n---\n\n`;
   for (const b of payload.blocks) {
-    md += `## ${b.role === 'User' ? t('Du', 'You') : 'Claude'}\n\n${b.md}\n\n---\n\n`;
+    md += `## ${b.role === 'User' ? t('Du', 'You', 'Vous', 'Tu') : 'Claude'}\n\n${b.md}\n\n---\n\n`;
   }
 
   const safeName = payload.title.replace(/[^\w\s.-]+/g, '_').slice(0, 80) || 'claude-chat';
@@ -2510,20 +2576,20 @@ async function exportActiveConversation() {
     defaultPath: path.join(app.getPath('documents'), `${safeName}-${today}.md`),
     filters: [
       { name: 'Markdown', extensions: ['md'] },
-      { name: t('Alle Dateien', 'All Files'), extensions: ['*'] }
+      { name: t('Alle Dateien', 'All Files', 'Tous les fichiers', 'Tutti i file'), extensions: ['*'] }
     ]
   });
   if (result.canceled || !result.filePath) return;
   fs.writeFile(result.filePath, md, 'utf8', (err) => {
     if (err) {
       showCustomMessageBox({
-        type: 'error', title: t('Export fehlgeschlagen', 'Export failed'),
+        type: 'error', title: t('Export fehlgeschlagen', 'Export failed', 'Échec de l’export', 'Esportazione non riuscita'),
         message: err.message || String(err)
       });
       return;
     }
     new Notification({
-      title: t('Konversation exportiert', 'Conversation exported'),
+      title: t('Konversation exportiert', 'Conversation exported', 'Conversation exportée', 'Conversazione esportata'),
       body: path.basename(result.filePath)
     }).show();
   });
@@ -2534,54 +2600,54 @@ function getSettingsHTML() {
   const th = subTheme();
   const ac = accent();
   const i18n = {
-    title: t('Einstellungen', 'Settings'),
-    subtitle: t('Hintergrund, Hotkeys, Templates', 'Background, hotkeys, templates'),
-    secBackground: t('Hintergrund', 'Background'),
-    secMicrophone: t('Mikrofon', 'Microphone'),
-    secHotkeys: t('Globale Hotkeys', 'Global hotkeys'),
-    secTemplates: t('Prompt-Templates', 'Prompt templates'),
-    minimizeLabel: t('Beim Schlie\u00dfen in den Hintergrund minimieren', 'Minimize to tray on close'),
-    minimizeHint: t('Claude bleibt im Hintergrund erreichbar \u2013 \u00fcber das Tray-Symbol oder die Hotkeys unten.', 'Claude stays reachable in the background \u2013 via the tray icon or the hotkeys below.'),
-    autostartLabel: t('Beim Anmelden automatisch starten', 'Start automatically at login'),
-    autostartHint: t('Claude startet beim Hochfahren des Systems automatisch.', 'Claude launches automatically when the system starts.'),
-    autostartFailed: t('Autostart konnte nicht aktiviert werden.', 'Could not enable autostart.'),
-    bgNotifLabel: t('Antwort-Benachrichtigung f\u00fcr Hintergrund-Tabs', 'Notify when a background tab finishes a response'),
-    bgNotifHint: t('Native Notification, sobald Claude in einem nicht aktiven Tab fertig geantwortet hat.', 'Native notification once Claude finishes a response in a tab you\u2019re not currently looking at.'),
-    micLabel: t('Mikrofon-Zugriff erlauben', 'Allow microphone access'),
-    micHint: t('Erlaubt Claude, dein Mikrofon f\u00fcr Spracheingaben zu nutzen. Beim ersten Klick auf das Mikrofon-Symbol fragt die App einmal nach \u2013 die Auswahl kannst du hier jederzeit \u00e4ndern.', 'Lets Claude use your microphone for voice input. The app asks once the first time you click the microphone icon \u2013 you can change your choice here at any time.'),
-    micSnapHint: t('Auf Snap muss das Mikrofon einmalig freigegeben werden. Entweder im Snap-Store \u00f6ffnen und \u201eAudio Record" aktivieren \u2013 oder den Befehl unten im Terminal ausf\u00fchren.', 'On Snap the microphone must be enabled once. Either open the Snap Store and enable \u201cAudio Record\u201d \u2013 or run the command below in a terminal.'),
-    micSnapButton: t('Im Snap-Store \u00f6ffnen', 'Open in Snap Store'),
-    micSnapCmdLabel: t('Oder im Terminal:', 'Or in a terminal:'),
-    micSnapCmdCopy: t('Befehl kopieren', 'Copy command'),
-    micSnapCmdCopied: t('Kopiert \u2713', 'Copied \u2713'),
-    micResetLabel: t('Erneut fragen beim n\u00e4chsten Mikrofon-Klick', 'Ask again on next microphone click'),
-    micResetDone: t('Erledigt \u2013 Dialog erscheint beim n\u00e4chsten Mikrofon-Klick wieder.', 'Done \u2013 dialog will appear again on next microphone click.'),
-    micResetHint: t('Verwirft die letzte Auswahl, sodass der Hinweis-Dialog beim n\u00e4chsten Mikrofon-Zugriff wieder erscheint.', 'Discards the last choice so the consent dialog appears again on the next microphone request.'),
-    micSnapStatusConnected: t('Snap: Audio-Record verbunden', 'Snap: audio-record connected'),
-    micSnapStatusDisconnected: t('Snap: Audio-Record nicht verbunden', 'Snap: audio-record not connected'),
-    micSnapStatusUnknown: t('Snap-Status wird gepr\u00fcft\u2026', 'Checking snap status\u2026'),
-    micToggleNeedsConsent: t('Bitte zuerst die Snap-Berechtigung freigeben.', 'Please enable the Snap permission first.'),
-    hotkeyQp: t('Neuer Chat (Quick-Prompt)', 'New chat (Quick-Prompt)'),
-    hotkeyClip: t('Zwischenablage als Prompt einf\u00fcgen', 'Send clipboard text as new prompt'),
-    press: t('Klick hier und dr\u00fccke eine Tastenkombination', 'Click here and press a key combination'),
-    pressing: t('Dr\u00fccke die gew\u00fcnschte Tastenkombination\u2026', 'Press your key combination\u2026'),
-    clear: t('L\u00f6schen', 'Clear'),
-    close: t('Schlie\u00dfen', 'Close'),
-    registered: t('Hotkey registriert.', 'Hotkey registered.'),
-    failed: t('Diese Kombination konnte nicht registriert werden – evtl. systemweit belegt.', 'Could not register this combination — likely already in use system-wide.'),
-    failedWayland: t('Globaler Hotkey konnte unter Wayland nicht registriert werden – der Compositor erlaubt das nicht. Quick-Prompt funktioniert nur bei aktivem Fenster.', 'Could not register a global hotkey on Wayland – the compositor does not allow it. Quick-Prompt only works when the window is focused.'),
-    conflictQp: t('Diese Kombination ist bereits dem Quick-Prompt-Hotkey zugewiesen.', 'This combination is already assigned to the Quick-Prompt hotkey.'),
-    conflictClip: t('Diese Kombination ist bereits dem Clipboard-Hotkey zugewiesen.', 'This combination is already assigned to the Clipboard hotkey.'),
-    removed: t('Hotkey entfernt.', 'Hotkey removed.'),
-    needMod: t('Bitte mindestens eine Modifikator-Taste (Strg/Alt/Shift) verwenden.', 'Please use at least one modifier key (Ctrl/Alt/Shift).'),
-    waylandHint: t('Hinweis: Auf Wayland werden globale Hotkeys vom Compositor begrenzt und können je nach Desktop (GNOME/KDE) nicht systemweit greifen. Wenn die Registrierung fehlschlägt, weicht die App still aus – du kannst den Quick-Prompt dann nur bei aktivem Fenster auslösen.', 'Note: On Wayland, global hotkeys are gated by the compositor and may not work system-wide depending on the desktop (GNOME/KDE). If registration fails, the app silently skips it – the Quick-Prompt is then only reachable while the window is focused.'),
-    tplEmpty: t('Noch keine Templates. F\u00fcgst du eines hinzu, erscheint es im Quick-Prompt-Fenster als Auswahl.', 'No templates yet. Once added, they appear as a picker in the Quick-Prompt window.'),
-    tplName: t('Name (z.B. \u201e\u00dcbersetze")', 'Name (e.g. \u201eTranslate")'),
-    tplPrefix: t('Prefix-Text (wird vor deinem Input eingef\u00fcgt)', 'Prefix text (prepended to your input)'),
-    tplAdd: t('Hinzuf\u00fcgen', 'Add'),
-    tplDelete: t('L\u00f6schen', 'Delete'),
-    tplLimit: t('Maximal 50 Templates.', 'Maximum 50 templates.'),
-    tplDup: t('Name existiert bereits.', 'A template with that name already exists.')
+    title: t('Einstellungen', 'Settings', 'Param\u00e8tres', 'Impostazioni'),
+    subtitle: t('Hintergrund, Hotkeys, Templates', 'Background, hotkeys, templates', 'Arri\u00e8re-plan, raccourcis, mod\u00e8les', 'Background, scorciatoie, modelli'),
+    secBackground: t('Hintergrund', 'Background', 'Arri\u00e8re-plan', 'Background'),
+    secMicrophone: t('Mikrofon', 'Microphone', 'Microphone', 'Microfono'),
+    secHotkeys: t('Globale Hotkeys', 'Global hotkeys', 'Raccourcis globaux', 'Scorciatoie globali'),
+    secTemplates: t('Prompt-Templates', 'Prompt templates', 'Mod\u00e8les de prompt', 'Modelli di prompt'),
+    minimizeLabel: t('Beim Schlie\u00dfen in den Hintergrund minimieren', 'Minimize to tray on close', 'R\u00e9duire dans la zone de notification \u00e0 la fermeture', 'Riduci nell\'area di notifica alla chiusura'),
+    minimizeHint: t('Claude bleibt im Hintergrund erreichbar \u2013 \u00fcber das Tray-Symbol oder die Hotkeys unten.', 'Claude stays reachable in the background \u2013 via the tray icon or the hotkeys below.', 'Claude reste accessible en arri\u00e8re-plan, via l\'ic\u00f4ne de la zone de notification ou les raccourcis ci-dessous.', 'Claude resta accessibile in background, tramite l\'icona nell\'area di notifica o le scorciatoie qui sotto.'),
+    autostartLabel: t('Beim Anmelden automatisch starten', 'Start automatically at login', 'Lancer automatiquement \u00e0 la connexion', 'Avvia automaticamente all\'accesso'),
+    autostartHint: t('Claude startet beim Hochfahren des Systems automatisch.', 'Claude launches automatically when the system starts.', 'Claude se lance automatiquement au d\u00e9marrage du syst\u00e8me.', 'Claude si avvia automaticamente all\'avvio del sistema.'),
+    autostartFailed: t('Autostart konnte nicht aktiviert werden.', 'Could not enable autostart.', 'Impossible d\'activer le d\u00e9marrage automatique.', 'Impossibile attivare l\'avvio automatico.'),
+    bgNotifLabel: t('Antwort-Benachrichtigung f\u00fcr Hintergrund-Tabs', 'Notify when a background tab finishes a response', 'Notification de r\u00e9ponse pour les onglets en arri\u00e8re-plan', 'Notifica di risposta per le schede in background'),
+    bgNotifHint: t('Native Notification, sobald Claude in einem nicht aktiven Tab fertig geantwortet hat.', 'Native notification once Claude finishes a response in a tab you\u2019re not currently looking at.', 'Notification native d\u00e8s que Claude a termin\u00e9 sa r\u00e9ponse dans un onglet que vous ne regardez pas.', 'Notifica nativa non appena Claude termina una risposta in una scheda che non stai guardando.'),
+    micLabel: t('Mikrofon-Zugriff erlauben', 'Allow microphone access', 'Autoriser l\'acc\u00e8s au microphone', 'Consenti l\'accesso al microfono'),
+    micHint: t('Erlaubt Claude, dein Mikrofon f\u00fcr Spracheingaben zu nutzen. Beim ersten Klick auf das Mikrofon-Symbol fragt die App einmal nach \u2013 die Auswahl kannst du hier jederzeit \u00e4ndern.', 'Lets Claude use your microphone for voice input. The app asks once the first time you click the microphone icon \u2013 you can change your choice here at any time.', 'Permet \u00e0 Claude d\'utiliser votre microphone pour la saisie vocale. Au premier clic sur l\'ic\u00f4ne du microphone, l\'application demande une fois, vous pouvez modifier ce choix ici \u00e0 tout moment.', 'Permette a Claude di usare il microfono per l\'input vocale. Al primo clic sull\'icona del microfono l\'app chiede una volta, puoi modificare questa scelta qui in qualsiasi momento.'),
+    micSnapHint: t('Auf Snap muss das Mikrofon einmalig freigegeben werden. Entweder im Snap-Store \u00f6ffnen und \u201eAudio Record" aktivieren \u2013 oder den Befehl unten im Terminal ausf\u00fchren.', 'On Snap the microphone must be enabled once. Either open the Snap Store and enable \u201cAudio Record\u201d \u2013 or run the command below in a terminal.', 'Sur Snap, le microphone doit \u00eatre autoris\u00e9 une fois. Ouvrez le Snap Store et activez \u00ab Audio Record \u00bb, ou ex\u00e9cutez la commande ci-dessous dans un terminal.', 'Su Snap il microfono deve essere autorizzato una volta. Apri lo Snap Store e attiva "Audio Record", oppure esegui il comando qui sotto in un terminale.'),
+    micSnapButton: t('Im Snap-Store \u00f6ffnen', 'Open in Snap Store', 'Ouvrir dans le Snap Store', 'Apri nello Snap Store'),
+    micSnapCmdLabel: t('Oder im Terminal:', 'Or in a terminal:', 'Ou dans un terminal :', 'Oppure in un terminale:'),
+    micSnapCmdCopy: t('Befehl kopieren', 'Copy command', 'Copier la commande', 'Copia comando'),
+    micSnapCmdCopied: t('Kopiert \u2713', 'Copied \u2713', 'Copi\u00e9 \u2713', 'Copiato \u2713'),
+    micResetLabel: t('Erneut fragen beim n\u00e4chsten Mikrofon-Klick', 'Ask again on next microphone click', 'Redemander au prochain clic sur le microphone', 'Chiedi di nuovo al prossimo clic sul microfono'),
+    micResetDone: t('Erledigt \u2013 Dialog erscheint beim n\u00e4chsten Mikrofon-Klick wieder.', 'Done \u2013 dialog will appear again on next microphone click.', 'Termin\u00e9, le dialogue r\u00e9appara\u00eetra au prochain clic sur le microphone.', 'Fatto, la finestra riapparir\u00e0 al prossimo clic sul microfono.'),
+    micResetHint: t('Verwirft die letzte Auswahl, sodass der Hinweis-Dialog beim n\u00e4chsten Mikrofon-Zugriff wieder erscheint.', 'Discards the last choice so the consent dialog appears again on the next microphone request.', 'Annule le dernier choix afin que le dialogue de consentement r\u00e9apparaisse lors du prochain acc\u00e8s au microphone.', 'Annulla l\'ultima scelta in modo che la finestra di consenso riappaia al prossimo accesso al microfono.'),
+    micSnapStatusConnected: t('Snap: Audio-Record verbunden', 'Snap: audio-record connected', 'Snap : Audio Record connect\u00e9', 'Snap: Audio Record connesso'),
+    micSnapStatusDisconnected: t('Snap: Audio-Record nicht verbunden', 'Snap: audio-record not connected', 'Snap : Audio Record non connect\u00e9', 'Snap: Audio Record non connesso'),
+    micSnapStatusUnknown: t('Snap-Status wird gepr\u00fcft\u2026', 'Checking snap status\u2026', 'V\u00e9rification du statut Snap\u2026', 'Verifica dello stato Snap\u2026'),
+    micToggleNeedsConsent: t('Bitte zuerst die Snap-Berechtigung freigeben.', 'Please enable the Snap permission first.', 'Veuillez d\'abord activer l\'autorisation Snap.', 'Attiva prima l\'autorizzazione Snap.'),
+    hotkeyQp: t('Neuer Chat (Quick-Prompt)', 'New chat (Quick-Prompt)', 'Nouvelle conversation (Quick-Prompt)', 'Nuova chat (Quick-Prompt)'),
+    hotkeyClip: t('Zwischenablage als Prompt einf\u00fcgen', 'Send clipboard text as new prompt', 'Envoyer le presse-papiers comme nouveau prompt', 'Invia gli appunti come nuovo prompt'),
+    press: t('Klick hier und dr\u00fccke eine Tastenkombination', 'Click here and press a key combination', 'Cliquez ici et appuyez sur une combinaison de touches', 'Fai clic qui e premi una combinazione di tasti'),
+    pressing: t('Dr\u00fccke die gew\u00fcnschte Tastenkombination\u2026', 'Press your key combination\u2026', 'Appuyez sur la combinaison souhait\u00e9e\u2026', 'Premi la combinazione desiderata\u2026'),
+    clear: t('L\u00f6schen', 'Clear', 'Effacer', 'Cancella'),
+    close: t('Schlie\u00dfen', 'Close', 'Fermer', 'Chiudi'),
+    registered: t('Hotkey registriert.', 'Hotkey registered.', 'Raccourci enregistré.', 'Scorciatoia registrata.'),
+    failed: t('Diese Kombination konnte nicht registriert werden – evtl. systemweit belegt.', 'Could not register this combination — likely already in use system-wide.', 'Impossible d\'enregistrer cette combinaison, elle est peut-être déjà utilisée au niveau du système.', 'Impossibile registrare questa combinazione, forse è già in uso a livello di sistema.'),
+    failedWayland: t('Globaler Hotkey konnte unter Wayland nicht registriert werden – der Compositor erlaubt das nicht. Quick-Prompt funktioniert nur bei aktivem Fenster.', 'Could not register a global hotkey on Wayland – the compositor does not allow it. Quick-Prompt only works when the window is focused.', 'Impossible d\'enregistrer un raccourci global sous Wayland, le compositeur ne l\'autorise pas. Le Quick-Prompt ne fonctionne que lorsque la fenêtre est active.', 'Impossibile registrare una scorciatoia globale su Wayland, il compositor non lo consente. Il Quick-Prompt funziona solo quando la finestra è attiva.'),
+    conflictQp: t('Diese Kombination ist bereits dem Quick-Prompt-Hotkey zugewiesen.', 'This combination is already assigned to the Quick-Prompt hotkey.', 'Cette combinaison est déjà attribuée au raccourci Quick-Prompt.', 'Questa combinazione è già assegnata alla scorciatoia Quick-Prompt.'),
+    conflictClip: t('Diese Kombination ist bereits dem Clipboard-Hotkey zugewiesen.', 'This combination is already assigned to the Clipboard hotkey.', 'Cette combinaison est déjà attribuée au raccourci du presse-papiers.', 'Questa combinazione è già assegnata alla scorciatoia degli appunti.'),
+    removed: t('Hotkey entfernt.', 'Hotkey removed.', 'Raccourci supprimé.', 'Scorciatoia rimossa.'),
+    needMod: t('Bitte mindestens eine Modifikator-Taste (Strg/Alt/Shift) verwenden.', 'Please use at least one modifier key (Ctrl/Alt/Shift).', 'Veuillez utiliser au moins une touche de modification (Ctrl/Alt/Maj).', 'Usa almeno un tasto modificatore (Ctrl/Alt/Maiusc).'),
+    waylandHint: t('Hinweis: Auf Wayland werden globale Hotkeys vom Compositor begrenzt und können je nach Desktop (GNOME/KDE) nicht systemweit greifen. Wenn die Registrierung fehlschlägt, weicht die App still aus – du kannst den Quick-Prompt dann nur bei aktivem Fenster auslösen.', 'Note: On Wayland, global hotkeys are gated by the compositor and may not work system-wide depending on the desktop (GNOME/KDE). If registration fails, the app silently skips it – the Quick-Prompt is then only reachable while the window is focused.', 'Remarque : sous Wayland, les raccourcis globaux sont limités par le compositeur et peuvent ne pas fonctionner au niveau du système selon le bureau (GNOME/KDE). Si l\'enregistrement échoue, l\'application l\'ignore silencieusement, le Quick-Prompt n\'est alors accessible que lorsque la fenêtre est active.', 'Nota: su Wayland le scorciatoie globali sono limitate dal compositor e potrebbero non funzionare a livello di sistema a seconda del desktop (GNOME/KDE). Se la registrazione fallisce, l\'app la ignora silenziosamente, il Quick-Prompt è quindi accessibile solo quando la finestra è attiva.'),
+    tplEmpty: t('Noch keine Templates. F\u00fcgst du eines hinzu, erscheint es im Quick-Prompt-Fenster als Auswahl.', 'No templates yet. Once added, they appear as a picker in the Quick-Prompt window.', 'Aucun mod\u00e8le pour l\'instant. Lorsque vous en ajoutez un, il appara\u00eet comme choix dans la fen\u00eatre Quick-Prompt.', 'Ancora nessun modello. Quando ne aggiungi uno, appare come scelta nella finestra Quick-Prompt.'),
+    tplName: t('Name (z.B. \u201e\u00dcbersetze")', 'Name (e.g. \u201eTranslate")', 'Nom (par ex. \u00ab Traduire \u00bb)', 'Nome (es. "Traduci")'),
+    tplPrefix: t('Prefix-Text (wird vor deinem Input eingef\u00fcgt)', 'Prefix text (prepended to your input)', 'Texte de pr\u00e9fixe (ajout\u00e9 avant votre saisie)', 'Testo prefisso (inserito prima del tuo input)'),
+    tplAdd: t('Hinzuf\u00fcgen', 'Add', 'Ajouter', 'Aggiungi'),
+    tplDelete: t('L\u00f6schen', 'Delete', 'Supprimer', 'Elimina'),
+    tplLimit: t('Maximal 50 Templates.', 'Maximum 50 templates.', 'Maximum 50 mod\u00e8les.', 'Massimo 50 modelli.'),
+    tplDup: t('Name existiert bereits.', 'A template with that name already exists.', 'Ce nom existe d\u00e9j\u00e0.', 'Esiste gi\u00e0 un modello con questo nome.')
   };
   return `<!DOCTYPE html><html><head>
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline';">
@@ -2632,7 +2698,7 @@ button:disabled{opacity:.5;cursor:not-allowed}
 .snap-cmd-copy-btn{padding:6px 10px!important;font-size:11.5px}
 .hint-block{margin-left:0;margin-top:6px}
 .snap-status-pill{display:inline-flex;align-items:center;gap:6px;margin:6px 0 0 24px;padding:3px 10px;border-radius:999px;font-size:11.5px;border:1px solid ${th.border};background:${th.bgHover};color:${th.text}}
-.snap-status-pill .dot{width:8px;height:8px;border-radius:50%;background:#9a9a96}
+.snap-status-pill .dot{width:8px;height:8px;border-radius:50%;background:${th.text}}
 .snap-status-pill[data-status="connected"]{background:rgba(46,160,67,.15);border-color:rgba(46,160,67,.4);color:#3aaf52}
 .snap-status-pill[data-status="connected"] .dot{background:#3aaf52;box-shadow:0 0 0 0 rgba(58,175,82,.6);animation:dotpulse 2.4s infinite}
 .snap-status-pill[data-status="disconnected"]{background:rgba(224,94,62,.15);border-color:rgba(224,94,62,.4);color:#e05e3e}
@@ -2640,7 +2706,7 @@ button:disabled{opacity:.5;cursor:not-allowed}
 @keyframes dotpulse{0%{box-shadow:0 0 0 0 rgba(58,175,82,.6)}70%{box-shadow:0 0 0 6px rgba(58,175,82,0)}100%{box-shadow:0 0 0 0 rgba(58,175,82,0)}}
 ${customTitlebarCSS()}
 </style></head><body>
-${customTitlebarHTML(t('Claude – Einstellungen', 'Claude – Settings'))}
+${customTitlebarHTML(t('Claude – Einstellungen', 'Claude – Settings', 'Claude – Paramètres', 'Claude – Impostazioni'))}
 <div class="head">
   <h1>${i18n.title}</h1>
   <div class="sub">${i18n.subtitle}</div>
@@ -2970,11 +3036,16 @@ function getWhatsNewHTML(force = false) {
     heart: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>'
   };
   const i18n = {
-    header: t('Neu in Claude v' + version, 'New in Claude v' + version),
-    sub: t('Ein kurzer \u00dcberblick \u00fcber die wichtigsten \u00c4nderungen', 'A quick look at the highlights'),
-    close: t('Los geht\u2019s', 'Let\u2019s go'),
-    openSettings: t('App-Einstellungen \u00f6ffnen', 'Open app settings')
+    header: t('Neu in Claude v' + version, 'New in Claude v' + version, 'Nouveautés de Claude v' + version, 'Novità di Claude v' + version),
+    sub: t('Ein kurzer \u00dcberblick \u00fcber die wichtigsten \u00c4nderungen', 'A quick look at the highlights', 'Un aperçu rapide des principales nouveautés', 'Una rapida panoramica sulle novità principali'),
+    close: t('Los geht\u2019s', 'Let\u2019s go', 'C’est parti', 'Iniziamo'),
+    openSettings: t('App-Einstellungen \u00f6ffnen', 'Open app settings', 'Ouvrir les paramètres de l’application', 'Apri le impostazioni dell’app')
   };
+  const transNote = sysLang === 'fr'
+    ? 'Cette interface vient d’être traduite en français. Une formulation vous semble incorrecte ? Signalez-la via « Signaler un bug » dans le menu.'
+    : sysLang === 'it'
+    ? 'Questa interfaccia è stata appena tradotta in italiano. Una frase ti sembra sbagliata? Segnalala tramite « Segnala un bug » nel menu.'
+    : '';
   const items = notes.map(n => `
     <div class="tile">
       <div class="tile-ic">${icons[n.icon] || icons.check}</div>
@@ -3000,6 +3071,7 @@ ${customTitlebarCSS()}
 .hero-title{font-size:28px;font-weight:700;letter-spacing:-.6px;margin-bottom:6px;position:relative;z-index:1;line-height:1.1}
 .hero-sub{font-size:13.5px;line-height:1.5;opacity:.92;position:relative;z-index:1;max-width:80%}
 .body{flex:1;overflow-y:auto;padding:18px}
+.trans-note{margin:0 0 14px;padding:10px 14px;border-radius:10px;font-size:11.5px;line-height:1.5;background:color-mix(in srgb,${ac.from} 10%,${th.bgHover});border:1px solid color-mix(in srgb,${ac.from} 30%,${th.border});color:${th.text}}
 .body::-webkit-scrollbar{width:8px}
 .body::-webkit-scrollbar-thumb{background:${th.border};border-radius:4px}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
@@ -3021,13 +3093,13 @@ ${customTitlebarCSS()}
 .footer button.primary:hover{filter:brightness(1.08)}
 .footer button:focus-visible{outline:2px solid ${ac.from};outline-offset:2px}
 </style></head><body>
-${customTitlebarHTML(t('Neu in Claude', 'What’s new in Claude'))}
+${customTitlebarHTML(t('Neu in Claude', 'What’s new in Claude', 'Nouveautés de Claude', 'Novità di Claude'))}
 <div class="hero">
   <div class="hero-pill">v${version}</div>
-  <div class="hero-title">${t('Was ist neu', 'What’s new')}</div>
+  <div class="hero-title">${t('Was ist neu', 'What’s new', 'Nouveautés', 'Novità')}</div>
   <div class="hero-sub">${i18n.sub}</div>
 </div>
-<div class="body"><div class="grid">${items}</div></div>
+<div class="body">${transNote ? `<div class="trans-note">${transNote}</div>` : ''}<div class="grid">${items}</div></div>
 <div class="footer">
   <button class="secondary" id="opts">${i18n.openSettings}</button>
   <button class="primary" id="close">${i18n.close}</button>
@@ -3051,7 +3123,7 @@ function openWhatsNewWindow(force = false) {
     ...size,
     parent: mainWindow && !mainWindow.isDestroyed() ? mainWindow : undefined,
     modal: false, resizable: false, minimizable: false, maximizable: false,
-    title: t('Neu in Claude', 'What\u2019s new in Claude'),
+    title: t('Neu in Claude', 'What\u2019s new in Claude', 'Nouveautés de Claude', 'Novità di Claude'),
     backgroundColor: subTheme().bg,
     icon: icon(),
     autoHideMenuBar: true,
@@ -3076,22 +3148,26 @@ function getAboutHTML() {
   const th = subTheme();
   const ac = accent();
   const i18n = {
-    tagline: t('Inoffizieller claude.ai-Wrapper für Linux', 'Unofficial claude.ai wrapper for Linux'),
-    secAbout: t('Über die App', 'About this app'),
+    tagline: t('Inoffizieller claude.ai-Wrapper für Linux', 'Unofficial claude.ai wrapper for Linux', 'Wrapper claude.ai non officiel pour Linux', 'Wrapper claude.ai non ufficiale per Linux'),
+    secAbout: t('Über die App', 'About this app', 'À propos de l’application', 'Informazioni sull’app'),
     aboutText: t(
       'Eine inoffizielle Community-App, die claude.ai als native Desktop-Anwendung auf Linux bringt – mit Tabs, Tray, Quick-Prompt, Voice-Input und mehr. Open Source unter MIT-Lizenz.',
-      'An unofficial community app that brings claude.ai to Linux as a native desktop application – with tabs, tray, quick-prompt, voice input and more. Open source under the MIT licence.'
+      'An unofficial community app that brings claude.ai to Linux as a native desktop application – with tabs, tray, quick-prompt, voice input and more. Open source under the MIT licence.',
+      'Une application communautaire non officielle qui amène claude.ai sur Linux comme application de bureau native, avec onglets, zone de notification, Quick-Prompt, saisie vocale et plus encore. Open source sous licence MIT.',
+      'Un\'app comunitaria non ufficiale che porta claude.ai su Linux come applicazione desktop nativa, con schede, area di notifica, Quick-Prompt, input vocale e altro ancora. Open source con licenza MIT.'
     ),
-    secLinks: t('Links', 'Links'),
-    linkRepo: t('Quellcode & Issues auf GitHub', 'Source code & issues on GitHub'),
-    linkSupport: t('Anthropic-Support (offizielle Hilfe für claude.ai)', 'Anthropic Support (official help for claude.ai)'),
-    secLegal: t('Rechtliches', 'Legal'),
+    secLinks: t('Links', 'Links', 'Liens', 'Link'),
+    linkRepo: t('Quellcode & Issues auf GitHub', 'Source code & issues on GitHub', 'Code source et tickets sur GitHub', 'Codice sorgente e issue su GitHub'),
+    linkSupport: t('Anthropic-Support (offizielle Hilfe für claude.ai)', 'Anthropic Support (official help for claude.ai)', 'Support Anthropic (aide officielle pour claude.ai)', 'Supporto Anthropic (aiuto ufficiale per claude.ai)'),
+    secLegal: t('Rechtliches', 'Legal', 'Mentions légales', 'Note legali'),
     legalText: t(
       'Diese App ist nicht mit Anthropic verbunden und wird nicht von Anthropic unterstützt. „Claude" und das Claude-Logo sind Markenzeichen von Anthropic PBC. Für Fragen zu Account, Login, Abo oder Bezahlung wende dich bitte direkt an den Anthropic-Support.',
-      'This app is not affiliated with or endorsed by Anthropic. "Claude" and the Claude logo are trademarks of Anthropic PBC. For account, login, subscription or billing questions please contact Anthropic Support directly.'
+      'This app is not affiliated with or endorsed by Anthropic. "Claude" and the Claude logo are trademarks of Anthropic PBC. For account, login, subscription or billing questions please contact Anthropic Support directly.',
+      'Cette application n\'est ni affiliée à Anthropic ni approuvée par Anthropic. « Claude » et le logo Claude sont des marques d\'Anthropic PBC. Pour toute question concernant le compte, la connexion, l\'abonnement ou le paiement, contactez directement le support Anthropic.',
+      'Questa applicazione non è affiliata ad Anthropic né approvata da Anthropic. "Claude" e il logo Claude sono marchi di Anthropic PBC. Per domande su account, accesso, abbonamento o pagamento, contatta direttamente il supporto Anthropic.'
     ),
-    btnWhatsNew: t('Neuigkeiten anzeigen', 'Show What’s New'),
-    btnClose: t('Schließen', 'Close')
+    btnWhatsNew: t('Neuigkeiten anzeigen', 'Show What’s New', 'Afficher les nouveautés', 'Mostra le novità'),
+    btnClose: t('Schließen', 'Close', 'Fermer', 'Chiudi')
   };
   return `<!DOCTYPE html><html><head>
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:;">
@@ -3125,7 +3201,7 @@ button:hover{filter:brightness(1.08)}
 button:focus-visible{outline:2px solid ${ac.from};outline-offset:2px}
 ${customTitlebarCSS()}
 </style></head><body>
-${customTitlebarHTML(t('Über Claude Desktop', 'About Claude Desktop'))}
+${customTitlebarHTML(t('Über Claude Desktop', 'About Claude Desktop', 'À propos de Claude Desktop', 'Informazioni su Claude Desktop'))}
 <div class="hero">
   <img class="hero-logo" src="${iconDataUrlForCurrentTheme()}" alt="Claude Desktop"/>
   <div class="hero-text">
@@ -3184,7 +3260,7 @@ function openAboutWindow() {
     ...size,
     parent: mainWindow && !mainWindow.isDestroyed() ? mainWindow : undefined,
     modal: false, resizable: false, minimizable: false, maximizable: false,
-    title: t('Über Claude Desktop', 'About Claude Desktop'),
+    title: t('Über Claude Desktop', 'About Claude Desktop', 'À propos de Claude Desktop', 'Informazioni su Claude Desktop'),
     backgroundColor: subTheme().bg,
     icon: icon(),
     autoHideMenuBar: true,
@@ -3211,7 +3287,7 @@ function openSettingsWindow() {
     ...swSize,
     parent: mainWindow && !mainWindow.isDestroyed() ? mainWindow : undefined,
     modal: false, resizable: false, minimizable: false, maximizable: false,
-    title: t('Claude \u2013 Einstellungen', 'Claude \u2013 Settings'),
+    title: t('Claude \u2013 Einstellungen', 'Claude \u2013 Settings', 'Claude – Paramètres', 'Claude – Impostazioni'),
     backgroundColor: subTheme().bg,
     icon: icon(),
     autoHideMenuBar: true,
@@ -3235,24 +3311,24 @@ function openSettingsWindow() {
 function getAppMenuItems() {
   const designLabel = `Design: ${customDesign ? 'Modern' : 'Classic'}`;
   return [
-    { type: 'item', action: 'new-tab', label: t('Neuer Tab', 'New Tab'), accel: 'Ctrl+T', icon: 'plus' },
-    { type: 'item', action: 'close-tab', label: t('Tab schließen', 'Close Tab'), accel: 'Ctrl+W', icon: 'x' },
+    { type: 'item', action: 'new-tab', label: t('Neuer Tab', 'New Tab', 'Nouvel onglet', 'Nuova scheda'), accel: 'Ctrl+T', icon: 'plus' },
+    { type: 'item', action: 'close-tab', label: t('Tab schließen', 'Close Tab', 'Fermer l’onglet', 'Chiudi scheda'), accel: 'Ctrl+W', icon: 'x' },
     { type: 'sep' },
-    { type: 'item', action: 'export', label: t('Konversation exportieren…', 'Export conversation…'), accel: 'Ctrl+Shift+E', icon: 'download' },
-    { type: 'item', action: 'reload', label: t('Neu laden', 'Reload'), accel: 'Ctrl+R', icon: 'refresh' },
+    { type: 'item', action: 'export', label: t('Konversation exportieren…', 'Export conversation…', 'Exporter la conversation…', 'Esporta la conversazione…'), accel: 'Ctrl+Shift+E', icon: 'download' },
+    { type: 'item', action: 'reload', label: t('Neu laden', 'Reload', 'Recharger', 'Ricarica'), accel: 'Ctrl+R', icon: 'refresh' },
     { type: 'sep' },
     { type: 'item', action: 'design-toggle', label: designLabel, icon: 'palette' },
-    { type: 'item', action: 'settings', label: t('App-Einstellungen…', 'App Settings…'), accel: 'Ctrl+,', icon: 'cog' },
+    { type: 'item', action: 'settings', label: t('App-Einstellungen…', 'App Settings…', 'Paramètres de l\'application…', 'Impostazioni dell\'app…'), accel: 'Ctrl+,', icon: 'cog' },
     { type: 'sep' },
-    { type: 'item', action: 'check-updates', label: t('Nach Updates suchen…', 'Check for Updates…'), icon: 'refresh' },
+    { type: 'item', action: 'check-updates', label: t('Nach Updates suchen…', 'Check for Updates…', 'Rechercher des mises à jour…', 'Controlla aggiornamenti…'), icon: 'refresh' },
     { type: 'item', action: 'bug-report', label: (bugReportStrings[sysLang] || bugReportStrings.en).title, icon: 'bug' },
-    { type: 'item', action: 'copy-diagnostics', label: t('Diagnose-Info kopieren', 'Copy diagnostics info'), icon: 'info' },
-    { type: 'item', action: 'reset-verification', label: t('claude.ai-Verifizierung zurücksetzen…', 'Reset claude.ai verification…'), icon: 'shield' },
+    { type: 'item', action: 'copy-diagnostics', label: t('Diagnose-Info kopieren', 'Copy diagnostics info', 'Copier les infos de diagnostic', 'Copia informazioni di diagnostica'), icon: 'info' },
+    { type: 'item', action: 'reset-verification', label: t('claude.ai-Verifizierung zurücksetzen…', 'Reset claude.ai verification…', 'Réinitialiser la vérification claude.ai…', 'Reimposta la verifica claude.ai…'), icon: 'shield' },
     { type: 'sep' },
-    { type: 'item', action: 'whats-new', label: t('Was ist neu?…', 'What’s New…'), icon: 'bolt' },
-    { type: 'item', action: 'about', label: t('Über Claude Desktop…', 'About Claude Desktop…'), icon: 'info' },
+    { type: 'item', action: 'whats-new', label: t('Was ist neu?…', 'What’s New…', 'Nouveautés…', 'Novità…'), icon: 'bolt' },
+    { type: 'item', action: 'about', label: t('Über Claude Desktop…', 'About Claude Desktop…', 'À propos de Claude Desktop…', 'Informazioni su Claude Desktop…'), icon: 'info' },
     { type: 'sep' },
-    { type: 'item', action: 'quit', label: t('Beenden', 'Quit'), accel: 'Ctrl+Q', icon: 'power' }
+    { type: 'item', action: 'quit', label: t('Beenden', 'Quit', 'Quitter', 'Esci'), accel: 'Ctrl+Q', icon: 'power' }
   ];
 }
 
@@ -3562,21 +3638,21 @@ function updateMenu(force = false) {
 
     Menu.setApplicationMenu(Menu.buildFromTemplate([
       { label: 'Claude', submenu: [
-        { label: t('Neuer Tab', 'New Tab'), accelerator: 'CmdOrCtrl+T', click: () => createTab() },
-        { label: t('Tab schlie\u00dfen', 'Close Tab'), accelerator: 'CmdOrCtrl+W', click: () => closeTab(activeTabIndex) },
+        { label: t('Neuer Tab', 'New Tab', 'Nouvel onglet', 'Nuova scheda'), accelerator: 'CmdOrCtrl+T', click: () => createTab() },
+        { label: t('Tab schlie\u00dfen', 'Close Tab', 'Fermer l’onglet', 'Chiudi scheda'), accelerator: 'CmdOrCtrl+W', click: () => closeTab(activeTabIndex) },
         { type: 'separator' }, ...tabItems, { type: 'separator' },
-        { label: t('Konversation als Markdown exportieren\u2026', 'Export conversation as Markdown\u2026'), accelerator: 'CmdOrCtrl+Shift+E', click: () => exportActiveConversation() },
+        { label: t('Konversation als Markdown exportieren\u2026', 'Export conversation as Markdown\u2026', 'Exporter la conversation en Markdown…', 'Esporta la conversazione in Markdown…'), accelerator: 'CmdOrCtrl+Shift+E', click: () => exportActiveConversation() },
         { type: 'separator' },
-        { label: t('Einstellungen', 'Settings'), accelerator: 'CmdOrCtrl+,', click: () => {
+        { label: t('Einstellungen', 'Settings', 'Paramètres', 'Impostazioni'), accelerator: 'CmdOrCtrl+,', click: () => {
           if (tabs[activeTabIndex] && alive(tabs[activeTabIndex].view))
             tabs[activeTabIndex].view.webContents.loadURL('https://claude.ai/settings');
         }},
-        { label: t('App-Einstellungen\u2026', 'App Settings\u2026'), click: () => openSettingsWindow() },
+        { label: t('App-Einstellungen\u2026', 'App Settings\u2026', 'Paramètres de l’application…', 'Impostazioni dell’app…'), click: () => openSettingsWindow() },
         { type: 'separator' },
         { label: `Design: ${customDesign ? 'Modern' : 'Classic'}`, click: toggleDesign },
-        { label: t('Nach Updates suchen\u2026', 'Check for Updates\u2026'), click: () => {
+        { label: t('Nach Updates suchen\u2026', 'Check for Updates\u2026', 'Rechercher des mises à jour…', 'Controlla aggiornamenti…'), click: () => {
           if (isDev) {
-            showCustomMessageBox({ type: 'info', title: 'Claude', message: t('Updates sind im Entwicklungsmodus deaktiviert.', 'Updates are disabled in development mode.') });
+            showCustomMessageBox({ type: 'info', title: 'Claude', message: t('Updates sind im Entwicklungsmodus deaktiviert.', 'Updates are disabled in development mode.', 'Les mises à jour sont désactivées en mode développement.', 'Gli aggiornamenti sono disattivati in modalità sviluppo.') });
             return;
           }
           manualUpdateCheck = true;
@@ -3584,39 +3660,39 @@ function updateMenu(force = false) {
         }},
         { label: (bugReportStrings[sysLang] || bugReportStrings.en).title, click: showBugReportDialog },
         { type: 'separator' },
-        { role: 'quit', label: t('Beenden', 'Quit') }
+        { role: 'quit', label: t('Beenden', 'Quit', 'Quitter', 'Esci') }
       ]},
-      { label: t('Bearbeiten', 'Edit'), submenu: [
-        { role: 'undo', label: t('R\u00fcckg\u00e4ngig', 'Undo') },
-        { role: 'redo', label: t('Wiederholen', 'Redo') },
+      { label: t('Bearbeiten', 'Edit', 'Édition', 'Modifica'), submenu: [
+        { role: 'undo', label: t('R\u00fcckg\u00e4ngig', 'Undo', 'Annuler', 'Annulla') },
+        { role: 'redo', label: t('Wiederholen', 'Redo', 'Rétablir', 'Ripeti') },
         { type: 'separator' },
-        { role: 'cut', label: t('Ausschneiden', 'Cut') },
-        { role: 'copy', label: t('Kopieren', 'Copy') },
-        { role: 'paste', label: t('Einf\u00fcgen', 'Paste') },
-        { role: 'selectAll', label: t('Alles ausw\u00e4hlen', 'Select All') }
+        { role: 'cut', label: t('Ausschneiden', 'Cut', 'Couper', 'Taglia') },
+        { role: 'copy', label: t('Kopieren', 'Copy', 'Copier', 'Copia') },
+        { role: 'paste', label: t('Einf\u00fcgen', 'Paste', 'Coller', 'Incolla') },
+        { role: 'selectAll', label: t('Alles ausw\u00e4hlen', 'Select All', 'Tout sélectionner', 'Seleziona tutto') }
       ]},
-      { label: t('Ansicht', 'View'), submenu: [
-        { label: t('Neu laden', 'Reload'), accelerator: 'CmdOrCtrl+R', click: () => { if (tabs[activeTabIndex] && alive(tabs[activeTabIndex].view)) tabs[activeTabIndex].view.webContents.reload(); } },
-        { label: t('Erzwungen neu laden', 'Force Reload'), accelerator: 'CmdOrCtrl+Shift+R', click: () => { if (tabs[activeTabIndex] && alive(tabs[activeTabIndex].view)) tabs[activeTabIndex].view.webContents.reloadIgnoringCache(); } },
+      { label: t('Ansicht', 'View', 'Affichage', 'Visualizza'), submenu: [
+        { label: t('Neu laden', 'Reload', 'Recharger', 'Ricarica'), accelerator: 'CmdOrCtrl+R', click: () => { if (tabs[activeTabIndex] && alive(tabs[activeTabIndex].view)) tabs[activeTabIndex].view.webContents.reload(); } },
+        { label: t('Erzwungen neu laden', 'Force Reload', 'Recharger de force', 'Ricarica forzata'), accelerator: 'CmdOrCtrl+Shift+R', click: () => { if (tabs[activeTabIndex] && alive(tabs[activeTabIndex].view)) tabs[activeTabIndex].view.webContents.reloadIgnoringCache(); } },
         { type: 'separator' },
-        { role: 'resetZoom', label: t('Zoom zur\u00fccksetzen', 'Reset Zoom') },
-        { role: 'zoomIn', label: t('Vergr\u00f6\u00dfern', 'Zoom In') },
-        { role: 'zoomOut', label: t('Verkleinern', 'Zoom Out') },
+        { role: 'resetZoom', label: t('Zoom zur\u00fccksetzen', 'Reset Zoom', 'Réinitialiser le zoom', 'Reimposta zoom') },
+        { role: 'zoomIn', label: t('Vergr\u00f6\u00dfern', 'Zoom In', 'Zoom avant', 'Aumenta zoom') },
+        { role: 'zoomOut', label: t('Verkleinern', 'Zoom Out', 'Zoom arrière', 'Riduci zoom') },
         { type: 'separator' },
-        { role: 'togglefullscreen', label: t('Vollbild', 'Fullscreen') },
+        { role: 'togglefullscreen', label: t('Vollbild', 'Fullscreen', 'Plein écran', 'Schermo intero') },
         ...(isDev ? [{ type: 'separator' }, { label: 'DevTools', accelerator: 'F12', click: () => { if (tabs[activeTabIndex] && alive(tabs[activeTabIndex].view)) tabs[activeTabIndex].view.webContents.toggleDevTools(); } }] : [])
       ]},
       { label: 'Tabs', submenu: [
-        { label: t('Neuer Tab', 'New Tab'), accelerator: 'CmdOrCtrl+T', click: () => createTab() },
-        { label: t('Tab schlie\u00dfen', 'Close Tab'), accelerator: 'CmdOrCtrl+W', click: () => closeTab(activeTabIndex) },
+        { label: t('Neuer Tab', 'New Tab', 'Nouvel onglet', 'Nuova scheda'), accelerator: 'CmdOrCtrl+T', click: () => createTab() },
+        { label: t('Tab schlie\u00dfen', 'Close Tab', 'Fermer l’onglet', 'Chiudi scheda'), accelerator: 'CmdOrCtrl+W', click: () => closeTab(activeTabIndex) },
         { type: 'separator' },
-        { label: t('N\u00e4chster Tab', 'Next Tab'), accelerator: 'CmdOrCtrl+Tab', click: () => switchToTab((activeTabIndex + 1) % tabs.length) },
-        { label: t('Vorheriger Tab', 'Previous Tab'), accelerator: 'CmdOrCtrl+Shift+Tab', click: () => switchToTab((activeTabIndex - 1 + tabs.length) % tabs.length) },
+        { label: t('N\u00e4chster Tab', 'Next Tab', 'Onglet suivant', 'Scheda successiva'), accelerator: 'CmdOrCtrl+Tab', click: () => switchToTab((activeTabIndex + 1) % tabs.length) },
+        { label: t('Vorheriger Tab', 'Previous Tab', 'Onglet précédent', 'Scheda precedente'), accelerator: 'CmdOrCtrl+Shift+Tab', click: () => switchToTab((activeTabIndex - 1 + tabs.length) % tabs.length) },
         { type: 'separator' }, ...tabItems
       ]},
-      { label: t('Fenster', 'Window'), submenu: [
-        { role: 'minimize', label: t('Minimieren', 'Minimize') },
-        { role: 'close', label: t('Schlie\u00dfen', 'Close') }
+      { label: t('Fenster', 'Window', 'Fenêtre', 'Finestra'), submenu: [
+        { role: 'minimize', label: t('Minimieren', 'Minimize', 'Réduire', 'Riduci a icona') },
+        { role: 'close', label: t('Schlie\u00dfen', 'Close', 'Fermer', 'Chiudi') }
       ]}
     ]));
   });
@@ -3630,11 +3706,11 @@ function handleOnlineChange(online) {
   updateTitle();
   if (!online) {
     showOfflinePage();
-    new Notification({ title: 'Claude', body: t('Keine Internetverbindung.', 'No internet connection.') }).show();
+    new Notification({ title: 'Claude', body: t('Keine Internetverbindung.', 'No internet connection.', 'Pas de connexion Internet.', 'Nessuna connessione a Internet.') }).show();
   } else {
     if (tabs[activeTabIndex] && alive(tabs[activeTabIndex].view))
       tabs[activeTabIndex].view.webContents.reload();
-    new Notification({ title: 'Claude', body: t('Verbindung wiederhergestellt!', 'Connection restored!') }).show();
+    new Notification({ title: 'Claude', body: t('Verbindung wiederhergestellt!', 'Connection restored!', 'Connexion rétablie !', 'Connessione ripristinata!') }).show();
   }
 }
 
@@ -3653,10 +3729,10 @@ function showOfflinePage() {
     button:hover{background:#F0635C}
     .pulse{animation:p 2s ease-in-out infinite}@keyframes p{0%,100%{opacity:.3}50%{opacity:1}}
     </style></head><body>
-    <h1>${t('Keine Verbindung', 'No Connection')}</h1>
-    <p>${t('Prüfe deine Netzwerkverbindung.', 'Check your network connection.')}</p>
-    <p class="pulse" style="font-size:12px">${t('Automatische Wiederverbindung\u2026', 'Reconnecting automatically\u2026')}</p>
-    <button onclick="location.href='https://claude.ai'">${t('Erneut versuchen', 'Try Again')}</button>
+    <h1>${t('Keine Verbindung', 'No Connection', 'Pas de connexion', 'Nessuna connessione')}</h1>
+    <p>${t('Prüfe deine Netzwerkverbindung.', 'Check your network connection.', 'Vérifiez votre connexion réseau.', 'Controlla la connessione di rete.')}</p>
+    <p class="pulse" style="font-size:12px">${t('Automatische Wiederverbindung\u2026', 'Reconnecting automatically\u2026', 'Reconnexion automatique…', 'Riconnessione automatica…')}</p>
+    <button onclick="location.href='https://claude.ai'">${t('Erneut versuchen', 'Try Again', 'Réessayer', 'Riprova')}</button>
     </body></html>`
   ));
 }
@@ -3727,13 +3803,13 @@ function setupDownloadManager() {
           catch (e2) { console.error(`[DL] move failed: ${e2.message}`); }
         }
         new Notification({
-          title: ok ? t('Download fertig', 'Download complete') : t('Download fehlgeschlagen', 'Download failed'),
+          title: ok ? t('Download fertig', 'Download complete', 'Téléchargement terminé', 'Download completato') : t('Download fehlgeschlagen', 'Download failed', 'Échec du téléchargement', 'Download non riuscito'),
           body: fileName
         }).show();
       } else {
         try { fs.unlinkSync(tmpPath); } catch {}
         if (!cancelledByDialog && downloadState !== 'cancelled' && downloadState !== '') {
-          new Notification({ title: t('Download fehlgeschlagen', 'Download failed'), body: fileName }).show();
+          new Notification({ title: t('Download fehlgeschlagen', 'Download failed', 'Échec du téléchargement', 'Download non riuscito'), body: fileName }).show();
         }
       }
       keys.forEach(dropKey);
@@ -3741,7 +3817,7 @@ function setupDownloadManager() {
 
     dialog.showSaveDialog(mainWindow, {
       defaultPath: path.join(app.getPath('downloads'), fileName),
-      filters: [{ name: t('Alle Dateien', 'All Files'), extensions: ['*'] }]
+      filters: [{ name: t('Alle Dateien', 'All Files', 'Tous les fichiers', 'Tutti i file'), extensions: ['*'] }]
     }).then(result => {
       dialogDone = true;
       if (result.canceled || !result.filePath) {
@@ -3795,9 +3871,9 @@ function setupAutoUpdater() {
     if (isQuitting) return;
     if (manualUpdateCheck) {
       manualUpdateCheck = false;
-      showCustomMessageBox({ type: 'info', title: t('Update verf\u00fcgbar', 'Update available'), message: `v${info.version} ${t('wird heruntergeladen\u2026', 'is downloading\u2026')}` });
+      showCustomMessageBox({ type: 'info', title: t('Update verf\u00fcgbar', 'Update available', 'Mise à jour disponible', 'Aggiornamento disponibile'), message: `v${info.version} ${t('wird heruntergeladen\u2026', 'is downloading\u2026', 'en cours de téléchargement…', 'in download…')}` });
     } else {
-      new Notification({ title: t('Update verf\u00fcgbar', 'Update available'), body: `v${info.version} ${t('wird geladen\u2026', 'downloading\u2026')}` }).show();
+      new Notification({ title: t('Update verf\u00fcgbar', 'Update available', 'Mise à jour disponible', 'Aggiornamento disponibile'), body: `v${info.version} ${t('wird geladen\u2026', 'downloading\u2026', 'téléchargement…', 'download…')}` }).show();
     }
   });
 
@@ -3806,7 +3882,7 @@ function setupAutoUpdater() {
     if (isQuitting) return;
     if (manualUpdateCheck) {
       manualUpdateCheck = false;
-      showCustomMessageBox({ type: 'info', title: t('Kein Update', 'No Update'), message: t('Du verwendest bereits die neueste Version.', 'You are already on the latest version.'), detail: `v${app.getVersion()}` });
+      showCustomMessageBox({ type: 'info', title: t('Kein Update', 'No Update', 'Aucune mise à jour', 'Nessun aggiornamento'), message: t('Du verwendest bereits die neueste Version.', 'You are already on the latest version.', 'Vous utilisez déjà la dernière version.', 'Stai già usando l’ultima versione.'), detail: `v${app.getVersion()}` });
     }
   });
 
@@ -3822,9 +3898,9 @@ function setupAutoUpdater() {
     if (isQuitting) return;
     if (mainWindow && !mainWindow.isDestroyed()) { mainWindow.setTitle('Claude'); mainWindow.setProgressBar(-1); }
     showCustomMessageBox({
-      type: 'info', title: t('Update bereit', 'Update ready'),
-      message: `v${info.version} ${t('heruntergeladen. Jetzt neu starten?', 'downloaded. Restart now?')}`,
-      buttons: [t('Neu starten', 'Restart'), t('Sp\u00e4ter', 'Later')], defaultId: 0, cancelId: 1
+      type: 'info', title: t('Update bereit', 'Update ready', 'Mise à jour prête', 'Aggiornamento pronto'),
+      message: `v${info.version} ${t('heruntergeladen. Jetzt neu starten?', 'downloaded. Restart now?', 'téléchargée. Redémarrer maintenant ?', 'scaricato. Riavviare ora?')}`,
+      buttons: [t('Neu starten', 'Restart', 'Redémarrer', 'Riavvia'), t('Sp\u00e4ter', 'Later', 'Plus tard', 'Più tardi')], defaultId: 0, cancelId: 1
     }).then(r => { if (!isQuitting && r.response === 0) autoUpdater.quitAndInstall(); });
   });
 
@@ -3835,7 +3911,7 @@ function setupAutoUpdater() {
     if (manualUpdateCheck) {
       manualUpdateCheck = false;
       const short = (err.message || '').split('\n')[0].slice(0, 200);
-      showCustomMessageBox({ type: 'error', title: t('Update-Fehler', 'Update Error'), message: t('Update-Pr\u00fcfung fehlgeschlagen.', 'Update check failed.'), detail: short });
+      showCustomMessageBox({ type: 'error', title: t('Update-Fehler', 'Update Error', 'Erreur de mise à jour', 'Errore di aggiornamento'), message: t('Update-Pr\u00fcfung fehlgeschlagen.', 'Update check failed.', 'Échec de la vérification des mises à jour.', 'Controllo aggiornamenti non riuscito.'), detail: short });
     }
   });
 
@@ -3958,7 +4034,7 @@ async function requestMicrophoneConsent() {
     const win = createDialogWindow({
       width: 520,
       height: showSnapPanel ? 480 : 240,
-      title: t('Mikrofon-Zugriff', 'Microphone access')
+      title: t('Mikrofon-Zugriff', 'Microphone access', 'Accès au microphone', 'Accesso al microfono')
     });
 
     respondHandler = (_, idx) => {
@@ -3999,30 +4075,36 @@ function getMicConsentHTML({ respondChannel, snapOpenChannel, statusChannel, cop
   const th = subTheme();
   const ac = accent();
   const i18n = {
-    title: t('Mikrofon-Zugriff', 'Microphone access'),
+    title: t('Mikrofon-Zugriff', 'Microphone access', 'Accès au microphone', 'Accesso al microfono'),
     message: t(
       'Claude Desktop möchte auf dein Mikrofon zugreifen, um Spracheingaben zu ermöglichen.',
-      'Claude Desktop wants to access your microphone to enable voice input.'
+      'Claude Desktop wants to access your microphone to enable voice input.',
+      'Claude Desktop souhaite accéder à votre microphone pour permettre la saisie vocale.',
+      'Claude Desktop vuole accedere al microfono per consentire l\'input vocale.'
     ),
     hint: t(
       'Du kannst diese Erlaubnis jederzeit in den App-Einstellungen unter „Mikrofon" widerrufen.',
-      'You can revoke this permission anytime in the app settings under “Microphone”.'
+      'You can revoke this permission anytime in the app settings under “Microphone”.',
+      'Vous pouvez révoquer cette autorisation à tout moment dans les paramètres de l\'application, sous « Microphone ».',
+      'È possibile revocare questa autorizzazione in qualsiasi momento nelle impostazioni dell\'app, alla voce "Microfono".'
     ),
-    snapTitle: t('Snap-Berechtigung', 'Snap permission'),
-    snapConnected: t('Verbunden', 'Connected'),
-    snapDisconnected: t('Nicht verbunden', 'Not connected'),
-    snapUnknown: t('Status wird geprüft…', 'Checking status…'),
-    snapButton: t('Im Snap-Store öffnen', 'Open in Snap Store'),
+    snapTitle: t('Snap-Berechtigung', 'Snap permission', 'Autorisation Snap', 'Autorizzazione Snap'),
+    snapConnected: t('Verbunden', 'Connected', 'Connecté', 'Connesso'),
+    snapDisconnected: t('Nicht verbunden', 'Not connected', 'Non connecté', 'Non connesso'),
+    snapUnknown: t('Status wird geprüft…', 'Checking status…', 'Vérification du statut…', 'Verifica dello stato…'),
+    snapButton: t('Im Snap-Store öffnen', 'Open in Snap Store', 'Ouvrir dans le Snap Store', 'Apri nello Snap Store'),
     snapButtonHint: t(
       'Öffnet die Snap-Detailseite. Dort auf „Permissions" → „Audio Record" aktivieren – dieser Dialog erkennt es automatisch.',
-      'Opens the Snap detail page. Go to “Permissions” → enable “Audio Record” – this dialog detects it automatically.'
+      'Opens the Snap detail page. Go to “Permissions” → enable “Audio Record” – this dialog detects it automatically.',
+      'Ouvre la page de détails du Snap. Activez-y « Permissions » → « Audio Record », cette fenêtre le détecte automatiquement.',
+      'Apre la pagina dei dettagli dello Snap. Attiva "Permissions" → "Audio Record", questa finestra lo rileva automaticamente.'
     ),
-    snapOrCmd: t('Oder im Terminal ausführen:', 'Or run in a terminal:'),
-    snapCmdCopy: t('Befehl kopieren', 'Copy command'),
-    snapCmdCopied: t('Kopiert ✓', 'Copied ✓'),
-    snapNeedConnect: t('Aktiviere zuerst die Snap-Berechtigung, um „Erlauben" auszuwählen.', 'Enable the Snap permission first to choose “Allow”.'),
-    allow: t('Erlauben', 'Allow'),
-    deny: t('Ablehnen', 'Deny')
+    snapOrCmd: t('Oder im Terminal ausführen:', 'Or run in a terminal:', 'Ou exécuter dans un terminal :', 'Oppure esegui in un terminale:'),
+    snapCmdCopy: t('Befehl kopieren', 'Copy command', 'Copier la commande', 'Copia comando'),
+    snapCmdCopied: t('Kopiert ✓', 'Copied ✓', 'Copié ✓', 'Copiato ✓'),
+    snapNeedConnect: t('Aktiviere zuerst die Snap-Berechtigung, um „Erlauben" auszuwählen.', 'Enable the Snap permission first to choose “Allow”.', 'Activez d’abord l’autorisation Snap pour choisir « Autoriser ».', 'Attiva prima l’autorizzazione Snap per scegliere "Consenti".'),
+    allow: t('Erlauben', 'Allow', 'Autoriser', 'Consenti'),
+    deny: t('Ablehnen', 'Deny', 'Refuser', 'Rifiuta')
   };
   const esc = (s) => String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
   const snapPanel = showSnapPanel ? `
@@ -4602,7 +4684,7 @@ ipcMain.on('claude-response-done', (event, payload) => {
   const title = (tab.title || 'Claude').slice(0, 80);
   const body = typeof payload === 'object' && payload && typeof payload.preview === 'string'
     ? payload.preview.slice(0, 140)
-    : t('Antwort fertig', 'Response ready');
+    : t('Antwort fertig', 'Response ready', 'Réponse prête', 'Risposta pronta');
   try {
     const n = new Notification({ title, body, silent: false });
     n.on('click', () => {
@@ -4697,7 +4779,7 @@ ipcMain.on('appmenu-action', (event, name) => {
     case 'settings': openSettingsWindow(); break;
     case 'check-updates':
       if (isDev) {
-        showCustomMessageBox({ type: 'info', title: 'Claude', message: t('Updates sind im Entwicklungsmodus deaktiviert.', 'Updates are disabled in development mode.') });
+        showCustomMessageBox({ type: 'info', title: 'Claude', message: t('Updates sind im Entwicklungsmodus deaktiviert.', 'Updates are disabled in development mode.', 'Les mises à jour sont désactivées en mode développement.', 'Gli aggiornamenti sono disattivati in modalità sviluppo.') });
       } else {
         manualUpdateCheck = true;
         autoUpdater.checkForUpdates().catch(() => {});

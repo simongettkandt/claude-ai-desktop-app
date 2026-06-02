@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.4.2] - 2026-06-02 - Italian & French, Snap Notifications
+
+### Added
+- **App interface in Italian and French.** The whole app UI (tab bar, tray, native and app menus, Settings, About, What's New, Quick-Prompt, bug-report confirm dialogs, microphone consent, offline page, download/update notices, Markdown export labels) is now available in Italian and French on top of German and English. `t(de, en)` was extended to `t(de, en, fr, it)` with an English fallback, driven by the existing `sysLang` system-language detection; `localize()` for release notes follows the same scheme. The app picks the language from the system locale and stays on English when the locale is not one of the four. What's New shows a short FR/IT notice inviting users to report translation glitches via the bug-report form.
+
+### Fixed
+- **Snap notifications attribute to the app again.** Electron builds the libnotify `desktop-entry` hint from `$CHROME_DESKTOP`, which was never set in the Snap. Without it GNOME Shell cannot map the notification to the app and drops it under strict confinement. The Snap now sets `CHROME_DESKTOP=claude-ai-desktop.desktop`. This is the suspected cause of the v1.3.13 report that notifications were not coming through, and replaces the bogus `desktop-notifications` plug attempt from 1.4.1.
+- **OLED tab bar colour is now consistent.** The tab-bar live-switch palette used `#000000` (with slightly different hover/active/border tones) while a fresh start in OLED used the central `#050306` palette, so the bar changed shade depending on how you entered OLED. The live-switch palette now matches the central OLED palette.
+- **Settings status dot follows the theme.** The default microphone-status dot was hardcoded to the dark-theme text tone, slightly off in Light and OLED.
+
+### Changed
+- **Snap image slightly smaller.** `LICENSES.chromium.html` (19 MB uncompressed) is excluded from the Snap, which trims roughly 2 MB off the compressed download.
+- **Snap: icon writes to `~/` are skipped under confinement.** `toggleDesign()` no longer copies icons into `~/Apps` and `~/.local/share/icons` when running as a Snap, where those paths are a no-op and only produced journal noise.
+
+### Notes
+- The notification fix is under verification against a real Snap build. The store-listing and release-note wording will be confirmed once the build is tested, to avoid another premature claim like the 1.4.1 `desktop-notifications` plug.
+
+---
+
 ## [1.4.1] - 2026-05-29 - Localized Release Notes
 
 ### Fixed

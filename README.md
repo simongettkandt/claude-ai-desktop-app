@@ -14,7 +14,7 @@ sudo snap install claude-ai-desktop
 
 [![claude-ai-desktop](https://snapcraft.io/claude-ai-desktop/badge.svg)](https://snapcraft.io/claude-ai-desktop)
 
-> **v1.4.1** - Hotfix. The "What's New" window now follows the system language instead of always rendering German; release notes for every version through 1.4.0 carry both `de` and `en` text. As a one-time catch-up, upgrading to 1.4.1 also re-shows the 1.4.0 highlights in your language.
+> **v1.4.2** - Italian & French plus Snap fixes. The app interface is now available in Italian and French on top of German and English, chosen by system language with an English fallback. Snap notifications attribute to the app again (sets the `CHROME_DESKTOP` desktop-entry hint GNOME needs), the OLED tab bar colour is consistent between live-toggle and fresh start, and the Snap download is a little smaller.
 
 ---
 
@@ -39,7 +39,7 @@ sudo snap install claude-ai-desktop
 - **Manual Update Check** – Menu entry shows a dialog with the result
 - **What's-New Popup** – Shows the changelog once after each version upgrade, including notes for skipped versions
 - **In-App OAuth Popups** – Google, GitHub, Google Drive, GitLab, Bitbucket, Microsoft, Auth0, Higgsfield
-- **Multilingual UI** – Automatic language detection (25 languages, system fallback to English)
+- **Multilingual UI** – Full interface in German, English, French and Italian, selected by system language with English fallback (the bug-report dialog covers additional languages)
 - **Offline Detection** – Automatic reconnect when connection is restored
 - **Crash Recovery** – Crashed tabs reload automatically (max 3 retries)
 - **Background Throttling** – Reduces CPU usage when the window is minimized
@@ -176,6 +176,14 @@ The `--no-sandbox` flag is required for Electron AppImages on Linux because the 
 ---
 
 ## Changelog
+
+### v1.4.2 - Italian & French, Snap Notifications (2026-06-02)
+
+- **App interface in Italian and French.** The whole UI (tab bar, tray, native and app menus, Settings, About, What's New, Quick-Prompt, bug-report confirm dialogs, microphone consent, offline page, download/update notices, Markdown export labels) is now available in Italian and French on top of German and English. `t(de, en)` became `t(de, en, fr, it)` with an English fallback, driven by the existing `sysLang` system-language detection; `localize()` for release notes follows the same scheme. What's New shows a short FR/IT notice asking users to report translation glitches via the bug-report form.
+- **Snap notifications attribute to the app again.** Electron derives the libnotify `desktop-entry` hint from `$CHROME_DESKTOP`, which the Snap never set, so GNOME Shell could not map the notification to the app and dropped it under strict confinement. The Snap now sets `CHROME_DESKTOP=claude-ai-desktop.desktop`. Suspected cause of the v1.3.13 "notifications not coming through" report; replaces the bogus `desktop-notifications` plug from 1.4.1. Under verification against a real Snap build.
+- **OLED tab bar colour consistent.** The tab-bar live-switch palette used `#000000` while a fresh OLED start used `#050306`; both now use the central OLED palette.
+- **Settings status dot follows the theme** instead of a hardcoded dark-theme tone.
+- **Snap a little smaller** by excluding `LICENSES.chromium.html` (roughly 2 MB off the compressed download), and icon writes to `~/` are skipped under Snap confinement.
 
 ### v1.4.1 - Localized Release Notes (2026-05-29)
 
