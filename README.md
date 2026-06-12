@@ -14,7 +14,7 @@ sudo snap install claude-ai-desktop
 
 [![claude-ai-desktop](https://snapcraft.io/claude-ai-desktop/badge.svg)](https://snapcraft.io/claude-ai-desktop)
 
-> **v1.4.2** - Italian & French plus Snap fixes. The app interface is now available in Italian and French on top of German and English, chosen by system language with an English fallback. Snap notifications attribute to the app again (sets the `CHROME_DESKTOP` desktop-entry hint GNOME needs), the OLED tab bar colour is consistent between live-toggle and fresh start, and the Snap download is a little smaller.
+> **v1.4.3** - Design refresh plus connector and Snap file fixes. A new spark logo and a reworked theming engine: cleanly separated Light/Dark/OLED, deep-black OLED with a faint starfield behind the content, no more gradient washes in menus and windows, a neutral light mode, and no flash when switching tabs. Adding a custom connector now completes inside the app, and on Snap attaching files and saving downloads go through the system file portal. Plus an Electron 41 security refresh.
 
 ---
 
@@ -176,6 +176,14 @@ The `--no-sandbox` flag is required for Electron AppImages on Linux because the 
 ---
 
 ## Changelog
+
+### v1.4.3 - Design Refresh, Connectors & Snap Files (2026-06-11)
+
+- **New logo and reworked theming.** A new spark logo, and `inject/brand.js` + `inject/oled.js` are replaced by one attribute-scoped controller (`inject/theme.js`). Light/Dark/OLED are cleanly separated and switched by toggling a `data-cd-theme` attribute. A luminance gate stops OLED bleeding onto light claude.ai sub-apps (e.g. Claude Design). OLED is consistently deep black (incl. the home screen) with a faint 5-point starfield behind the content, the sub-windows and hamburger menu lose their gradient washes, the light mode drops its reddish tint, and the controller injects at `dom-ready` so new tabs no longer flash before theming.
+- **Custom connectors connect in-app again.** The sign-in popup for a custom connector (a custom MCP/connector server, an unknown host) was pushed to the system browser, where the callback never returned to the app session. `setWindowOpenHandler` now opens it in-app when it comes from claude.ai and the URL looks like an OAuth2 authorize endpoint; normal external links still open in the system browser. Same class as the v1.3.12 Higgsfield fix.
+- **Snap: file dialogs go through the portal.** `electron-launch` sets `GTK_USE_PORTAL=1`, so open/save dialogs and the HTML file picker use `xdg-desktop-portal`; the document portal grants access to files outside `$HOME`, addressing "cannot attach/save a file" under strict confinement. Adds the `removable-media` plug for external drives.
+- **Snap: clipboard hotkey recognises images.** The clipboard-to-chat hotkey said "clipboard is empty" for a copied screenshot; it now detects the image and points to pasting it with Ctrl+V.
+- **Updated Electron to 41.7.1** with current Chromium security fixes (electron-builder 26.15.2, electron-updater 6.8.9).
 
 ### v1.4.2 - Italian & French, Snap Notifications (2026-06-02)
 

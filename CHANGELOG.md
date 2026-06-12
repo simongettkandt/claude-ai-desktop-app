@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.4.3] - 2026-06-11 - Design Refresh, Connectors & Snap Files
+
+### Fixed
+- **Custom connectors connect in-app again.** When claude.ai opened the sign-in popup for a custom connector, the wrapper only treated a fixed allowlist of hosts (Google, GitHub, etc.) as in-app OAuth popups; any other host was pushed to the system browser, where the callback never returned to the app session. A custom MCP/connector server is by definition an unknown host, so its OAuth flow was lost (same class as the v1.3.12 Higgsfield fix). `setWindowOpenHandler` now also opens a popup in-app when it originates from a claude.ai page and the target URL looks like an OAuth2 authorize endpoint (`response_type=`/`client_id=`/`redirect_uri=` query or `/oauth|authorize|sso` path), and the same OAuth-URL detection exempts same-window navigations in `will-navigate`/`will-frame-navigate`, so clicking "Approve" on the authorization page (which redirects to the provider) is no longer blocked. Normal external links still open in the system browser.
+- **Snap: file dialogs go through the portal.** `electron-launch` now sets `GTK_USE_PORTAL=1`, so the open/save dialogs and the HTML file picker use `xdg-desktop-portal`. The document portal grants access to chosen files outside `$HOME` via a file descriptor, addressing "cannot attach a file" / "cannot save a download" under strict confinement.
+- **Theme injection limited to claude.ai pages.** OLED/brand styling and the helper scripts no longer run on OAuth provider pages (Google, Linear, etc.) that load during a connector sign-in. Those login pages were previously recoloured to near-black (unreadable in OLED) and our MutationObservers could disturb the provider's OAuth JavaScript, surfacing as "Invalid flow state".
+- **Snap: clipboard hotkey recognises images.** The clipboard-to-chat hotkey reported "clipboard is empty" when the clipboard held a screenshot (an image, not text). It now detects an image and points to pasting it directly with Ctrl+V.
+
+### Added
+- **Snap: `removable-media` plug.** Declares access to external drives (`/media`, `/run/media`) for attaching and saving files. Standard interface, no manual store review; connect with `sudo snap connect claude-ai-desktop:removable-media`.
+
+### Changed
+- **New app logo.** A new spark logo (orange-to-magenta on a dark tile) replaces the previous icon across the window, dock, tray and in-app surfaces.
+- **Reworked theming engine.** `inject/brand.js` and `inject/oled.js` are replaced by a single attribute-scoped controller (`inject/theme.js`). The three themes (Light, Dark, OLED) are cleanly separated and switched by flipping a `data-cd-theme` attribute instead of a disable/re-inject cycle. A luminance "surface" gate keeps OLED from bleeding onto light claude.ai sub-apps (e.g. the Claude Design tool, where it previously turned inputs unreadable). OLED now renders consistently deep black including the home screen, with a faint 5-point starfield sitting behind content so the composer, previews and panels stay clear. The background gradients, which did not land well with many users, are removed everywhere: the chat background, the sub-windows and the hamburger menu (plus its logo). The light mode no longer carries a reddish brand tint.
+- **Theme applies without lag.** The variable recolouring runs synchronously on apply (measured ~3ms), so the theme is in place immediately at startup and on new tabs instead of filling in roughly 1.5s after the first paint. A `requestIdleCallback`-deferred recolour pass added during development had caused that delay. The tab pre-warm pool was raised from one to two and refills after 1.2s instead of 3s, so the second tab is warm more often.
+- **Updated Electron to 41.7.1** (current Chromium security fixes), electron-builder to 26.15.2, electron-updater to 6.8.9.
+
+### Notes
+- The `GTK_USE_PORTAL` file-dialog behaviour, the connector "Approve" flow, and the reworked theming across all three themes plus a light sub-app are to be verified against a real build before release.
+
+---
+
 ## [1.4.2] - 2026-06-02 - Italian & French, Snap Notifications
 
 ### Added

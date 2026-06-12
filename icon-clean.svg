@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2048 2048">
+  <defs><linearGradient id="spark" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="2048" y2="2048">
+    <stop offset="0%" stop-color="#F26A3F"/><stop offset="100%" stop-color="#E83B6E"/>
+  </linearGradient></defs>
+  <rect width="2048" height="2048" rx="272" fill="#0d0d0d"/>
+  <g stroke="url(#spark)" stroke-width="114.7" stroke-linecap="round"><line x1="1059.6" y1="1033.5" x2="1600.8" y2="1178.6"/><line x1="1050.5" y1="1049.6" x2="1464.2" y2="1449.1"/><line x1="1042.4" y1="1055.9" x2="1322.6" y2="1541.2"/><line x1="1020.8" y1="1060.7" x2="969.4" y2="1648.3"/><line x1="1005.0" y1="1055.6" x2="705.0" y2="1554.9"/><line x1="993.8" y1="1045.1" x2="540.8" y2="1362.3"/><line x1="987.1" y1="1024.6" x2="404.8" y2="1034.8"/><line x1="992.7" y1="1004.5" x2="505.0" y2="699.7"/><line x1="1006.7" y1="991.5" x2="719.4" y2="451.1"/><line x1="1029.1" y1="987.5" x2="1103.0" y2="461.8"/><line x1="1048.2" y1="996.2" x2="1411.0" y2="578.9"/><line x1="1060.6" y1="1019.5" x2="1602.1" y2="953.0"/></g>
+</svg>

@@ -1,6 +1,6 @@
 {
   "name": "claude-desktop",
-  "version": "1.4.2",
+  "version": "1.4.3",
   "description": "Claude AI – Native Desktop App für Linux",
   "main": "main.js",
   "license": "MIT",
@@ -89,10 +89,10 @@
     }
   },
   "dependencies": {
-    "electron-updater": "^6.8.3"
+    "electron-updater": "^6.8.9"
   },
   "devDependencies": {
-    "electron": "^41.2.1",
-    "electron-builder": "^26.8.2"
+    "electron": "^41.7.1",
+    "electron-builder": "^26.15.2"
   }
 }

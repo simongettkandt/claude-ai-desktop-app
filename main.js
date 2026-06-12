@@ -46,7 +46,7 @@ const isWayland = process.platform === 'linux'
   && (process.env.XDG_SESSION_TYPE === 'wayland' || !!process.env.WAYLAND_DISPLAY);
 
 const TAB_BAR_HEIGHT = 40;
-const POOL_SIZE = 0;
+const POOL_SIZE = 2;
 const MAX_CRASH_RELOADS = 3;
 const ONLINE_CHECK_MS = 60_000;
 const UPDATE_CHECK_MS = 3_600_000;
@@ -61,20 +61,9 @@ const MAX_NOTIFICATIONS_VISIBLE = 1;                        // ein Banner gleich
 
 // Injected Scripts (aus Dateien geladen)
 
-const BRAND_SCRIPT = fs.readFileSync(path.join(__dirname, 'inject', 'brand.js'), 'utf8');
 const NOTIFY_SCRIPT = fs.readFileSync(path.join(__dirname, 'inject', 'notify.js'), 'utf8');
 const VERIFY_SCRIPT = fs.readFileSync(path.join(__dirname, 'inject', 'verify-banner.js'), 'utf8');
-const OLED_SCRIPT = fs.readFileSync(path.join(__dirname, 'inject', 'oled.js'), 'utf8');
-const OLED_DISABLE_SCRIPT = '(function(){try{window._cdOledDisable&&window._cdOledDisable();}catch(e){}})();';
-
-function oledScriptForCurrentDesign() {
-  const ac = customDesign
-    ? { from: '#F26A3F', to: '#E83B6E' }
-    : { from: '#d4734c', to: '#d4734c' };
-  return `window._cdOledDesign='${customDesign ? 'modern' : 'classic'}';`
-    + `window._cdOledBrand={from:'${ac.from}',to:'${ac.to}'};`
-    + OLED_SCRIPT;
-}
+const THEME_SCRIPT = fs.readFileSync(path.join(__dirname, 'inject', 'theme.js'), 'utf8');
 
 // State
 
@@ -422,6 +411,84 @@ const RELEASE_NOTES_REVISIT = {
 };
 
 const RELEASE_NOTES = {
+  '1.4.3': [
+    {
+      icon: 'palette',
+      title: {
+        de: 'Neues Logo und aufgefrischtes Design',
+        en: 'New logo and a refreshed look',
+        fr: 'Nouveau logo et un design rafraîchi',
+        it: 'Nuovo logo e un design rinfrescato'
+      },
+      text: {
+        de: 'Die App hat ein neues Spark-Logo, und die drei Themes sind von Grund auf neu aufgebaut. Die Farbverläufe im Hintergrund kamen bei vielen nicht gut an, deshalb sind sie überall raus: in den Menüs, den Einstellungs- und Info-Fenstern und im Chat. Jedes Theme ist jetzt klar für sich gebaut: Hell ist ein neutrales Weiß ohne den früheren rötlichen Stich, Dunkel bleibt ruhig und gleichmäßig, und OLED zeigt durchgehend tiefes Schwarz mit ein paar dezenten Sternen im Hintergrund.',
+        en: 'The app has a new spark logo, and the three themes are rebuilt from the ground up. The background gradients did not sit well with many people, so they are gone everywhere: in the menus, the settings and info windows, and the chat. Each theme is now built on its own terms: light is a neutral white without the earlier reddish tint, dark stays calm and even, and OLED is consistently deep black with a few subtle stars in the background.',
+        fr: 'L’application a un nouveau logo « spark », et les trois thèmes sont reconstruits de zéro. Les dégradés en arrière-plan ne plaisaient pas à beaucoup de monde, ils ont donc disparu partout : dans les menus, les fenêtres de réglages et d’informations, et le chat. Chaque thème est désormais conçu pour lui-même : le clair est un blanc neutre sans la teinte rougeâtre d’avant, le sombre reste calme et homogène, et l’OLED affiche un noir profond et uniforme avec quelques étoiles discrètes en arrière-plan.',
+        it: 'L’app ha un nuovo logo spark e i tre temi sono ricostruiti da zero. Le sfumature sullo sfondo non piacevano a molti, quindi sono state rimosse ovunque: nei menu, nelle finestre di impostazioni e informazioni e nella chat. Ogni tema ora è costruito per conto suo: il chiaro è un bianco neutro senza la tinta rossastra di prima, lo scuro resta calmo e uniforme e l’OLED mostra un nero profondo e uniforme con qualche stella discreta sullo sfondo.'
+      }
+    },
+    {
+      icon: 'bolt',
+      title: {
+        de: 'Theme ohne Nachladen',
+        en: 'Theme without lag',
+        fr: 'Thème sans délai',
+        it: 'Tema senza ritardi'
+      },
+      text: {
+        de: 'Das Theme steht jetzt sofort beim App-Start und beim Öffnen eines neuen Tabs. Vorher baute es sich mit kurzer Verzögerung sichtbar auf.',
+        en: 'The theme is in place immediately when the app starts and when you open a new tab. Before, it built up visibly with a short delay.',
+        fr: 'Le thème est en place immédiatement au démarrage de l’application et à l’ouverture d’un nouvel onglet. Auparavant, il se mettait en place avec un léger délai visible.',
+        it: 'Il tema è presente subito all’avvio dell’app e quando apri una nuova scheda. Prima si formava con un breve ritardo visibile.'
+      }
+    },
+    {
+      icon: 'plus',
+      title: {
+        de: 'Eigene Connectors verbinden sich wieder',
+        en: 'Custom connectors connect again',
+        fr: 'Les connecteurs personnalisés se connectent à nouveau',
+        it: 'I connettori personalizzati si collegano di nuovo'
+      },
+      text: {
+        de: 'Beim Hinzufügen eines eigenen Connectors öffnete sich das Anmelde-Popup im Systembrowser, wo die Verbindung nie zurückkam. Es öffnet jetzt in der App, sodass die Verbindung abgeschlossen wird.',
+        en: 'When you added a custom connector, the sign-in popup opened in the system browser, where the connection never came back. It now opens inside the app so the connection completes.',
+        fr: 'Lors de l’ajout d’un connecteur personnalisé, la fenêtre de connexion s’ouvrait dans le navigateur système, où la connexion n’aboutissait jamais. Elle s’ouvre désormais dans l’application, ce qui permet de terminer la connexion.',
+        it: 'Quando aggiungevi un connettore personalizzato, il popup di accesso si apriva nel browser di sistema, dove la connessione non tornava mai. Ora si apre nell’app, così la connessione viene completata.'
+      }
+    },
+    {
+      icon: 'download',
+      title: {
+        de: 'Snap: Dateien anhängen und speichern',
+        en: 'Snap: attaching and saving files',
+        fr: 'Snap : joindre et enregistrer des fichiers',
+        it: 'Snap: allegare e salvare file'
+      },
+      text: {
+        de: 'Unter Snap laufen das Anhängen von Dateien und das Speichern von Downloads jetzt über das System-Dateiportal. Damit erreichst du auch Dateien außerhalb deines persönlichen Ordners und auf externen Datenträgern.',
+        en: 'On Snap, attaching files and saving downloads now go through the system file portal, so you can reach files outside your home folder and on external drives.',
+        fr: 'Sous Snap, joindre des fichiers et enregistrer des téléchargements passe désormais par le portail de fichiers du système, ce qui permet d’accéder aux fichiers hors de votre dossier personnel et sur des disques externes.',
+        it: 'Su Snap, allegare file e salvare i download avviene ora tramite il portale file di sistema, così puoi raggiungere i file fuori dalla tua cartella personale e su unità esterne.'
+      },
+      if: 'snap'
+    },
+    {
+      icon: 'shield',
+      title: {
+        de: 'Aktualisierter Unterbau',
+        en: 'Updated foundation',
+        fr: 'Socle mis à jour',
+        it: 'Base aggiornata'
+      },
+      text: {
+        de: 'Aktualisiert auf das neueste Electron 41 mit den aktuellen Chromium-Sicherheitsfixes.',
+        en: 'Updated to the latest Electron 41 with the current Chromium security fixes.',
+        fr: 'Mise à jour vers la dernière version d’Electron 41 avec les correctifs de sécurité Chromium actuels.',
+        it: 'Aggiornato all’ultima versione di Electron 41 con le correzioni di sicurezza di Chromium attuali.'
+      }
+    }
+  ],
   '1.4.2': [
     {
       icon: 'bolt',
@@ -1012,6 +1079,20 @@ function isOAuthDomain(url) {
   } catch { return false; }
 }
 
+// Custom-MCP-Connector: der OAuth-Server-Host ist beliebig und steht in keiner
+// Allowlist. Erkennt ein window.open mit OAuth2-Authorize-Signatur, damit das
+// Popup in-app aufgeht statt im Systembrowser (sonst landet der Callback nie in
+// der claude.ai-Session). Eng gefasst, damit normale externe Links extern bleiben.
+function looksLikeOAuthUrl(url) {
+  try {
+    const u = new URL(url);
+    if (u.protocol !== 'https:') return false;
+    const q = u.search.toLowerCase();
+    if (q.includes('response_type=') || q.includes('client_id=') || q.includes('redirect_uri=')) return true;
+    return /\/(oauth2?|authorize|authorization|sso)(\/|$)/.test(u.pathname.toLowerCase());
+  } catch { return false; }
+}
+
 // Theme & Design
 
 const THEME = {
@@ -1061,32 +1142,10 @@ function iconDataUrl() {
   return _iconDataUrlCache[p];
 }
 
-// OLED-Logo: Spark auf warmem schwarzen Untergrund mit Brand-Glow.
-// Im normalen Theme weiter das normale Icon (iconDataUrl). Nur im OLED-Mode
-// wird das Spark auf einem dunklen Tile mit subtilem Verlauf gerahmt, damit das
-// Logo nicht im OLED-Schwarz verschwindet.
+// Das neue Spark-Logo hat bereits einen dunklen, abgerundeten Tile (OLED-tauglich),
+// daher kein zusaetzlicher Tile/Glow-Wrapper mehr noetig - Logo wird as-is genutzt.
 function iconDataUrlForCurrentTheme() {
-  if (!oledMode) return iconDataUrl();
-  const ac = accent();
-  const inner = iconDataUrl();
-  if (!inner) return inner;
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">`
-    + `<defs>`
-    + `<radialGradient id="g1" cx="22%" cy="22%" r="78%">`
-    + `<stop offset="0%" stop-color="${ac.from}" stop-opacity="0.42"/>`
-    + `<stop offset="100%" stop-color="${ac.from}" stop-opacity="0"/>`
-    + `</radialGradient>`
-    + `<radialGradient id="g2" cx="80%" cy="82%" r="78%">`
-    + `<stop offset="0%" stop-color="${ac.to}" stop-opacity="0.32"/>`
-    + `<stop offset="100%" stop-color="${ac.to}" stop-opacity="0"/>`
-    + `</radialGradient>`
-    + `</defs>`
-    + `<rect width="100" height="100" rx="22" fill="#0a0709"/>`
-    + `<rect width="100" height="100" rx="22" fill="url(#g1)"/>`
-    + `<rect width="100" height="100" rx="22" fill="url(#g2)"/>`
-    + `<image href="${inner}" x="14" y="14" width="72" height="72"/>`
-    + `</svg>`;
-  return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+  return iconDataUrl();
 }
 
 // Tab-Bar HTML
@@ -1344,43 +1403,56 @@ function verifyScript() {
   return VERIFY_SCRIPT.replace('__VERIFY_I18N__', JSON.stringify(i18n));
 }
 
+// Theme-State fuer den Controller (inject/theme.js): mode + design + accent.
+// mid (#E8524F) ist der Brand-Mittelton fuer das Orange->Brand-Recoloring (Modern).
+function themeState() {
+  const ac = customDesign ? ACCENT.custom : ACCENT.original;
+  return { mode: currentThemeMode(), design: customDesign ? 'modern' : 'classic', accent: { from: ac.from, to: ac.to, mid: '#E8524F' } };
+}
+function themeScript() {
+  return 'window._cdTheme=' + JSON.stringify(themeState()) + ';' + THEME_SCRIPT;
+}
+
+// Anti-FOUC: preload-content.js holt den aktuellen Theme-State synchron bei document-start,
+// um OLED-Schwarz VOR dem ersten claude.ai-Paint zu setzen (sonst blitzt beim kalten Start
+// claude.ais eigenes Grau auf, bis der Controller bei dom-ready greift).
+ipcMain.on('cd-theme-mode', (e) => { e.returnValue = themeState(); });
+
 function injectScripts(wc) {
   if (!alive(wc)) return;
-  if (customDesign) wc.executeJavaScript(BRAND_SCRIPT).catch(() => {});
+  // Nur in claude.ai-Seiten injizieren, nie in OAuth-Provider-/Login-Seiten
+  // (Google, Linear, ...), die waehrend eines Connector-Flows im View laufen.
+  // Sonst werden fremde Login-Seiten umgefaerbt (unlesbar) und unsere
+  // MutationObserver stoeren deren OAuth-JS ("Invalid flow state").
+  if (!isAllowedDomain(wc.getURL())) return;
   wc.executeJavaScript(NOTIFY_SCRIPT).catch(() => {});
   wc.executeJavaScript(verifyScript()).catch(() => {});
-  if (oledMode) wc.executeJavaScript(oledScriptForCurrentDesign()).catch(() => {});
+  wc.executeJavaScript(themeScript()).catch(() => {});
 }
 
 function reinjectScripts(wc) {
   if (!alive(wc)) return;
-  // Brand-Script nur bei custom design re-injecten
-  if (customDesign) {
-    wc.executeJavaScript('!!window._cdBrand').then(active => {
-      if (!active) wc.executeJavaScript(BRAND_SCRIPT).catch(() => {});
-    }).catch(() => {});
-  }
-  // Notify-Script: idempotent, einfach prüfen
+  if (!isAllowedDomain(wc.getURL())) return;
+  // Notify-Script: idempotent
   wc.executeJavaScript('!!window._cdNotify').then(active => {
     if (!active) wc.executeJavaScript(NOTIFY_SCRIPT).catch(() => {});
   }).catch(() => {});
-  if (oledMode) {
-    wc.executeJavaScript('!!window._cdOled').then(active => {
-      if (!active) wc.executeJavaScript(oledScriptForCurrentDesign()).catch(() => {});
-    }).catch(() => {});
-  }
+  // Theme-Controller bleibt bei SPA-Nav bestehen; falls weg neu injizieren, sonst State re-asserten
+  wc.executeJavaScript('!!window._cdThemeCtl').then(active => {
+    if (!active) wc.executeJavaScript(themeScript()).catch(() => {});
+    else wc.executeJavaScript('window._cdSetTheme&&window._cdSetTheme(' + JSON.stringify(themeState()) + ')').catch(() => {});
+  }).catch(() => {});
 }
 
-function applyOledToAllViews() {
+// Theme live auf alle offenen Views anwenden (kein Reload, kein Re-Inject):
+// nur Attribute am <html> umschalten via window._cdSetTheme.
+function applyThemeToAllViews() {
+  const s = JSON.stringify(themeState());
   for (const tab of tabs) {
     if (!tab || !alive(tab.view)) continue;
     const wc = tab.view.webContents;
-    if (oledMode) {
-      // Erst disablen falls schon aktiv mit altem Design, dann frisch injizieren
-      wc.executeJavaScript(OLED_DISABLE_SCRIPT + oledScriptForCurrentDesign()).catch(() => {});
-    } else {
-      wc.executeJavaScript(OLED_DISABLE_SCRIPT).catch(() => {});
-    }
+    if (!isAllowedDomain(wc.getURL())) continue;
+    wc.executeJavaScript('window._cdSetTheme&&window._cdSetTheme(' + s + ')').catch(() => {});
   }
 }
 
@@ -1391,7 +1463,7 @@ function setupView(view) {
 
   // Window-Open: OAuth in-app, claude.ai erlaubt, Rest extern
   wc.setWindowOpenHandler(({ url }) => {
-    if (isOAuthDomain(url)) {
+    if (isOAuthDomain(url) || (isAllowedDomain(wc.getURL()) && looksLikeOAuthUrl(url))) {
       return { action: 'allow', overrideBrowserWindowOptions: {
         width: 600, height: 750, title: t('Anmeldung', 'Sign In', 'Connexion', 'Accesso'),
         webPreferences: { nodeIntegration: false, contextIsolation: true, sandbox: true, partition: 'persist:claude' }
@@ -1408,7 +1480,7 @@ function setupView(view) {
   // OAuth-Popup Lifecycle (nur wenn das neue Fenster wirklich OAuth ist)
   wc.on('did-create-window', (childWindow, details) => {
     const initialUrl = details && details.url ? details.url : '';
-    if (!isOAuthDomain(initialUrl)) return;
+    if (!isOAuthDomain(initialUrl) && !looksLikeOAuthUrl(initialUrl)) return;
 
     let closed = false;
     const cleanup = () => {
@@ -1436,18 +1508,25 @@ function setupView(view) {
 
   // Navigation Guards
   wc.on('will-navigate', (event, navUrl) => {
-    if (!isAllowedDomain(navUrl) && !isOAuthDomain(navUrl)) {
-      event.preventDefault();
-      try {
-        const p = new URL(navUrl).protocol;
-        if (p === 'https:' || p === 'http:' || p === 'mailto:') shell.openExternal(navUrl);
-      } catch {}
-    }
+    // claude.ai/bekannte-OAuth/OAuth-Authorize immer zulassen. looksLikeOAuthUrl deckt
+    // den Connector-Approve ab, der im selben Fenster zum Provider (Host nicht in der
+    // Allowlist) navigiert; ohne das blockt der Guard still -> "Approve tut nichts".
+    if (isAllowedDomain(navUrl) || isOAuthDomain(navUrl) || looksLikeOAuthUrl(navUrl)) return;
+    // Mid-OAuth: sind wir bereits auf einer externen Provider-Seite (per OAuth dorthin
+    // gelangt), dessen eigene Folge-Schritte (Login etc.) per https zulassen, bis es
+    // zurueck auf claude.ai redirected. Startup (leer/about:blank) faellt nicht darunter.
+    let onProvider = false;
+    try { onProvider = new URL(wc.getURL()).protocol === 'https:' && !isAllowedDomain(wc.getURL()); } catch {}
+    let proto = '';
+    try { proto = new URL(navUrl).protocol; } catch {}
+    if (onProvider && proto === 'https:') return;
+    event.preventDefault();
+    if (proto === 'https:' || proto === 'http:' || proto === 'mailto:') shell.openExternal(navUrl);
   });
 
   wc.on('will-frame-navigate', (event) => {
     const navUrl = event.url;
-    if (!isAllowedDomain(navUrl) && !isOAuthDomain(navUrl)) event.preventDefault();
+    if (!isAllowedDomain(navUrl) && !isOAuthDomain(navUrl) && !looksLikeOAuthUrl(navUrl)) event.preventDefault();
   });
 
   // Tab-Titel
@@ -1461,7 +1540,12 @@ function setupView(view) {
     }
   });
 
-  // Script-Injection bei Page-Load
+  // Theme-Controller schon bei dom-ready injizieren (vor dem ersten Content-Paint),
+  // damit beim neuen Tab/Reload kein heller/grauer claude.ai-Frame aufblitzt.
+  wc.on('dom-ready', () => {
+    if (alive(wc) && isAllowedDomain(wc.getURL())) wc.executeJavaScript(themeScript()).catch(() => {});
+  });
+  // Restliche Skripte + Theme-Reassert bei vollem Load
   wc.on('did-finish-load', () => {
     updateTitle();
     injectScripts(wc);
@@ -1523,7 +1607,7 @@ function fillPool() {
 function getPooledView() {
   if (viewPool.length > 0) {
     const view = viewPool.shift();
-    setTimeout(fillPool, 3000);
+    setTimeout(fillPool, 1200);
     return view;
   }
   return null;
@@ -1684,7 +1768,6 @@ function toggleDesign() {
     tabs[activeTabIndex].view.webContents.reload();
   }
   tabs.forEach((tab, i) => { if (i !== activeTabIndex) tab.needsReload = true; });
-  if (oledMode) applyOledToAllViews();
 
   setTimeout(fillPool, 3000);
   saveWindowState();
@@ -2301,17 +2384,8 @@ function submitQuickPrompt(text) {
 
 function customTitlebarCSS() {
   const th = subTheme();
-  let glow = '';
-  if (oledMode) {
-    const ac = accent();
-    glow = `
-body{position:relative}
-body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
-  background:radial-gradient(ellipse 80% 55% at 0% 0%,${ac.from}26,transparent 62%),
-             radial-gradient(ellipse 80% 55% at 100% 100%,${ac.to}1f,transparent 62%)}
-body > *{position:relative;z-index:1}`;
-  }
-  return `${glow}
+  // Sub-Fenster nutzen pro Theme nur ihre flache Theme-Farbe (kein Brand-Glow mehr).
+  return `
 .cd-titlebar{height:36px;-webkit-app-region:drag;display:flex;align-items:center;
   padding:0 0 0 14px;background:transparent;color:${th.textActive};
   font-size:12.5px;flex-shrink:0;user-select:none}
@@ -2446,9 +2520,16 @@ function openClipboardChat() {
   try { text = clipboard.readText() || ''; } catch {}
   text = text.trim();
   if (!text) {
+    // Screenshot liegt als Bild in der Zwischenablage, nicht als Text. Ein Bild
+    // laesst sich von hier nicht in den claude.ai-Composer injizieren, daher Hinweis
+    // auf direktes Einfuegen statt der irrefuehrenden "leer"-Meldung.
+    let hasImage = false;
+    try { hasImage = !clipboard.readImage().isEmpty(); } catch {}
     new Notification({
       title: 'Claude',
-      body: t('Zwischenablage ist leer.', 'Clipboard is empty.', 'Le presse-papiers est vide.', 'Gli appunti sono vuoti.')
+      body: hasImage
+        ? t('Bild in der Zwischenablage. Bitte direkt im Chat mit Strg+V einfügen.', 'Image in clipboard. Paste it directly in the chat with Ctrl+V.', 'Image dans le presse-papiers. Collez-la directement dans le chat avec Ctrl+V.', 'Immagine negli appunti. Incollala direttamente nella chat con Ctrl+V.')
+        : t('Zwischenablage ist leer.', 'Clipboard is empty.', 'Le presse-papiers est vide.', 'Gli appunti sono vuoti.')
     }).show();
     return;
   }
@@ -3371,10 +3452,7 @@ body{padding:8px}
     0 1px 3px ${dark ? 'rgba(0,0,0,.4)' : 'rgba(0,0,0,.08)'};
   padding:5px;overflow:hidden}
 .head{display:flex;align-items:center;gap:11px;padding:8px 11px 9px;margin:-1px -1px 4px;
-  border-bottom:1px solid ${th.border};
-  background:linear-gradient(180deg,color-mix(in srgb,${ac.from} 6%,transparent),transparent)}
-.head .logo{width:28px;height:28px;flex-shrink:0;border-radius:7px;object-fit:contain;
-  filter:drop-shadow(0 1px 4px color-mix(in srgb,${ac.from} 40%,transparent))}
+  border-bottom:1px solid ${th.border}}
 .head .meta{display:flex;flex-direction:column;line-height:1.2;flex:1;min-width:0}
 .head .name{font-weight:700;font-size:14px;color:${th.textActive};letter-spacing:.2px}
 .head .ver{font-size:11px;color:${th.text};font-family:ui-monospace,Menlo,Consolas,monospace}
@@ -3396,7 +3474,6 @@ body{padding:8px}
 </style></head><body>
 <div class="card" id="card">
   <div class="head">
-    <img class="logo" src="${iconDataUrlForCurrentTheme()}" alt="Claude" draggable="false"/>
     <div class="meta">
       <div class="name">Claude</div>
       <div class="ver">v${version}</div>
@@ -4804,7 +4881,7 @@ ipcMain.on('theme-toggle', () => {
   else if (!oledMode) { oledMode = true; }
   else { isDarkMode = false; oledMode = false; }
   drainPool();
-  applyOledToAllViews();
+  applyThemeToAllViews();
 
   const bg = theme().bg;
   const active = tabs[activeTabIndex]?.view;

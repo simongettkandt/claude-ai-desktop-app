@@ -5,6 +5,10 @@
 # verstreut. Unter XWayland funktionieren Position, globalShortcut und
 # alle bisherigen Code-Pfade wieder. Trade-Off: leicht unschaerfer bei
 # Fractional-Scaling. VS Code, Discord, Signal, Obsidian machen es genauso.
-exec env XDG_CURRENT_DESKTOP=Unity "$SNAP/app/claude-desktop" \
+# GTK_USE_PORTAL=1: Open/Save-Dialoge und der HTML-File-Picker laufen ueber
+# xdg-desktop-portal. Unter strict confinement gibt das Document-Portal Zugriff
+# auf gewaehlte Dateien auch ausserhalb von $HOME (per FD), statt nur den
+# home-Plug-Pfad zu zeigen. Behebt das "kann Datei nicht anhaengen/speichern".
+exec env XDG_CURRENT_DESKTOP=Unity GTK_USE_PORTAL=1 "$SNAP/app/claude-desktop" \
   --no-sandbox --use-gl=angle --use-angle=gl \
   --ozone-platform=x11 "$@"

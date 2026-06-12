@@ -1,5 +1,5 @@
 name: claude-ai-desktop
-version: '1.4.2'
+version: '1.4.3'
 summary: Unofficial desktop wrapper for Claude AI with tabs, tray and voice input
 description: |
   Unofficial desktop app for Claude AI on Linux. Runs claude.ai without
@@ -8,37 +8,29 @@ description: |
 
   Not affiliated with Anthropic.
 
-  What's new in v1.4.2:
+  What's new in v1.4.3:
 
-  * Italian and French - The whole app interface is now available in
-    Italian and French in addition to German and English. It follows
-    your system language and stays on English when your language is
-    not one of the four.
-  * Notifications on Snap - The app now identifies itself to GNOME as
-    the sender via the CHROME_DESKTOP desktop-entry hint. Without it
-    GNOME Shell could not map a notification to the app and dropped it
-    under strict confinement, so reply and download notices went
-    missing. They are attributed to the app again.
-  * OLED tab bar colour is now consistent - The tab bar used a
-    slightly different near-black when you toggled OLED live versus
-    starting up in OLED. Both now use the same palette.
-  * Smaller download - The bundled Chromium licence dump (19 MB) is
-    no longer shipped in the Snap, trimming the compressed download by
-    about 2 MB.
+  * Custom connectors connect in-app again - the sign-in popup for a
+    custom connector now opens inside the app instead of the system
+    browser, where the callback never returned, so the connection
+    completes.
+  * File dialogs go through the portal - attaching files and saving
+    downloads now use xdg-desktop-portal, so you can reach files
+    outside your home folder and on external drives.
+  * Updated to the latest Electron 41 with current Chromium security
+    fixes.
 
-  Highlights from v1.4.1:
+  Highlights from v1.4.2:
 
-  * "What's New" window follows the system language - All release
-    notes now carry both German and English text.
+  * Italian and French interface, following your system language, with
+    an English fallback.
+  * Notifications attribute to the app again on Snap, and a slightly
+    smaller download.
 
   Highlights from v1.4.0:
 
-  * OLED theme as a third theme - The sun/moon icon in the tab bar
-    cycles Light, Dark, OLED, on a warm near-black background with a
-    subtle brand-glow overlay.
-  * Frameless main window with custom controls - The system title bar
-    is replaced by the tab bar; Minimize, Maximize and Close sit on
-    the right.
+  * OLED theme as a third theme and a frameless main window with custom
+    Minimize, Maximize and Close controls.
 
   System requirements:
 
@@ -113,6 +105,7 @@ apps:
       - audio-record
       - desktop
       - home
+      - removable-media
       - x11
       - wayland
       - gsettings
