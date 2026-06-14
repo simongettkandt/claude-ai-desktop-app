@@ -14,7 +14,7 @@ sudo snap install claude-ai-desktop
 
 [![claude-ai-desktop](https://snapcraft.io/claude-ai-desktop/badge.svg)](https://snapcraft.io/claude-ai-desktop)
 
-> **v1.4.3** - Design refresh plus connector and Snap file fixes. A new spark logo and a reworked theming engine: cleanly separated Light/Dark/OLED, deep-black OLED with a faint starfield behind the content, no more gradient washes in menus and windows, a neutral light mode, and no flash when switching tabs. Adding a custom connector now completes inside the app, and on Snap attaching files and saving downloads go through the system file portal. Plus an Electron 41 security refresh.
+> **v1.4.4** - Verification loop fix. The app sent a `Sec-CH-UA-Platform-Version` (the Linux kernel version) that real Chrome on Linux never sends, which could trap the Cloudflare security check in a loop; it now matches a normal Linux Chrome exactly.
 
 ---
 
@@ -176,6 +176,10 @@ The `--no-sandbox` flag is required for Electron AppImages on Linux because the 
 ---
 
 ## Changelog
+
+### v1.4.4 - Verification Loop Fix (2026-06-14)
+
+- **Stopped leaking the kernel version in `Sec-CH-UA-Platform-Version`.** The session sent the raw Linux kernel release here (e.g. `7.0.9` on CachyOS), but real Chrome on Linux always sends an empty value, and the in-page `navigator.userAgentData` reported empty too. The mismatch was a bot signal that could trap the Cloudflare security check in a loop. The header now matches real Chrome on Linux (empty), verified against Chromium 149.
 
 ### v1.4.3 - Design Refresh, Connectors & Snap Files (2026-06-11)
 

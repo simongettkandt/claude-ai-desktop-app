@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.4.4] - 2026-06-14 - Verification Loop Fix
+
+### Fixed
+- **`Sec-CH-UA-Platform-Version` no longer leaks the kernel version.** The claude.ai session set this client-hint header from the raw kernel release (e.g. `6.8.0`, or `7.0.9` on CachyOS), but real Chrome on Linux always sends an empty value here, and the in-page `navigator.userAgentData` reported empty as well. The mismatch was a clear bot signal to Cloudflare and could trap the security check ("Performing security verification") in a loop. The header is now sent as the empty structured-field string `""`, matching real Chrome on Linux (verified against Chromium 149). Affects all Linux users; CachyOS was most exposed because kernel major 7 does not exist upstream.
+
+---
+
 ## [1.4.3] - 2026-06-11 - Design Refresh, Connectors & Snap Files
 
 ### Fixed

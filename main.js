@@ -411,6 +411,23 @@ const RELEASE_NOTES_REVISIT = {
 };
 
 const RELEASE_NOTES = {
+  '1.4.4': [
+    {
+      icon: 'shield',
+      title: {
+        de: 'Sicherheitsprüfung bleibt seltener hängen',
+        en: 'Fewer security-check loops',
+        fr: 'Moins de blocages à la vérification de sécurité',
+        it: 'Meno blocchi alla verifica di sicurezza'
+      },
+      text: {
+        de: 'Die App meldete sich bei der Cloudflare-Sicherheitsprüfung mit einer Kennung, die ein echter Linux-Browser so nie sendet (der Kernel-Version). Das konnte die Prüfung in eine Schleife laufen lassen. Die Kennung entspricht jetzt exakt der eines normalen Chrome unter Linux. Falls die Prüfung doch hängt, hilft weiterhin „claude.ai-Verifizierung zurücksetzen" im Menü.',
+        en: 'The app identified itself to the Cloudflare security check with a value no real Linux browser sends (the kernel version), which could send the check into a loop. That value now matches a normal Chrome on Linux exactly. If the check still hangs, "Reset claude.ai verification" in the menu still helps.',
+        fr: 'L’application se présentait à la vérification de sécurité Cloudflare avec une valeur qu’aucun vrai navigateur Linux n’envoie (la version du noyau), ce qui pouvait faire boucler la vérification. Cette valeur correspond désormais exactement à celle d’un Chrome normal sous Linux. Si la vérification se bloque encore, « Réinitialiser la vérification claude.ai » dans le menu reste utile.',
+        it: 'L’app si presentava alla verifica di sicurezza di Cloudflare con un valore che nessun browser Linux reale invia (la versione del kernel), e questo poteva mandare la verifica in loop. Ora quel valore corrisponde esattamente a quello di un normale Chrome su Linux. Se la verifica si blocca ancora, "Reimposta la verifica claude.ai" nel menu è ancora d’aiuto.'
+      }
+    }
+  ],
   '1.4.3': [
     {
       icon: 'palette',
@@ -4490,7 +4507,6 @@ function setupSession() {
   const chromeMajor = chromeFull.split('.')[0];
   const secChUa = `"Chromium";v="${chromeMajor}", "Not(A:Brand";v="24", "Google Chrome";v="${chromeMajor}"`;
   const secChUaFullVersionList = `"Chromium";v="${chromeFull}", "Not(A:Brand";v="24.0.0.0", "Google Chrome";v="${chromeFull}"`;
-  const kernelVersion = `"${os.release().split('-')[0]}"`;
 
   ses.webRequest.onBeforeSendHeaders({
     urls: [
@@ -4508,7 +4524,8 @@ function setupSession() {
     h['Sec-Ch-Ua-Mobile'] = '?0';
     h['Sec-Ch-Ua-Platform'] = '"Linux"';
     h['Sec-Ch-Ua-Full-Version-List'] = secChUaFullVersionList;
-    h['Sec-Ch-Ua-Platform-Version'] = kernelVersion;
+    // Chrome on Linux always sends an empty platform version; the kernel string was a bot tell.
+    h['Sec-Ch-Ua-Platform-Version'] = '""';
     cb({ requestHeaders: h });
   });
 

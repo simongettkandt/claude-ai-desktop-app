@@ -1,5 +1,5 @@
 name: claude-ai-desktop
-version: '1.4.3'
+version: '1.4.4'
 summary: Unofficial desktop wrapper for Claude AI with tabs, tray and voice input
 description: |
   Unofficial desktop app for Claude AI on Linux. Runs claude.ai without
@@ -8,17 +8,18 @@ description: |
 
   Not affiliated with Anthropic.
 
-  What's new in v1.4.3:
+  What's new in v1.4.4:
 
-  * Custom connectors connect in-app again - the sign-in popup for a
-    custom connector now opens inside the app instead of the system
-    browser, where the callback never returned, so the connection
-    completes.
-  * File dialogs go through the portal - attaching files and saving
-    downloads now use xdg-desktop-portal, so you can reach files
-    outside your home folder and on external drives.
-  * Updated to the latest Electron 41 with current Chromium security
-    fixes.
+  * Fewer security-check loops - the app no longer reports a
+    Sec-CH-UA-Platform-Version that real Chrome on Linux never sends
+    (the kernel version), which could trap the Cloudflare check in a
+    loop. It now matches a normal Linux Chrome.
+
+  Highlights from v1.4.3:
+
+  * Custom connectors connect in-app again, file dialogs go through
+    xdg-desktop-portal so you can reach files outside your home folder,
+    and the app is on Electron 41 with current Chromium security fixes.
 
   Highlights from v1.4.2:
 
