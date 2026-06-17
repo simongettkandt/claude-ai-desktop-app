@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.4.5] - 2026-06-17 - Alt+Tab Focus Fix
+
+### Fixed
+- **Keyboard focus returns to the page after Alt+Tab.** The main window is frameless and its custom tab bar is the top-level web contents, holding the window controls (minimize/maximize/close). When the window regained focus via Alt+Tab (or from the tray), keyboard focus stayed in that bar and landed on the first button, minimize, so the first Space/Enter minimized the window instead of reaching the chat input. On window `focus`/`restore` the app now redirects keyboard focus to the active tab's web contents, deferred past Electron's own focus restore, so you can type right away.
+
+---
+
 ## [1.4.4] - 2026-06-14 - Verification Loop Fix
 
 ### Fixed

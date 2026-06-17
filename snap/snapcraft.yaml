@@ -1,5 +1,5 @@
 name: claude-ai-desktop
-version: '1.4.4'
+version: '1.4.5'
 summary: Unofficial desktop wrapper for Claude AI with tabs, tray and voice input
 description: |
   Unofficial desktop app for Claude AI on Linux. Runs claude.ai without
@@ -8,7 +8,14 @@ description: |
 
   Not affiliated with Anthropic.
 
-  What's new in v1.4.4:
+  What's new in v1.4.5:
+
+  * Keyboard focus after Alt+Tab - switching back to the window put the
+    focus on the Minimize button, where the first keystroke minimized
+    the window instead of writing. Focus now returns straight to the
+    chat.
+
+  Highlights from v1.4.4:
 
   * Fewer security-check loops - the app no longer reports a
     Sec-CH-UA-Platform-Version that real Chrome on Linux never sends

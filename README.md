@@ -14,7 +14,7 @@ sudo snap install claude-ai-desktop
 
 [![claude-ai-desktop](https://snapcraft.io/claude-ai-desktop/badge.svg)](https://snapcraft.io/claude-ai-desktop)
 
-> **v1.4.4** - Verification loop fix. The app sent a `Sec-CH-UA-Platform-Version` (the Linux kernel version) that real Chrome on Linux never sends, which could trap the Cloudflare security check in a loop; it now matches a normal Linux Chrome exactly.
+> **v1.4.5** - Alt+Tab focus fix. Returning to the window with Alt+Tab put the keyboard focus on the Minimize button, so the first keystroke minimized the window instead of typing; focus now goes straight back to the chat.
 
 ---
 
@@ -176,6 +176,10 @@ The `--no-sandbox` flag is required for Electron AppImages on Linux because the 
 ---
 
 ## Changelog
+
+### v1.4.5 - Alt+Tab Focus Fix (2026-06-17)
+
+- **Keyboard focus returns to the page after Alt+Tab.** The frameless window's custom tab bar (top-level web contents) holds the window controls, and on regaining focus the keyboard focus landed on the Minimize button, so the first Space/Enter minimized the window instead of typing into the chat. On `focus`/`restore` the app now sends keyboard focus to the active tab's web contents.
 
 ### v1.4.4 - Verification Loop Fix (2026-06-14)
 

@@ -411,6 +411,23 @@ const RELEASE_NOTES_REVISIT = {
 };
 
 const RELEASE_NOTES = {
+  '1.4.5': [
+    {
+      icon: 'bolt',
+      title: {
+        de: 'Tastaturfokus nach Alt+Tab',
+        en: 'Keyboard focus after Alt+Tab',
+        fr: 'Focus clavier après Alt+Tab',
+        it: 'Focus da tastiera dopo Alt+Tab'
+      },
+      text: {
+        de: 'Beim Zurückwechseln per Alt+Tab landete der Tastaturfokus auf dem Minimieren-Knopf statt im Chat. Der erste Tastendruck minimierte dann das Fenster, statt zu schreiben. Der Fokus geht jetzt direkt in die Seite zurück.',
+        en: 'When you switched back with Alt+Tab, the keyboard focus landed on the minimize button instead of the chat. The first keystroke then minimized the window instead of typing. Focus now goes straight back to the page.',
+        fr: 'En revenant avec Alt+Tab, le focus clavier se plaçait sur le bouton Réduire au lieu du chat. La première touche réduisait alors la fenêtre au lieu d’écrire. Le focus revient désormais directement sur la page.',
+        it: 'Tornando con Alt+Tab, il focus da tastiera finiva sul pulsante Riduci a icona invece che nella chat. Il primo tasto premuto riduceva la finestra invece di scrivere. Ora il focus torna direttamente alla pagina.'
+      }
+    }
+  ],
   '1.4.4': [
     {
       icon: 'shield',
@@ -1661,6 +1678,19 @@ function throttleActiveView(throttleOn) {
       active.view.webContents.setFrameRate(throttleOn ? 10 : 60);
     }
   } catch {}
+}
+
+// Beim Fenster-Fokus (z.B. Alt+Tab) landet der Tastaturfokus sonst im Tabbar
+// (Top-Level-WebContents) auf dem ersten Button (win-min) statt im Chat-Inhalt,
+// wodurch der erste Tastendruck das Fenster minimiert. Fokus auf die aktive View
+// umlenken. Deferred, weil Electron den nativen Fokus nach dem Event restauriert.
+function focusActiveView() {
+  setImmediate(() => {
+    if (!mainWindow || mainWindow.isDestroyed() || !mainWindow.isFocused()) return;
+    const active = tabs[activeTabIndex];
+    if (!active || !alive(active.view)) return;
+    try { active.view.webContents.focus(); } catch {}
+  });
 }
 
 const resizeActiveView = throttle(() => {
@@ -4956,8 +4986,8 @@ function createWindow() {
   mainWindow.on('enter-full-screen', () => { lastViewBounds = ''; resizeActiveView(); });
   mainWindow.on('leave-full-screen', () => { lastViewBounds = ''; resizeActiveView(); });
   mainWindow.on('show', () => { lastViewBounds = ''; resizeActiveView(); throttleActiveView(false); });
-  mainWindow.on('restore', () => throttleActiveView(false));
-  mainWindow.on('focus', () => throttleActiveView(false));
+  mainWindow.on('restore', () => { throttleActiveView(false); focusActiveView(); });
+  mainWindow.on('focus', () => { throttleActiveView(false); focusActiveView(); });
   mainWindow.on('minimize', () => throttleActiveView(true));
   mainWindow.on('hide', () => throttleActiveView(true));
 
