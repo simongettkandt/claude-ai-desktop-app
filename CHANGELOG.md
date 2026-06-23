@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.4.6] - 2026-06-23 - Crash & Split-Screen Fixes
+
+### Fixed
+- **A stray "A JavaScript error occurred in the main process" dialog no longer appears.** `electron-updater` logs through `console.info` during its periodic update check (`AppImageUpdater.isUpdaterActive`). On the Snap build, stdout/stderr is a pipe that can be closed, so the write threw `EPIPE`, and with no handler Electron surfaced its default crash dialog, recurring on every check. stdout/stderr now swallow `EPIPE` (logging must never crash the app), and the in-app updater no longer runs on Snap at all, where it can't update a read-only Snap anyway and the Store handles updates. Snap-only.
+- **Split-screen / tiling no longer leaves the page mis-sized.** When the window was tiled to half the screen, the `WebContentsView` could keep stale bounds on X11: the page shifted toward the top, with a gray strip of bare window left at the bottom. The active view is throttled on `resize`; a debounced settle pass (200 ms after the last resize event) now clears the bounds cache and re-applies the final `getContentBounds()`, so the page re-fits the settled window size.
+- **Hardened other main-process crash vectors.** `shell.openExternal` returns a promise that can reject under Snap (portal/xdg-open unavailable); the call sites had a synchronous try/catch that does not catch a rejection, so an unhandled rejection could surface the crash dialog. All seven sites now route through an `openExternalSafe()` helper, and the bare `new Notification().show()` calls reachable in normal use (clipboard hint, export done, online/offline, download done/failed) are wrapped so a throw under strict confinement cannot crash the main process. Added an `unhandledRejection` logger as a last line. A failed download move (rename + copy both throwing) no longer leaks the staged temp file.
+- **Manual "Check for Updates" gives feedback on Snap.** The in-app updater no longer runs on Snap, so the manual menu action used to call into unregistered handlers and do nothing visible. It now reports that updates are managed by the Snap Store.
+- **Connector sign-in robustness.** OAuth popups that open a nested window (e.g. Microsoft sign-in) now keep that window in-app on the claude.ai session instead of spawning an uncontrolled default window. Subframe navigation is tightened so an embedded iframe can no longer follow an arbitrary OAuth-shaped https URL unless the top-level page is claude.ai, and a sign-in that has left claude.ai onto a provider is now bounded to that provider's own domain rather than allowing any https host in-app.
+
+---
+
 ## [1.4.5] - 2026-06-17 - Alt+Tab Focus Fix
 
 ### Fixed

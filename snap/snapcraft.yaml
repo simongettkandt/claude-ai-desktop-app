@@ -1,5 +1,5 @@
 name: claude-ai-desktop
-version: '1.4.5'
+version: '1.4.6'
 summary: Unofficial desktop wrapper for Claude AI with tabs, tray and voice input
 description: |
   Unofficial desktop app for Claude AI on Linux. Runs claude.ai without
@@ -8,7 +8,16 @@ description: |
 
   Not affiliated with Anthropic.
 
-  What's new in v1.4.5:
+  What's new in v1.4.6:
+
+  * Fewer crash pop-ups - a stray "A JavaScript error occurred in the
+    main process" dialog from the background update check no longer
+    appears, and the in-app updater no longer runs on Snap since the
+    Store handles updates.
+  * Split-screen display fix - tiling the window to half the screen no
+    longer leaves the page shifted up with a gray strip at the bottom.
+
+  Highlights from v1.4.5:
 
   * Keyboard focus after Alt+Tab - switching back to the window put the
     focus on the Minimize button, where the first keystroke minimized

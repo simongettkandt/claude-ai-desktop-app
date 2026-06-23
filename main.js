@@ -13,6 +13,16 @@ dialog.showErrorBox = (title, content) => {
   _origErrorBox(title, content);
 };
 
+// stdout/stderr EPIPE schlucken. Im Snap ist die stdio-Pipe oft geschlossen; ein
+// console.* (z.B. aus electron-updater) wirft dann "write EPIPE" als Uncaught
+// Exception und Electron zeigt den Crash-Dialog. Logging darf nie crashen.
+process.stdout.on('error', (e) => { if (e && e.code === 'EPIPE') return; });
+process.stderr.on('error', (e) => { if (e && e.code === 'EPIPE') return; });
+
+// Auffanglinie fuer verwaiste Promise-Rejections (z.B. ein openExternal das doch
+// durchrutscht), damit sie nicht als Crash-Dialog hochkommen. Nur loggen.
+process.on('unhandledRejection', (e) => { try { console.error('unhandledRejection:', (e && e.message) || e); } catch {} });
+
 if (app.isPackaged) process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = 'true';
 
 // Wayland-Bypass: BrowserWindow-Positionierung ist unter nativem Wayland
@@ -94,6 +104,18 @@ function throttle(fn, ms) {
     if (now - last >= ms) { last = now; fn(...args); }
     else { timer = setTimeout(() => { last = Date.now(); fn(...args); }, ms - (now - last)); }
   };
+}
+
+// shell.openExternal liefert ein Promise, das unter Snap rejecten kann (Portal/
+// xdg-open nicht erreichbar). Ohne .catch wuerde daraus eine unhandled rejection.
+function openExternalSafe(url) {
+  try { const p = shell.openExternal(url); if (p && p.catch) p.catch(() => {}); } catch {}
+}
+
+// Notification kann unter striktem Confinement werfen; ein Throw aus einem async
+// Callback oder Event-Handler waere sonst ein Uncaught-Exception-Crash.
+function notify(opts) {
+  try { new Notification(opts).show(); } catch {}
 }
 
 // Sicherer WebContents-Zugriff
@@ -411,6 +433,68 @@ const RELEASE_NOTES_REVISIT = {
 };
 
 const RELEASE_NOTES = {
+  '1.4.6': [
+    {
+      icon: 'shield',
+      title: {
+        de: 'Weniger Absturz-Dialoge',
+        en: 'Fewer crash pop-ups',
+        fr: 'Moins de fenêtres d’erreur',
+        it: 'Meno finestre di errore'
+      },
+      text: {
+        de: 'Auf der Snap-Version konnte unvermittelt das Fenster „A JavaScript error occurred in the main process" erscheinen. Auslöser war die Hintergrund-Update-Prüfung, die in eine geschlossene Log-Leitung schrieb. Das stürzt die App nicht mehr ab. Im Snap läuft der eingebaute Updater jetzt gar nicht mehr, da der Snap Store die Updates übernimmt. Auch weitere seltene Absturzquellen (externe Links öffnen, Benachrichtigungen unter striktem Snap-Confinement) werden jetzt abgefangen.',
+        en: 'On the Snap build an "A JavaScript error occurred in the main process" window could appear out of nowhere. It came from the background update check writing to a closed log pipe. That no longer crashes the app, and on Snap the built-in updater no longer runs at all, since the Snap Store handles updates. Other rare crash sources (opening external links, notifications under strict Snap confinement) are now caught too.',
+        fr: 'Sur la version Snap, une fenêtre « A JavaScript error occurred in the main process » pouvait surgir sans raison. Elle venait de la vérification des mises à jour en arrière-plan qui écrivait dans un canal de log fermé. Cela ne fait plus planter l’application, et sur Snap le programme de mise à jour intégré ne s’exécute plus du tout, car le Snap Store s’en charge. D’autres causes rares de plantage (ouverture de liens externes, notifications sous confinement Snap strict) sont elles aussi interceptées.',
+        it: 'Sulla versione Snap poteva comparire all’improvviso una finestra "A JavaScript error occurred in the main process". Derivava dal controllo aggiornamenti in background che scriveva su un canale di log chiuso. Ora questo non manda più in crash l’app e su Snap l’updater integrato non viene più eseguito, perché ci pensa lo Snap Store. Vengono ora intercettate anche altre rare cause di crash (apertura di link esterni, notifiche sotto confinamento Snap stretto).'
+      }
+    },
+    {
+      icon: 'refresh',
+      title: {
+        de: 'Darstellung beim geteilten Bildschirm',
+        en: 'Split-screen display fix',
+        fr: 'Affichage en écran partagé',
+        it: 'Visualizzazione a schermo diviso'
+      },
+      text: {
+        de: 'Beim Anordnen des Fensters auf eine Bildschirmhälfte (Tiling) blieb die Seite manchmal auf der alten Größe stehen: Inhalt nach oben verschoben, unten ein grauer Streifen. Nach dem Ändern der Fenstergröße passt die App die Seite jetzt zuverlässig an die endgültige Größe an.',
+        en: 'When you tiled the window to half the screen, the page could stay stuck at the old size: content shifted up, a gray strip left at the bottom. After a resize settles, the app now reliably re-fits the page to the final window size.',
+        fr: 'En plaçant la fenêtre sur une moitié d’écran (tiling), la page pouvait rester à l’ancienne taille : contenu décalé vers le haut, bande grise en bas. Une fois le redimensionnement terminé, l’application réajuste désormais la page à la taille finale de la fenêtre.',
+        it: 'Affiancando la finestra a metà schermo (tiling), la pagina poteva restare alla vecchia dimensione: contenuto spostato in alto, una striscia grigia in basso. Al termine del ridimensionamento, l’app ora riadatta in modo affidabile la pagina alla dimensione finale della finestra.'
+      }
+    },
+    {
+      icon: 'cog',
+      title: {
+        de: 'Anmeldung bei Connectors',
+        en: 'Connector sign-in',
+        fr: 'Connexion aux connecteurs',
+        it: 'Accesso ai connettori'
+      },
+      text: {
+        de: 'Anmelde-Popups, die ein weiteres Fenster öffnen (etwa bei Microsoft), bleiben jetzt in der App und in deiner Sitzung, statt ein unkontrolliertes Fenster zu öffnen. Externe Links während der Anmeldung werden strenger behandelt: eingebettete Bereiche dürfen nicht mehr beliebigen Anmelde-Adressen folgen, und eine Anmeldung auf einer Anbieterseite bleibt auf deren eigene Domain begrenzt.',
+        en: 'Sign-in popups that open another window (for example with Microsoft) now stay inside the app and on your session instead of spawning an uncontrolled window. External links during sign-in are handled more strictly: embedded areas can no longer follow arbitrary sign-in URLs, and a sign-in on a provider page stays limited to that provider’s own domain.',
+        fr: 'Les fenêtres de connexion qui en ouvrent une autre (par exemple avec Microsoft) restent désormais dans l’application et sur votre session au lieu d’ouvrir une fenêtre non contrôlée. Les liens externes pendant la connexion sont traités plus strictement : les zones intégrées ne peuvent plus suivre n’importe quelle adresse de connexion, et une connexion sur la page d’un fournisseur reste limitée à son propre domaine.',
+        it: 'I popup di accesso che ne aprono un altro (ad esempio con Microsoft) ora restano nell’app e nella tua sessione invece di aprire una finestra non controllata. I link esterni durante l’accesso sono gestiti in modo più rigoroso: le aree incorporate non possono più seguire indirizzi di accesso arbitrari e un accesso sulla pagina di un provider resta limitato al suo dominio.'
+      }
+    },
+    {
+      icon: 'download',
+      title: {
+        de: 'Update-Suche im Snap',
+        en: 'Update check on Snap',
+        fr: 'Recherche de mises à jour (Snap)',
+        it: 'Controllo aggiornamenti su Snap'
+      },
+      text: {
+        de: '„Nach Updates suchen" gab in der Snap-Version keine Rückmeldung mehr. Jetzt erscheint der Hinweis, dass Updates über den Snap Store kommen und automatisch installiert werden.',
+        en: '"Check for Updates" gave no feedback on the Snap build. It now tells you that updates come from the Snap Store and are installed automatically.',
+        fr: '« Rechercher des mises à jour » ne donnait aucun retour sur la version Snap. Un message indique désormais que les mises à jour proviennent du Snap Store et sont installées automatiquement.',
+        it: '"Controlla aggiornamenti" non dava alcun riscontro sulla versione Snap. Ora un messaggio indica che gli aggiornamenti arrivano dallo Snap Store e vengono installati automaticamente.'
+      }
+    }
+  ],
   '1.4.5': [
     {
       icon: 'bolt',
@@ -1492,12 +1576,12 @@ function applyThemeToAllViews() {
 
 // View Setup (Security + Events)
 
-function setupView(view) {
-  const wc = view.webContents;
-
-  // Window-Open: OAuth in-app, claude.ai erlaubt, Rest extern
-  wc.setWindowOpenHandler(({ url }) => {
-    if (isOAuthDomain(url) || (isAllowedDomain(wc.getURL()) && looksLikeOAuthUrl(url))) {
+// Window-Open-Handler: OAuth/claude.ai in-app, Rest extern. Als Factory, damit das
+// OAuth-Popup denselben Handler bekommt; Provider mit verschachteltem window.open
+// (z.B. Microsoft) oeffnen sonst ein ungesteuertes Default-Fenster ohne Session.
+function oauthWindowOpenHandler(getOpenerUrl) {
+  return ({ url }) => {
+    if (isOAuthDomain(url) || (isAllowedDomain(getOpenerUrl()) && looksLikeOAuthUrl(url))) {
       return { action: 'allow', overrideBrowserWindowOptions: {
         width: 600, height: 750, title: t('Anmeldung', 'Sign In', 'Connexion', 'Accesso'),
         webPreferences: { nodeIntegration: false, contextIsolation: true, sandbox: true, partition: 'persist:claude' }
@@ -1506,10 +1590,17 @@ function setupView(view) {
     if (isAllowedDomain(url)) return { action: 'allow' };
     try {
       const p = new URL(url).protocol;
-      if (p === 'https:' || p === 'http:' || p === 'mailto:') shell.openExternal(url);
+      if (p === 'https:' || p === 'http:' || p === 'mailto:') openExternalSafe(url);
     } catch {}
     return { action: 'deny' };
-  });
+  };
+}
+
+function setupView(view) {
+  const wc = view.webContents;
+
+  // Window-Open: OAuth in-app, claude.ai erlaubt, Rest extern
+  wc.setWindowOpenHandler(oauthWindowOpenHandler(() => wc.getURL()));
 
   // OAuth-Popup Lifecycle (nur wenn das neue Fenster wirklich OAuth ist)
   wc.on('did-create-window', (childWindow, details) => {
@@ -1538,6 +1629,11 @@ function setupView(view) {
     childWindow.webContents.on('will-navigate', onNav);
     childWindow.webContents.on('will-redirect', onRedirect);
     childWindow.webContents.on('did-navigate', onDidNav);
+
+    // Verschachteltes window.open aus dem Popup (Provider-SSO) ebenfalls steuern.
+    childWindow.webContents.setWindowOpenHandler(oauthWindowOpenHandler(() => {
+      try { return childWindow.isDestroyed() ? '' : childWindow.webContents.getURL(); } catch { return ''; }
+    }));
   });
 
   // Navigation Guards
@@ -1553,14 +1649,27 @@ function setupView(view) {
     try { onProvider = new URL(wc.getURL()).protocol === 'https:' && !isAllowedDomain(wc.getURL()); } catch {}
     let proto = '';
     try { proto = new URL(navUrl).protocol; } catch {}
-    if (onProvider && proto === 'https:') return;
+    // Mid-OAuth nur auf der gleichen Registrable-Domain wie die Provider-Seite
+    // zulassen; fremde https-Hosts (Marketing-/Hilfe-Links der Provider-Seite)
+    // gehen extern, damit die View kein offener Browser wird.
+    let sameSite = false;
+    try {
+      const a = new URL(navUrl).hostname.split('.').slice(-2).join('.');
+      const b = new URL(wc.getURL()).hostname.split('.').slice(-2).join('.');
+      sameSite = !!a && a === b;
+    } catch {}
+    if (onProvider && proto === 'https:' && sameSite) return;
     event.preventDefault();
-    if (proto === 'https:' || proto === 'http:' || proto === 'mailto:') shell.openExternal(navUrl);
+    if (proto === 'https:' || proto === 'http:' || proto === 'mailto:') openExternalSafe(navUrl);
   });
 
   wc.on('will-frame-navigate', (event) => {
+    if (event.isMainFrame) return; // Hauptframe entscheidet will-navigate
     const navUrl = event.url;
-    if (!isAllowedDomain(navUrl) && !isOAuthDomain(navUrl) && !looksLikeOAuthUrl(navUrl)) event.preventDefault();
+    // Subframes enger: ein blosses looksLikeOAuthUrl reicht fuer ein eingebettetes
+    // iframe nicht, nur zulassen wenn die Top-Level-Seite selbst claude.ai ist.
+    if (isAllowedDomain(navUrl) || isOAuthDomain(navUrl) || (isAllowedDomain(wc.getURL()) && looksLikeOAuthUrl(navUrl))) return;
+    event.preventDefault();
   });
 
   // Tab-Titel
@@ -1703,6 +1812,12 @@ const resizeActiveView = throttle(() => {
   lastViewBounds = key;
   tabs[activeTabIndex].view.setBounds({ x: 0, y: topInset, width: b.width, height: Math.max(0, b.height - topInset) });
 }, 16);
+
+// Nach einem Resize-Burst (Tiling/Half-Screen) ein letztes autoritatives Relayout.
+// Auf X11 bleibt die WebContentsView nach dem Tiling sonst mit veralteten Bounds
+// haengen: Inhalt nach oben-rechts verschoben, Fensterrest grau. Cache leeren
+// erzwingt die Neuanwendung mit der dann finalen getContentBounds().
+const settleActiveView = debounce(() => { lastViewBounds = ''; resizeActiveView(); }, 200);
 
 function switchToTab(index) {
   if (index < 0 || index >= tabs.length || !mainWindow || mainWindow.isDestroyed()) return;
@@ -2572,12 +2687,12 @@ function openClipboardChat() {
     // auf direktes Einfuegen statt der irrefuehrenden "leer"-Meldung.
     let hasImage = false;
     try { hasImage = !clipboard.readImage().isEmpty(); } catch {}
-    new Notification({
+    notify({
       title: 'Claude',
       body: hasImage
         ? t('Bild in der Zwischenablage. Bitte direkt im Chat mit Strg+V einfügen.', 'Image in clipboard. Paste it directly in the chat with Ctrl+V.', 'Image dans le presse-papiers. Collez-la directement dans le chat avec Ctrl+V.', 'Immagine negli appunti. Incollala direttamente nella chat con Ctrl+V.')
         : t('Zwischenablage ist leer.', 'Clipboard is empty.', 'Le presse-papiers est vide.', 'Gli appunti sono vuoti.')
-    }).show();
+    });
     return;
   }
   if (text.length > 8000) text = text.slice(0, 8000);
@@ -2716,10 +2831,10 @@ async function exportActiveConversation() {
       });
       return;
     }
-    new Notification({
+    notify({
       title: t('Konversation exportiert', 'Conversation exported', 'Conversation exportée', 'Conversazione esportata'),
       body: path.basename(result.filePath)
-    }).show();
+    });
   });
 }
 
@@ -3774,14 +3889,7 @@ function updateMenu(force = false) {
         { label: t('App-Einstellungen\u2026', 'App Settings\u2026', 'Paramètres de l’application…', 'Impostazioni dell’app…'), click: () => openSettingsWindow() },
         { type: 'separator' },
         { label: `Design: ${customDesign ? 'Modern' : 'Classic'}`, click: toggleDesign },
-        { label: t('Nach Updates suchen\u2026', 'Check for Updates\u2026', 'Rechercher des mises à jour…', 'Controlla aggiornamenti…'), click: () => {
-          if (isDev) {
-            showCustomMessageBox({ type: 'info', title: 'Claude', message: t('Updates sind im Entwicklungsmodus deaktiviert.', 'Updates are disabled in development mode.', 'Les mises à jour sont désactivées en mode développement.', 'Gli aggiornamenti sono disattivati in modalità sviluppo.') });
-            return;
-          }
-          manualUpdateCheck = true;
-          autoUpdater.checkForUpdates().catch(() => {});
-        }},
+        { label: t('Nach Updates suchen\u2026', 'Check for Updates\u2026', 'Rechercher des mises à jour…', 'Controlla aggiornamenti…'), click: () => triggerManualUpdateCheck() },
         { label: (bugReportStrings[sysLang] || bugReportStrings.en).title, click: showBugReportDialog },
         { type: 'separator' },
         { role: 'quit', label: t('Beenden', 'Quit', 'Quitter', 'Esci') }
@@ -3830,11 +3938,11 @@ function handleOnlineChange(online) {
   updateTitle();
   if (!online) {
     showOfflinePage();
-    new Notification({ title: 'Claude', body: t('Keine Internetverbindung.', 'No internet connection.', 'Pas de connexion Internet.', 'Nessuna connessione a Internet.') }).show();
+    notify({ title: 'Claude', body: t('Keine Internetverbindung.', 'No internet connection.', 'Pas de connexion Internet.', 'Nessuna connessione a Internet.') });
   } else {
     if (tabs[activeTabIndex] && alive(tabs[activeTabIndex].view))
       tabs[activeTabIndex].view.webContents.reload();
-    new Notification({ title: 'Claude', body: t('Verbindung wiederhergestellt!', 'Connection restored!', 'Connexion rétablie !', 'Connessione ripristinata!') }).show();
+    notify({ title: 'Claude', body: t('Verbindung wiederhergestellt!', 'Connection restored!', 'Connexion rétablie !', 'Connessione ripristinata!') });
   }
 }
 
@@ -3924,16 +4032,16 @@ function setupDownloadManager() {
         try { fs.renameSync(tmpPath, chosenPath); ok = true; }
         catch (_) {
           try { fs.copyFileSync(tmpPath, chosenPath); fs.unlinkSync(tmpPath); ok = true; }
-          catch (e2) { console.error(`[DL] move failed: ${e2.message}`); }
+          catch (e2) { console.error(`[DL] move failed: ${e2.message}`); try { fs.unlinkSync(tmpPath); } catch {} }
         }
-        new Notification({
+        notify({
           title: ok ? t('Download fertig', 'Download complete', 'Téléchargement terminé', 'Download completato') : t('Download fehlgeschlagen', 'Download failed', 'Échec du téléchargement', 'Download non riuscito'),
           body: fileName
-        }).show();
+        });
       } else {
         try { fs.unlinkSync(tmpPath); } catch {}
         if (!cancelledByDialog && downloadState !== 'cancelled' && downloadState !== '') {
-          new Notification({ title: t('Download fehlgeschlagen', 'Download failed', 'Échec du téléchargement', 'Download non riuscito'), body: fileName }).show();
+          notify({ title: t('Download fehlgeschlagen', 'Download failed', 'Échec du téléchargement', 'Download non riuscito'), body: fileName });
         }
       }
       keys.forEach(dropKey);
@@ -3984,8 +4092,25 @@ autoUpdater.autoDownload = true;
 autoUpdater.autoInstallOnAppQuit = true;
 let manualUpdateCheck = false;
 
+// Manuelle "Nach Updates suchen"-Aktion. Im Snap laeuft der electron-updater nicht
+// (setupAutoUpdater bricht ab, kein Handler registriert), darum hier eigene Rueckmeldung
+// statt eines stummen checkForUpdates() ohne sichtbares Ergebnis.
+function triggerManualUpdateCheck() {
+  if (isDev) {
+    showCustomMessageBox({ type: 'info', title: 'Claude', message: t('Updates sind im Entwicklungsmodus deaktiviert.', 'Updates are disabled in development mode.', 'Les mises à jour sont désactivées en mode développement.', 'Gli aggiornamenti sono disattivati in modalità sviluppo.') });
+    return;
+  }
+  if (isSnap) {
+    showCustomMessageBox({ type: 'info', title: 'Claude', message: t('Updates werden über den Snap Store verwaltet und automatisch installiert.', 'Updates are managed by the Snap Store and installed automatically.', 'Les mises à jour sont gérées par le Snap Store et installées automatiquement.', 'Gli aggiornamenti sono gestiti dallo Snap Store e installati automaticamente.') });
+    return;
+  }
+  manualUpdateCheck = true;
+  autoUpdater.checkForUpdates().catch(() => {});
+}
+
 function setupAutoUpdater() {
   if (isDev) return;
+  if (isSnap) return; // Snap aktualisiert sich ueber den Store; der AppImage-Updater laeuft hier ins Leere
   let failures = 0;
 
   const dialogParent = () => (mainWindow && !mainWindow.isDestroyed()) ? mainWindow : null;
@@ -4058,7 +4183,7 @@ const SNAP_CONNECT_CMD = 'sudo snap connect claude-ai-desktop:audio-record';
 // Umgeht den xdg-open-Chooser-Dialog auf Systemen mit mehreren snap://-Handlern.
 function openSnapStorePage() {
   if (!isSnap) {
-    try { shell.openExternal('snap://claude-ai-desktop'); } catch {}
+    openExternalSafe('snap://claude-ai-desktop');
     return;
   }
   const { execFile, spawn } = require('child_process');
@@ -4069,7 +4194,7 @@ function openSnapStorePage() {
   ];
   const tryNext = (i) => {
     if (i >= candidates.length) {
-      try { shell.openExternal('snap://claude-ai-desktop'); } catch {}
+      openExternalSafe('snap://claude-ai-desktop');
       return;
     }
     const c = candidates[i];
@@ -4766,7 +4891,7 @@ ipcMain.on('notification-link', (_, payload) => {
   if (!payload || typeof payload !== 'object') return;
   const url = typeof payload.url === 'string' ? payload.url : '';
   if (!/^https:\/\//i.test(url)) return;
-  try { shell.openExternal(url); } catch {}
+  openExternalSafe(url);
 });
 ipcMain.on('notifications-request', () => pushNotificationsToTabBar());
 
@@ -4854,7 +4979,7 @@ ipcMain.on('about-open-whatsnew', () => {
   openWhatsNewWindow(true);
 });
 ipcMain.on('about-open-external', (_event, url) => {
-  if (typeof url === 'string' && /^https:\/\//i.test(url)) shell.openExternal(url);
+  if (typeof url === 'string' && /^https:\/\//i.test(url)) openExternalSafe(url);
 });
 
 function sendWindowState() {
@@ -4902,12 +5027,7 @@ ipcMain.on('appmenu-action', (event, name) => {
     case 'design-toggle': toggleDesign(); break;
     case 'settings': openSettingsWindow(); break;
     case 'check-updates':
-      if (isDev) {
-        showCustomMessageBox({ type: 'info', title: 'Claude', message: t('Updates sind im Entwicklungsmodus deaktiviert.', 'Updates are disabled in development mode.', 'Les mises à jour sont désactivées en mode développement.', 'Gli aggiornamenti sono disattivati in modalità sviluppo.') });
-      } else {
-        manualUpdateCheck = true;
-        autoUpdater.checkForUpdates().catch(() => {});
-      }
+      triggerManualUpdateCheck();
       break;
     case 'bug-report': showBugReportDialog(); break;
     case 'copy-diagnostics': copyDiagnosticsInfo(); break;
@@ -4979,7 +5099,7 @@ function createWindow() {
     }
   }, 3000);
 
-  mainWindow.on('resize', () => { saveWindowState(); resizeActiveView(); });
+  mainWindow.on('resize', () => { saveWindowState(); resizeActiveView(); settleActiveView(); });
   mainWindow.on('move', saveWindowState);
   mainWindow.on('maximize', () => { saveWindowState(); lastViewBounds = ''; resizeActiveView(); sendWindowState(); });
   mainWindow.on('unmaximize', () => { saveWindowState(); lastViewBounds = ''; resizeActiveView(); sendWindowState(); });
@@ -5034,7 +5154,7 @@ app.on('web-contents-created', (_, wc) => {
 });
 
 ipcMain.on('bug-report-open-support', () => {
-  try { shell.openExternal('https://support.anthropic.com'); } catch {}
+  openExternalSafe('https://support.anthropic.com');
 });
 
 // Web3Forms erkennt Origin: null (unser data:-URL-Renderer) als "server-side"

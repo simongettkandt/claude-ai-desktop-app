@@ -14,7 +14,7 @@ sudo snap install claude-ai-desktop
 
 [![claude-ai-desktop](https://snapcraft.io/claude-ai-desktop/badge.svg)](https://snapcraft.io/claude-ai-desktop)
 
-> **v1.4.5** - Alt+Tab focus fix. Returning to the window with Alt+Tab put the keyboard focus on the Minimize button, so the first keystroke minimized the window instead of typing; focus now goes straight back to the chat.
+> **v1.4.6** - Crash & split-screen fixes. A stray "A JavaScript error occurred" dialog from the Snap background update check is gone, and tiling the window to half the screen no longer leaves the page shifted up with a gray strip at the bottom.
 
 ---
 
@@ -176,6 +176,13 @@ The `--no-sandbox` flag is required for Electron AppImages on Linux because the 
 ---
 
 ## Changelog
+
+### v1.4.6 - Crash & Split-Screen Fixes (2026-06-23)
+
+- **No more stray "A JavaScript error occurred in the main process" dialog.** On Snap, `electron-updater`'s periodic update check logs via `console.info`, and writing to the closed stdout/stderr pipe threw `EPIPE`; with no handler, Electron showed its crash dialog on every check. stdout/stderr now swallow `EPIPE`, and the in-app updater no longer runs on Snap (it can't update a read-only Snap; the Store handles updates). Snap-only.
+- **Split-screen / tiling display fix.** Tiling the window to half the screen could leave the `WebContentsView` with stale bounds on X11: the page shifted up, a gray strip of bare window at the bottom. A debounced settle pass after the resize burst re-applies the final `getContentBounds()`, so the page re-fits the settled window size.
+- **Hardened other crash vectors.** `shell.openExternal` rejections (portal/xdg-open unavailable under Snap) and `Notification` throws under strict confinement are caught instead of crashing the main process, with an `unhandledRejection` logger as a last line. The manual "Check for Updates" action now reports that updates come from the Snap Store instead of doing nothing.
+- **Connector sign-in robustness.** OAuth popups that open a nested window (e.g. Microsoft) stay in-app on the claude.ai session; embedded subframes can no longer follow an arbitrary OAuth-shaped URL unless the top-level page is claude.ai, and a sign-in on a provider is bounded to that provider's own domain.
 
 ### v1.4.5 - Alt+Tab Focus Fix (2026-06-17)
 
