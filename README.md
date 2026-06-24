@@ -14,7 +14,7 @@ sudo snap install claude-ai-desktop
 
 [![claude-ai-desktop](https://snapcraft.io/claude-ai-desktop/badge.svg)](https://snapcraft.io/claude-ai-desktop)
 
-> **v1.4.6** - Crash & split-screen fixes. A stray "A JavaScript error occurred" dialog from the Snap background update check is gone, and tiling the window to half the screen no longer leaves the page shifted up with a gray strip at the bottom.
+> **v1.4.7** - OLED polish and a new window frame. OLED mode reads clearer (hairline separators on menus and the sidebar, a calmer focus ring, the settings content pane no longer a gray block), the window and dialogs get a subtle theme-aware frame, and the close button matches the design accent.
 
 ---
 
@@ -176,6 +176,12 @@ The `--no-sandbox` flag is required for Electron AppImages on Linux because the 
 ---
 
 ## Changelog
+
+### v1.4.7 - OLED Polish & Window Frame (2026-06-24)
+
+- **Clearer OLED mode.** Dark surfaces sitting under 1.2:1 contrast blurred together; menus, dialogs and popovers now get a 1px border plus shadow, the sidebar a separating `border-right`, and claude.ai's newer `bg-surface-*` tokens are mapped to the OLED palette, so the settings content pane is dark instead of a light gray block.
+- **Subtle window frame.** A 1px soft-depth frame (lighter at the top, darker toward the bottom, theme-aware) wraps the main window and the dialogs. It is the tab bar's border showing through a 1px inset left around the embedded `WebContentsView`, no transparency involved.
+- **Polish fixes.** The focus ring is back to a thin, subtle ring (the 2px opaque version looked like an error on the settings search field), the background stars are hidden while a modal is open, the composer no longer shows a focus stripe while typing, and the close button uses the design accent (Modern orange-to-pink / Classic terracotta) instead of a fixed red.
 
 ### v1.4.6 - Crash & Split-Screen Fixes (2026-06-23)
 

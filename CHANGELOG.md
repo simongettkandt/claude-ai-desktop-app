@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.4.7] - 2026-06-24 - OLED Polish & Window Frame
+
+### Added
+- **Subtle window frame.** A 1px frame now wraps the main window and the dialogs (settings, about, what's new, bug report). It is the tab bar's `border-image` showing through a 1px inset left around the embedded `WebContentsView`, so no transparency is involved. The gradient runs lighter at the top to darker at the bottom (soft-depth) and the color follows the theme (`frameHi`/`frameLo` per mode).
+
+### Changed
+- **OLED separation via hairlines instead of near-black surfaces.** In OLED mode the surface tones (`#050306` / `#120f12` / `#1a1517`) sit under 1.2:1 contrast and blur together on the panel. Menus, dialogs and popovers now get a warm 1px border plus a drop shadow, the sidebar gets a `border-right` against the same-black chat area, and claude.ai's newer `bg-surface-*` tokens are mapped to the OLED palette (previously only `bg-bg-*` was), so the settings content pane is no longer a light gray block next to the black sidebar.
+- **Close button follows the design accent.** The `#win-close` hover was a fixed red (`#e05e3e`); it now uses the same accent gradient as the new-tab button, matching Modern (orange to pink) or Classic (terracotta).
+
+### Fixed
+- **Focus ring no longer reads as an error.** The OLED focus outline had been bumped to a 2px fully-opaque accent ring, which looked like a validation error on the settings search field. It is back to a thin, semi-transparent ring with an offset.
+- **Background stars no longer shimmer through modals.** The OLED sparkle background showed through the dimmed backdrop behind dialogs. It is now hidden while any `[role="dialog"]` / `[aria-modal="true"]` is open.
+- **Composer no longer shows a focus stripe while typing.** The same focus ring also hit the `contenteditable` composer; `contenteditable` and `[role="textbox"]` are now excluded, so typing stays clean.
+
+---
+
 ## [1.4.6] - 2026-06-23 - Crash & Split-Screen Fixes
 
 ### Fixed

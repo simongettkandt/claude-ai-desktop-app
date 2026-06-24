@@ -56,6 +56,7 @@ const isWayland = process.platform === 'linux'
   && (process.env.XDG_SESSION_TYPE === 'wayland' || !!process.env.WAYLAND_DISPLAY);
 
 const TAB_BAR_HEIGHT = 40;
+const WINDOW_BORDER = 1; // dezenter Fensterrahmen: 1px der Tab-Bar-Border scheint im View-Inset durch
 const POOL_SIZE = 2;
 const MAX_CRASH_RELOADS = 3;
 const ONLINE_CHECK_MS = 60_000;
@@ -433,6 +434,38 @@ const RELEASE_NOTES_REVISIT = {
 };
 
 const RELEASE_NOTES = {
+  '1.4.7': [
+    {
+      icon: 'bolt',
+      title: {
+        de: 'OLED-Modus aufpoliert',
+        en: 'OLED mode polished',
+        fr: 'Mode OLED peaufiné',
+        it: 'Modalità OLED rifinita'
+      },
+      text: {
+        de: 'Im OLED-Modus waren dunkle Flächen kaum voneinander zu unterscheiden. Menüs, Karten und Dialoge haben jetzt feine Trennlinien, die Seitenleiste ist klar vom Chat abgegrenzt, und der Fokusrahmen um Eingabefelder ist dezenter. Neu ist ein zurückhaltender Rahmen um das Fenster und die Dialoge, oben etwas heller und nach unten dunkler werdend, der sich dem Theme anpasst. Der Schließen-Button übernimmt jetzt die Akzentfarbe des gewählten Designs.',
+        en: 'In OLED mode, dark areas were hard to tell apart. Menus, cards and dialogs now have thin separator lines, the sidebar is clearly set off from the chat, and the focus ring around input fields is more subtle. There is also a restrained frame around the window and dialogs, a little lighter at the top and darker toward the bottom, that adapts to the theme. The close button now takes on the accent color of the selected design.',
+        fr: 'En mode OLED, les zones sombres étaient difficiles à distinguer. Les menus, cartes et boîtes de dialogue ont désormais de fines lignes de séparation, la barre latérale se détache nettement du chat, et le contour de focus autour des champs de saisie est plus discret. Un cadre sobre entoure également la fenêtre et les boîtes de dialogue, un peu plus clair en haut et plus sombre vers le bas, et s’adapte au thème. Le bouton de fermeture reprend maintenant la couleur d’accent du design choisi.',
+        it: 'In modalità OLED le aree scure erano difficili da distinguere. Menu, schede e finestre di dialogo ora hanno sottili linee di separazione, la barra laterale si stacca nettamente dalla chat e il contorno di focus attorno ai campi di immissione è più discreto. È stata aggiunta anche una cornice sobria attorno alla finestra e alle finestre di dialogo, un po’ più chiara in alto e più scura verso il basso, che si adatta al tema. Il pulsante di chiusura ora assume il colore d’accento del design scelto.'
+      }
+    },
+    {
+      icon: 'settings',
+      title: {
+        de: 'Einstellungsfenster im Dunkelmodus',
+        en: 'Settings window in dark mode',
+        fr: 'Fenêtre des paramètres en mode sombre',
+        it: 'Finestra delle impostazioni in modalità scura'
+      },
+      text: {
+        de: 'Im OLED-Modus war im Einstellungsfenster eine helle graue Fläche neben der dunklen Seitenleiste zu sehen, und die Sterne des Hintergrunds schimmerten durch. Die Fläche ist jetzt durchgehend dunkel, die Sterne werden ausgeblendet, solange ein Fenster im Vordergrund liegt, und das Suchfeld wirkt ruhiger.',
+        en: 'In OLED mode the settings window showed a light gray area next to the dark sidebar, and the background stars shimmered through. The area is now uniformly dark, the stars are hidden while a dialog is open, and the search field looks calmer.',
+        fr: 'En mode OLED, la fenêtre des paramètres affichait une zone gris clair à côté de la barre latérale sombre, et les étoiles de l’arrière-plan transparaissaient. La zone est désormais uniformément sombre, les étoiles sont masquées tant qu’une boîte de dialogue est ouverte, et le champ de recherche paraît plus calme.',
+        it: 'In modalità OLED la finestra delle impostazioni mostrava un’area grigio chiaro accanto alla barra laterale scura e le stelle dello sfondo trasparivano. Ora l’area è uniformemente scura, le stelle vengono nascoste finché una finestra di dialogo è aperta e il campo di ricerca appare più tranquillo.'
+      }
+    }
+  ],
   '1.4.6': [
     {
       icon: 'shield',
@@ -1214,9 +1247,9 @@ function looksLikeOAuthUrl(url) {
 // Theme & Design
 
 const THEME = {
-  dark:  { bg: '#262624', bgHover: '#333330', bgActive: '#3a3a37', text: '#9a9a96', textActive: '#e8e8e4', border: '#333330' },
-  light: { bg: '#f5f2ef', bgHover: '#ede9e4', bgActive: '#faf8f6', text: '#8a7e72', textActive: '#2a2420', border: '#e8e4de' },
-  oled:  { bg: '#050306', bgHover: '#121013', bgActive: '#1c181b', text: '#9a948f', textActive: '#e8e8e4', border: '#1a1719' }
+  dark:  { bg: '#262624', bgHover: '#333330', bgActive: '#3a3a37', text: '#9a9a96', textActive: '#e8e8e4', border: '#333330', frameHi: '#423d38', frameLo: '#2a2622' },
+  light: { bg: '#f5f2ef', bgHover: '#ede9e4', bgActive: '#faf8f6', text: '#8a7e72', textActive: '#2a2420', border: '#e8e4de', frameHi: '#ddd6cc', frameLo: '#c8c1b6' },
+  oled:  { bg: '#050306', bgHover: '#121013', bgActive: '#1c181b', text: '#9a948f', textActive: '#e8e8e4', border: '#1a1719', frameHi: '#2c2429', frameLo: '#0c090b' }
 };
 
 const ACCENT = {
@@ -1282,12 +1315,14 @@ function getTabBarHTML() {
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:;">
 <style>
 :root{--bg:${th.bg};--bgh:${th.bgHover};--bga:${th.bgActive};--t:${th.text};--ta:${th.textActive};--bd:${th.border};
-  --ac-from:${a.from};--ac-to:${a.to}}
+  --frame-hi:${th.frameHi};--frame-lo:${th.frameLo};--ac-from:${a.from};--ac-to:${a.to}}
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{height:100%}
 body{background:var(--bg);font:500 12px/1 -apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
   color:var(--t);overflow:hidden;user-select:none;
-  display:flex;flex-direction:column;contain:layout style}
+  display:flex;flex-direction:column;contain:layout style;
+  border:${WINDOW_BORDER}px solid var(--frame-lo);
+  border-image:linear-gradient(180deg,var(--frame-hi),var(--frame-lo)) 1}
 #notif-bar{display:flex;flex-direction:column;flex-shrink:0;-webkit-app-region:no-drag}
 #notif-bar:empty{display:none}
 .notif{display:flex;align-items:center;gap:14px;min-height:${NOTIFICATION_BANNER_HEIGHT}px;padding:10px 14px 10px 0;font-family:inherit;line-height:1.35;color:var(--ta);border-bottom:1px solid var(--bd);background:var(--bgh);position:relative}
@@ -1302,12 +1337,12 @@ body{background:var(--bg);font:500 12px/1 -apple-system,BlinkMacSystemFont,'Sego
 .notif-text{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;overflow:hidden}
 .notif-text strong{font-weight:600;color:var(--ta);font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .notif-text span{color:var(--t);font-weight:400;font-size:12.5px;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.notif-link{flex:0 0 auto;background:var(--ac-from);color:#fff;border:none;border-radius:6px;padding:7px 14px;font-size:12.5px;font-family:inherit;font-weight:600;cursor:pointer;white-space:nowrap;transition:filter .12s ease}
+.notif-link{flex:0 0 auto;background:var(--ac-from);color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12.5px;font-family:inherit;font-weight:600;cursor:pointer;white-space:nowrap;transition:filter .12s ease}
 .notif[data-sev="warn"] .notif-link{background:#e0a93e;color:#1c1208}
 .notif[data-sev="critical"] .notif-link{background:#e05e3e;color:#fff}
 .notif[data-sev="success"] .notif-link{background:#3fb96e;color:#0e1d14}
 .notif-link:hover{filter:brightness(1.08)}
-.notif-x{flex:0 0 auto;width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t);font-size:18px;line-height:1;border:none;background:transparent;font-family:inherit;transition:background .12s ease}
+.notif-x{flex:0 0 auto;width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t);font-size:18px;line-height:1;border:none;background:transparent;font-family:inherit;transition:background .12s ease}
 .notif-x:hover{background:var(--bga);color:var(--ta)}
 #tab-row{display:flex;align-items:flex-end;height:${TAB_BAR_HEIGHT}px;flex:0 0 ${TAB_BAR_HEIGHT}px;-webkit-app-region:drag}
 .menu-btn{-webkit-app-region:no-drag;width:30px;height:30px;display:flex;align-items:center;justify-content:center;
@@ -1319,18 +1354,18 @@ body{background:var(--bg);font:500 12px/1 -apple-system,BlinkMacSystemFont,'Sego
 #tabs{display:flex;align-items:flex-end;height:100%;flex:1;padding:0 4px;gap:2px;
   overflow-x:auto;min-width:0}
 #tabs::-webkit-scrollbar{height:0}
-.tab{display:flex;align-items:center;height:34px;padding:0 14px;border-radius:10px 10px 0 0;
+.tab{display:flex;align-items:center;height:34px;padding:0 14px;border-radius:11px 11px 0 0;
   cursor:pointer;white-space:nowrap;max-width:220px;min-width:60px;gap:8px;
   position:relative;color:var(--t);transition:background .15s,color .15s;contain:layout style;
   -webkit-app-region:no-drag}
 .tab:hover{background:linear-gradient(180deg,transparent,var(--bgh));color:var(--ta)}
 .tab.active{background:var(--bga);color:var(--ta);
-  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--ac-from) 18%,transparent)}
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--ac-from) 28%,transparent)}
 .tab.active::after{content:'';position:absolute;bottom:0;left:10px;right:10px;height:2.5px;
   background:linear-gradient(90deg,var(--ac-from),var(--ac-to));border-radius:2px 2px 0 0;
   box-shadow:0 0 8px color-mix(in srgb,var(--ac-from) 45%,transparent)}
 .tab-title{flex:1;overflow:hidden;text-overflow:ellipsis}
-.tab-close{width:18px;height:18px;border-radius:6px;display:flex;align-items:center;justify-content:center;
+.tab-close{width:18px;height:18px;border-radius:8px;display:flex;align-items:center;justify-content:center;
   font-size:15px;line-height:1;opacity:0;flex-shrink:0;transition:opacity .1s,background .1s}
 .tab:hover .tab-close{opacity:.5}
 .tab-close:hover{opacity:1!important;background:linear-gradient(135deg,var(--ac-from),var(--ac-to));color:#fff}
@@ -1355,7 +1390,7 @@ body{background:var(--bg);font:500 12px/1 -apple-system,BlinkMacSystemFont,'Sego
   transition:background .12s,color .12s;opacity:.78;font-family:inherit;padding:0}
 .win-btn:hover{background:var(--bgh);opacity:1}
 .win-btn svg{width:11px;height:11px;display:block}
-#win-close:hover{background:#e05e3e;color:#fff}
+#win-close:hover{background:linear-gradient(135deg,var(--ac-from),var(--ac-to));color:#fff}
 </style></head><body>
 <div id="notif-bar"></div>
 <div id="tab-row">
@@ -1442,10 +1477,11 @@ window.tabAPI.onTabsUpdate(data=>{
   }
 });
 
+// v[6]=frameHi, v[7]=frameLo muessen mit dem THEME-Objekt oben synchron bleiben.
 const THEME_VARS={
-  light:['#f5f2ef','#ede9e4','#faf8f6','#8a7e72','#2a2420','#e8e4de'],
-  dark: ['#262624','#333330','#3a3a37','#9a9a96','#e8e8e4','#333330'],
-  oled: ['#050306','#121013','#1c181b','#9a948f','#e8e8e4','#1a1719']
+  light:['#f5f2ef','#ede9e4','#faf8f6','#8a7e72','#2a2420','#e8e4de','#ddd6cc','#c8c1b6'],
+  dark: ['#262624','#333330','#3a3a37','#9a9a96','#e8e8e4','#333330','#423d38','#2a2622'],
+  oled: ['#050306','#121013','#1c181b','#9a948f','#e8e8e4','#1a1719','#2c2429','#0c090b']
 };
 window.tabAPI.onThemeUpdate(mode=>{
   const m=(mode==='light'||mode==='oled')?mode:'dark';
@@ -1453,6 +1489,7 @@ window.tabAPI.onThemeUpdate(mode=>{
   const r=document.documentElement.style;
   r.setProperty('--bg',v[0]);r.setProperty('--bgh',v[1]);r.setProperty('--bga',v[2]);
   r.setProperty('--t',v[3]);r.setProperty('--ta',v[4]);r.setProperty('--bd',v[5]);
+  r.setProperty('--frame-hi',v[6]);r.setProperty('--frame-lo',v[7]);
   document.body.style.background='';
   document.getElementById('theme-icon-dark').style.display=m==='dark'?'':'none';
   document.getElementById('theme-icon-light').style.display=m==='light'?'':'none';
@@ -1806,11 +1843,12 @@ const resizeActiveView = throttle(() => {
   if (!mainWindow || mainWindow.isDestroyed() || !tabs[activeTabIndex]) return;
   const b = mainWindow.getContentBounds();
   const nh = getNotificationBarHeight();
-  const topInset = TAB_BAR_HEIGHT + nh;
+  const bw = WINDOW_BORDER;
+  const topInset = TAB_BAR_HEIGHT + nh + bw;
   const key = `${b.width}:${b.height}:${nh}`;
   if (key === lastViewBounds) return;
   lastViewBounds = key;
-  tabs[activeTabIndex].view.setBounds({ x: 0, y: topInset, width: b.width, height: Math.max(0, b.height - topInset) });
+  tabs[activeTabIndex].view.setBounds({ x: bw, y: topInset, width: Math.max(0, b.width - 2 * bw), height: Math.max(0, b.height - topInset - bw) });
 }, 16);
 
 // Nach einem Resize-Burst (Tiling/Half-Screen) ein letztes autoritatives Relayout.
@@ -2547,7 +2585,10 @@ function submitQuickPrompt(text) {
 function customTitlebarCSS() {
   const th = subTheme();
   // Sub-Fenster nutzen pro Theme nur ihre flache Theme-Farbe (kein Brand-Glow mehr).
+  // Soft-Depth-Fensterrahmen (oben heller, unten dunkler) gleich wie Hauptfenster, gemeinsam fuer
+  // alle Dialoge die diese Titlebar einbinden (Bug-Report/Settings/What's-New/About).
   return `
+body{border:${WINDOW_BORDER}px solid ${th.frameLo};border-image:linear-gradient(180deg,${th.frameHi},${th.frameLo}) ${WINDOW_BORDER}}
 .cd-titlebar{height:36px;-webkit-app-region:drag;display:flex;align-items:center;
   padding:0 0 0 14px;background:transparent;color:${th.textActive};
   font-size:12.5px;flex-shrink:0;user-select:none}

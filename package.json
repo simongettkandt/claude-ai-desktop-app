@@ -1,6 +1,6 @@
 {
   "name": "claude-desktop",
-  "version": "1.4.6",
+  "version": "1.4.7",
   "description": "Claude AI – Native Desktop App für Linux",
   "main": "main.js",
   "license": "MIT",
@@ -13,7 +13,86 @@
     "type": "git",
     "url": "https://github.com/simonlinuxcraft/claude-ai-desktop-app.git"
   },
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --no-sandbox --ozone-platform=x11",
+    "test": "node --test test/",
+    "build": "electron-builder --linux",
+    "build-appimage": "electron-builder --linux AppImage",
+    "build-deb": "electron-builder --linux deb"
+  },
+  "build": {
+    "appId": "com.claude.desktop",
+    "productName": "Claude Desktop",
+    "afterPack": "./scripts/after-pack.js",
+    "publish": {
+      "provider": "github",
+      "owner": "simonlinuxcraft",
+      "repo": "claude-ai-desktop-app"
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "icon": "icon.png",
+      "category": "Utility",
+      "synopsis": "Claude AI Desktop Client",
+      "description": "Eine schnelle, native Desktop-App für Claude AI",
+      "maintainer": "Simon Gettkandt"
+    },
+    "electronLanguages": [
+      "en-US",
+      "de"
+    ],
+    "asar": true,
+    "asarUnpack": [
+      "icon.png",
+      "icon-original.png",
+      "icon-tray.png",
+      "icon-original-tray.png",
+      "icon-beta.png",
+      "icon-original-beta.png",
+      "icon-tray-beta.png",
+      "icon-original-tray-beta.png"
+    ],
+    "files": [
+      "main.js",
+      "preload-tabbar.js",
+      "preload-settings.js",
+      "preload-quickprompt.js",
+      "preload-whatsnew.js",
+      "preload-messagebox.js",
+      "preload-content.js",
+      "preload-appmenu.js",
+      "preload-bugreport.js",
+      "preload-about.js",
+      "inject/**/*",
+      "utils/**/*",
+      "icon.png",
+      "icon-original.png",
+      "icon-tray.png",
+      "icon-original-tray.png",
+      "icon-beta.png",
+      "icon-original-beta.png",
+      "icon-tray-beta.png",
+      "icon-original-tray-beta.png",
+      "package.json",
+      "node_modules/**/*",
+      "!node_modules/*/{test,tests,__tests__,docs,doc,example,examples,benchmark,benchmarks}/**",
+      "!node_modules/**/*.{md,markdown,ts,map,d.ts,coffee,bak,log,h,c,cc,cpp,gyp,gypi,Makefile,mk}",
+      "!node_modules/**/{LICENSE,license,LICENCE,licence,CHANGELOG,changelog,HISTORY,history,AUTHORS,CONTRIBUTORS,NOTICE,README,readme}*",
+      "!node_modules/**/{.github,.idea,.vscode,.nyc_output,.eslintrc*,.prettierrc*,.editorconfig,.travis.yml,.gitignore,.gitattributes,.npmignore,tsconfig*.json,jest.config*,karma.conf*,webpack.config*,rollup.config*,gulpfile*,Gruntfile*}",
+      "!**/*.{md,ts,map,d.ts}"
+    ],
+    "appImage": {
+      "artifactName": "Claude-Desktop-${version}.AppImage"
+    }
+  },
   "dependencies": {
     "electron-updater": "^6.8.9"
+  },
+  "devDependencies": {
+    "electron": "^41.7.1",
+    "electron-builder": "^26.15.2"
   }
 }

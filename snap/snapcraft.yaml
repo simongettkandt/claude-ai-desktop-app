@@ -1,5 +1,5 @@
 name: claude-ai-desktop
-version: '1.4.6'
+version: '1.4.7'
 summary: Unofficial desktop wrapper for Claude AI with tabs, tray and voice input
 description: |
   Unofficial desktop app for Claude AI on Linux. Runs claude.ai without
@@ -8,7 +8,17 @@ description: |
 
   Not affiliated with Anthropic.
 
-  What's new in v1.4.6:
+  What's new in v1.4.7:
+
+  * OLED mode polished - menus, dialogs and the sidebar now have thin
+    separators so dark areas no longer blur together, the settings
+    window's content pane is dark instead of light gray, and a subtle
+    theme-aware frame wraps the window.
+  * Calmer details - the focus ring is back to a thin subtle ring
+    instead of a bold red one, background stars are hidden while a
+    dialog is open, and the close button matches the design accent.
+
+  Highlights from v1.4.6:
 
   * Fewer crash pop-ups - a stray "A JavaScript error occurred in the
     main process" dialog from the background update check no longer

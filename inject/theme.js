@@ -142,6 +142,9 @@
 
   function buildStaticCSS() {
     var BG = '#050306', BG_HI = '#120f12';
+    // OLED: Flaechen liegen alle unter 1.2:1 Kontrast -> auf near-black crush unsichtbar.
+    // Trennung laeuft daher ueber 1px-Hairlines (Kante triggert, nicht Flaechenhelligkeit).
+    var MENU_EDGE = 'rgba(232,82,79,0.12)', HAIR_DIM = 'rgba(255,255,255,0.07)', FOCUS = 'rgba(232,82,79,0.45)';
     var O = 'html[data-cd-theme="oled"][data-cd-surface="dark"]';
     var SPARK = sparkleBg();
 
@@ -152,12 +155,19 @@
       // transparent, scheinen also durch). Composer/Sidebar/Panels haben eigenen opaken
       // Hintergrund und decken die Sterne ab -> Sterne nur in leeren Flaechen sichtbar.
       O + ' body{background-color:' + BG + ' !important;background-image:' + SPARK + ' !important;background-size:620px 620px;background-attachment:fixed}',
+      // Sterne ausblenden solange ein Modal offen ist, sonst schimmern sie unruhig durch den Backdrop.
+      O + ' body:has([role="dialog"]),' + O + ' body:has([aria-modal="true"]){background-image:none !important}',
       O + ' #__next,' + O + ' #root,' + O + ' main,' + O + ' [role="main"]{background-color:transparent !important;background-image:none !important}',
       // undurchsichtige Flaechen decken die Sterne ab
       O + ' nav,' + O + ' aside,' + O + ' header,' + O + ' [class*="sidebar" i],' + O + ' [class*="Sidebar"],' + O + ' [class*="topbar" i],' + O + ' [class*="TopBar"]{background-color:' + BG + ' !important;background-image:none !important}',
+      // Sidebar gegen den gleich-schwarzen Chatbereich abgrenzen (sonst Kante 1.0:1 = unsichtbar).
+      O + ' nav,' + O + ' aside,' + O + ' [class*="sidebar" i],' + O + ' [class*="Sidebar"]{border-right:1px solid ' + HAIR_DIM + ' !important}',
       O + ' [class*="bg-bg-000"],' + O + ' [class*="bg-bg-100"],' + O + ' [class*="bg-bg-200"]{background-color:' + BG + ' !important}',
       O + ' [class*="bg-bg-300"],' + O + ' [class*="bg-bg-400"]{background-color:' + BG_HI + ' !important}',
       O + ' [class*="bg-bg-500"],' + O + ' [class*="bg-bg-600"]{background-color:#1a1517 !important}',
+      // claude.ais neuere surface-Tokens (z.B. Settings-Content bg-surface-2 = grau) ebenfalls schwaerzen.
+      O + ' [class*="bg-surface-0"],' + O + ' [class*="bg-surface-1"]{background-color:' + BG + ' !important}',
+      O + ' [class*="bg-surface-2"],' + O + ' [class*="bg-surface-3"]{background-color:' + BG_HI + ' !important}',
       O + ' [class*="bg-black"],' + O + ' [class*="bg-neutral-9"],' + O + ' [class*="bg-zinc-9"],' + O + ' [class*="bg-gray-9"],' + O + ' [class*="bg-stone-9"],' + O + ' [class*="bg-slate-9"]{background-color:' + BG + ' !important}',
       O + ' [class*="from-bg-"],' + O + ' [class*="to-bg-"],' + O + ' [class*="via-bg-"]{background-image:none !important}',
       O + ' header[class*="bg-"]{background-color:' + BG + ' !important;background-image:none !important}',
@@ -165,10 +175,10 @@
       O + ' nav a,' + O + ' nav button,' + O + ' aside a,' + O + ' aside button,' + O + ' [class*="sidebar" i] a,' + O + ' [class*="sidebar" i] button,' + O + ' [class*="Sidebar"] a,' + O + ' [class*="Sidebar"] button{background-color:transparent !important;border-color:transparent !important;box-shadow:none !important}',
       O + ' nav a:hover,' + O + ' nav button:hover,' + O + ' aside a:hover,' + O + ' aside button:hover,' + O + ' [class*="sidebar" i] a:hover,' + O + ' [class*="sidebar" i] button:hover{background-color:#181417 !important}',
       O + ' nav [aria-current="page"],' + O + ' nav [data-state="active"],' + O + ' nav [aria-selected="true"],' + O + ' aside [aria-current="page"],' + O + ' aside [data-state="active"],' + O + ' aside [aria-selected="true"]{background-color:#1c181b !important}',
-      O + ' [role="menu"],' + O + ' [role="dialog"],' + O + ' [role="listbox"],' + O + ' [role="tooltip"],' + O + ' [class*="opover"],' + O + ' [class*="ropdown"],' + O + ' [class*="enuContent"],' + O + ' [data-radix-popper-content-wrapper]>*{background-color:' + BG_HI + ' !important;background-image:none !important}',
+      O + ' [role="menu"],' + O + ' [role="dialog"],' + O + ' [role="listbox"],' + O + ' [role="tooltip"],' + O + ' [class*="opover"],' + O + ' [class*="ropdown"],' + O + ' [class*="enuContent"],' + O + ' [data-radix-popper-content-wrapper]>*{background-color:' + BG_HI + ' !important;background-image:none !important;border:1px solid ' + MENU_EDGE + ' !important;box-shadow:0 8px 28px rgba(0,0,0,0.6) !important}',
       O + ' [role="menu"] [role="menuitem"],' + O + ' [role="menu"] button,' + O + ' [role="menu"] a,' + O + ' [role="listbox"] [role="option"]{background-color:transparent !important;border-color:transparent !important}',
       O + ' [role="menu"] [role="menuitem"]:hover,' + O + ' [role="menu"] button:hover,' + O + ' [role="menu"] a:hover,' + O + ' [role="listbox"] [role="option"]:hover,' + O + ' [role="menuitem"][data-highlighted]{background-color:#1c181b !important}',
-      O + ' input:focus,' + O + ' textarea:focus,' + O + ' [role="searchbox"]:focus,' + O + ' [role="textbox"]:focus,' + O + ' [contenteditable="true"]:focus,' + O + ' [role="combobox"]:focus{outline-color:rgba(232,82,79,0.45) !important}',
+      O + ' input:focus,' + O + ' textarea:focus,' + O + ' [role="searchbox"]:focus,' + O + ' [role="combobox"]:focus{outline:1.5px solid ' + FOCUS + ' !important;outline-offset:2px !important}',
       // --- OLED: Composer-Gradient-Rand ---
       '@keyframes cdGradShift{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}',
       O + ' .cd-composer{position:relative;border-color:transparent !important;overflow:visible !important;background-color:' + BG + ' !important}',
