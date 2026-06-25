@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Focus ring no longer reads as an error.** The OLED focus outline had been bumped to a 2px fully-opaque accent ring, which looked like a validation error on the settings search field. It is back to a thin, semi-transparent ring with an offset.
 - **Background stars no longer shimmer through modals.** The OLED sparkle background showed through the dimmed backdrop behind dialogs. It is now hidden while any `[role="dialog"]` / `[aria-modal="true"]` is open.
 - **Composer no longer shows a focus stripe while typing.** The same focus ring also hit the `contenteditable` composer; `contenteditable` and `[role="textbox"]` are now excluded, so typing stays clean.
+- **Black window when tiling.** Tiling the window to half the screen could leave it fully black with only the title bar visible. The 1.4.6 split-screen fix only re-applied bounds, which is a no-op on X11 when the geometry is unchanged and the compositor surface is stale. The settle pass now also forces a real 1px size delta (shrink, then restore) to trigger a recomposition.
 
 ---
 

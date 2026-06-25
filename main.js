@@ -464,6 +464,21 @@ const RELEASE_NOTES = {
         fr: 'En mode OLED, la fenêtre des paramètres affichait une zone gris clair à côté de la barre latérale sombre, et les étoiles de l’arrière-plan transparaissaient. La zone est désormais uniformément sombre, les étoiles sont masquées tant qu’une boîte de dialogue est ouverte, et le champ de recherche paraît plus calme.',
         it: 'In modalità OLED la finestra delle impostazioni mostrava un’area grigio chiaro accanto alla barra laterale scura e le stelle dello sfondo trasparivano. Ora l’area è uniformemente scura, le stelle vengono nascoste finché una finestra di dialogo è aperta e il campo di ricerca appare più tranquillo.'
       }
+    },
+    {
+      icon: 'refresh',
+      title: {
+        de: 'Schwarzes Fenster beim geteilten Bildschirm',
+        en: 'Black window when tiling',
+        fr: 'Fenêtre noire en écran partagé',
+        it: 'Finestra nera a schermo diviso'
+      },
+      text: {
+        de: 'Auf einer Bildschirmhälfte (Tiling) konnte das Fenster komplett schwarz bleiben, nur die Titelleiste war sichtbar. Nach dem Ändern der Fenstergröße erzwingt die App jetzt eine Neuzeichnung, sodass der Inhalt zuverlässig wieder erscheint.',
+        en: 'When tiled to half the screen, the window could turn fully black with only the title bar showing. After a resize, the app now forces a redraw so the content reliably comes back.',
+        fr: 'Placée sur une moitié d’écran (tiling), la fenêtre pouvait devenir entièrement noire, seule la barre de titre restant visible. Après un redimensionnement, l’application force désormais un nouveau rendu pour que le contenu réapparaisse de façon fiable.',
+        it: 'Affiancata a metà schermo (tiling), la finestra poteva diventare completamente nera, con solo la barra del titolo visibile. Dopo un ridimensionamento, l’app forza ora un nuovo disegno così che il contenuto riappaia in modo affidabile.'
+      }
     }
   ],
   '1.4.6': [
@@ -1853,9 +1868,22 @@ const resizeActiveView = throttle(() => {
 
 // Nach einem Resize-Burst (Tiling/Half-Screen) ein letztes autoritatives Relayout.
 // Auf X11 bleibt die WebContentsView nach dem Tiling sonst mit veralteten Bounds
-// haengen: Inhalt nach oben-rechts verschoben, Fensterrest grau. Cache leeren
-// erzwingt die Neuanwendung mit der dann finalen getContentBounds().
-const settleActiveView = debounce(() => { lastViewBounds = ''; resizeActiveView(); }, 200);
+// haengen: Inhalt verschoben oder Fensterrest schwarz/grau. Cache leeren + finales
+// Relayout. Wenn das Fenster dieselben Bounds behaelt und nur die Compositor-Surface
+// haengt, ist setBounds mit identischen Werten ein No-op und die Flaeche bleibt
+// schwarz - darum zusaetzlich ein echter 1px-Delta (kurz verkleinern, zuruecksetzen),
+// der eine Neukomposition erzwingt.
+const settleActiveView = debounce(() => {
+  if (!mainWindow || mainWindow.isDestroyed() || !tabs[activeTabIndex] || !alive(tabs[activeTabIndex].view)) return;
+  lastViewBounds = '';
+  resizeActiveView();
+  const view = tabs[activeTabIndex].view;
+  try {
+    const b = view.getBounds();
+    view.setBounds({ x: b.x, y: b.y, width: b.width, height: Math.max(0, b.height - 1) });
+    setImmediate(() => { if (alive(view)) view.setBounds(b); });
+  } catch {}
+}, 200);
 
 function switchToTab(index) {
   if (index < 0 || index >= tabs.length || !mainWindow || mainWindow.isDestroyed()) return;
