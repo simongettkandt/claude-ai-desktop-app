@@ -17,6 +17,8 @@ description: |
   * Calmer details - the focus ring is back to a thin subtle ring
     instead of a bold red one, background stars are hidden while a
     dialog is open, and the close button matches the design accent.
+  * Fixed a black window when tiling the app to half the screen - the
+    content now reliably reappears after the window is resized.
 
   Highlights from v1.4.6:
 
@@ -46,18 +48,6 @@ description: |
   * Custom connectors connect in-app again, file dialogs go through
     xdg-desktop-portal so you can reach files outside your home folder,
     and the app is on Electron 41 with current Chromium security fixes.
-
-  Highlights from v1.4.2:
-
-  * Italian and French interface, following your system language, with
-    an English fallback.
-  * Notifications attribute to the app again on Snap, and a slightly
-    smaller download.
-
-  Highlights from v1.4.0:
-
-  * OLED theme as a third theme and a frameless main window with custom
-    Minimize, Maximize and Close controls.
 
   System requirements:
 
