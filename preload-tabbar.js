@@ -27,6 +27,7 @@ contextBridge.exposeInMainWorld('tabAPI', {
   toggleTheme: () => ipcRenderer.send('theme-toggle'),
   toggleDesign: () => ipcRenderer.send('design-toggle'),
   bugReport: () => ipcRenderer.send('bug-report'),
+  resetVerification: () => ipcRenderer.send('tabbar-reset-verification'),
   exportConversation: () => ipcRenderer.send('export-conversation'),
   openAppMenu: (x, y) => {
     const px = typeof x === 'number' && Number.isFinite(x) ? x : 0;

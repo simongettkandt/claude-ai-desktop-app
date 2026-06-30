@@ -46,7 +46,11 @@ if (!app.requestSingleInstanceLock()) { app.quit(); }
 // Konstanten
 
 const isDev = !app.isPackaged;
-const chromeUA = `Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${process.versions.chrome} Safari/537.36`;
+// Chrome reduziert seit v107 die UA-Version auf <major>.0.0.0 (UA Reduction). Die volle
+// Build-Version (z.B. 146.0.7680.216) im UA sendet KEIN echter Chrome mehr; nacktes Chromium
+// kommt durch die CF-Verifizierung, die App mit voller Version blieb haengen. Volle Version
+// gehoert nur in Sec-Ch-Ua-Full-Version-List, nicht in den UA-String.
+const chromeUA = `Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${process.versions.chrome.split('.')[0]}.0.0.0 Safari/537.36`;
 
 // Wayland erkennen: clientseitige Toplevel-Positionierung wird vom Compositor
 // ignoriert (kein xdg_positioner fuer toplevel). Alle x/y-Constructor-Params und
@@ -434,6 +438,69 @@ const RELEASE_NOTES_REVISIT = {
 };
 
 const RELEASE_NOTES = {
+  '1.4.8': [
+    {
+      icon: 'shield',
+      image: 'whatsnew/cf-verify.png',
+      title: {
+        de: 'Cloudflare-Verifizierung: Browser-Kennung korrigiert',
+        en: 'Cloudflare verification: browser identity fix',
+        fr: 'Vérification Cloudflare : identité du navigateur corrigée',
+        it: 'Verifica Cloudflare: identità del browser corretta'
+      },
+      text: {
+        de: 'Die App meldete der Cloudflare-Sicherheitsprüfung im HTTP-Header eine Browser-Kennung ("Google Chrome"), die die JavaScript-Schnittstelle des eingebauten Browsers gar nicht bestätigt. Ein echter Browser hält beides identisch, die Abweichung war ein Bot-Signal, das die Prüfung in eine Schleife laufen lassen konnte. Header und JavaScript-Kennung stimmen jetzt überein (durchgängig Chromium). Zusätzlich wird der "Do Not Track"-Header nicht mehr gesendet, da ein normales Chrome ihn standardmäßig auch nicht sendet.',
+        en: 'The app told the Cloudflare security check, in the HTTP header, a browser identity ("Google Chrome") that the JavaScript interface of the built-in browser does not confirm. A real browser keeps both identical, so the mismatch was a bot signal that could send the check into a loop. Header and JavaScript identity now match (consistent Chromium). The "Do Not Track" header is also no longer sent, since a normal Chrome does not send it by default either.',
+        fr: 'L’application indiquait à la vérification de sécurité Cloudflare, dans l’en-tête HTTP, une identité de navigateur (« Google Chrome ») que l’interface JavaScript du navigateur intégré ne confirme pas. Un vrai navigateur garde les deux identiques, cet écart était un signal de bot qui pouvait faire tourner la vérification en boucle. L’en-tête et l’identité JavaScript correspondent désormais (Chromium cohérent). L’en-tête « Do Not Track » n’est plus envoyé non plus, car un Chrome normal ne l’envoie pas par défaut.',
+        it: 'L’app comunicava al controllo di sicurezza di Cloudflare, nell’header HTTP, un’identità del browser ("Google Chrome") che l’interfaccia JavaScript del browser integrato non conferma. Un browser reale le mantiene identiche, quindi questa differenza era un segnale da bot che poteva mandare il controllo in un ciclo. Ora header e identità JavaScript coincidono (Chromium coerente). Inoltre l’header "Do Not Track" non viene più inviato, poiché nemmeno un normale Chrome lo invia per impostazione predefinita.'
+      }
+    },
+    {
+      icon: 'refresh',
+      title: {
+        de: 'Bessere Hilfe bei hängender Verifizierung',
+        en: 'Better help when verification gets stuck',
+        fr: 'Meilleure aide en cas de vérification bloquée',
+        it: 'Aiuto migliore quando la verifica si blocca'
+      },
+      text: {
+        de: 'Bleibt die Cloudflare-Sicherheitsprüfung in einer Schleife hängen, erklärt der Hinweis auf der Seite jetzt genauer, was hilft: Zurücksetzen leert nur Cookies und Cache und behebt nur eine veraltete Cookie-Schleife. Hängt die Prüfung weiter, liegt es an der Netzwerk-Adresse: ein aktives VPN ist oft die Ursache (für claude.ai ausschalten), sonst hilft ein anderes Netzwerk. So landet man nicht mehr beim wirkungslosen wiederholten Zurücksetzen.',
+        en: 'When the Cloudflare security check is stuck in a loop, the on-page notice now explains more precisely what helps: Reset only clears cookies and cache and only fixes a stale-cookie loop. If the check keeps looping, it is your network address: an active VPN is often the cause (turn it off for claude.ai), otherwise a different network helps. No more dead-end repeated resetting.',
+        fr: 'Lorsque la vérification de sécurité Cloudflare tourne en boucle, le message sur la page explique désormais plus précisément ce qui aide : la réinitialisation efface seulement les cookies et le cache et ne corrige qu’une boucle due à un cookie obsolète. Si la vérification continue de boucler, cela vient de votre adresse réseau : un VPN actif en est souvent la cause (désactivez-le pour claude.ai), sinon un autre réseau aide. Fini la réinitialisation répétée et sans effet.',
+        it: 'Quando il controllo di sicurezza di Cloudflare resta bloccato in un ciclo, l’avviso sulla pagina ora spiega più precisamente cosa aiuta: la reimpostazione cancella solo cookie e cache e risolve soltanto un ciclo dovuto a un cookie obsoleto. Se il controllo continua a ripetersi, dipende dal tuo indirizzo di rete: una VPN attiva è spesso la causa (disattivala per claude.ai), altrimenti aiuta una rete diversa. Niente più reimpostazioni ripetute e inutili.'
+      }
+    },
+    {
+      icon: 'shield',
+      title: {
+        de: 'Reset-Knopf jetzt in der Leiste',
+        en: 'Reset button now in the toolbar',
+        fr: 'Bouton de réinitialisation dans la barre',
+        it: 'Pulsante di reimpostazione nella barra'
+      },
+      text: {
+        de: 'Das Zurücksetzen der Verifizierung ist jetzt direkt über ein Schild-Symbol oben in der Leiste erreichbar, nicht mehr nur versteckt im Menü. Praktisch, wenn die Cloudflare-Prüfung hängt und du schnell handeln willst.',
+        en: 'Resetting verification is now reachable directly via a shield icon in the top toolbar, no longer only hidden in the menu. Handy when the Cloudflare check is stuck and you want to act fast.',
+        fr: 'La réinitialisation de la vérification est désormais accessible directement via une icône bouclier dans la barre du haut, plus seulement cachée dans le menu. Pratique quand la vérification Cloudflare bloque et que vous voulez agir vite.',
+        it: 'La reimpostazione della verifica è ora raggiungibile direttamente tramite un’icona scudo nella barra in alto, non più solo nascosta nel menu. Utile quando il controllo Cloudflare si blocca e vuoi agire in fretta.'
+      }
+    },
+    {
+      icon: 'bolt',
+      title: {
+        de: 'Neugestaltetes „Was ist neu“-Fenster',
+        en: 'Redesigned update window',
+        fr: 'Fenêtre des nouveautés repensée',
+        it: 'Finestra delle novità ridisegnata'
+      },
+      text: {
+        de: 'Die Update-Übersicht ist jetzt eine kleine Diashow: ein Punkt pro Neuerung, zum Durchklicken mit Weiter/Zurück, den Punkten oder den Pfeiltasten, dazu eine dezente Animation und Platz für ein Bild. Du liest sie gerade.',
+        en: 'The update overview is now a small slideshow: one slide per change, click through with next/back, the dots or the arrow keys, with a subtle animation and room for an image. You are reading it right now.',
+        fr: 'L’aperçu des mises à jour est désormais un petit diaporama : une diapositive par nouveauté, à parcourir avec suivant/retour, les points ou les flèches, avec une animation discrète et de la place pour une image. Vous êtes en train de le lire.',
+        it: 'La panoramica degli aggiornamenti ora è una piccola presentazione: una diapositiva per novità, da sfogliare con avanti/indietro, i punti o le frecce, con un’animazione discreta e spazio per un’immagine. La stai leggendo proprio ora.'
+      }
+    }
+  ],
   '1.4.7': [
     {
       icon: 'bolt',
@@ -1421,6 +1488,9 @@ body{background:var(--bg);font:500 12px/1 -apple-system,BlinkMacSystemFont,'Sego
   <div class="ctrl-btn" id="bug-report" title="${(bugReportStrings[sysLang] || bugReportStrings.en).title}">
     <svg viewBox="0 0 24 24" fill="none"><path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
   </div>
+  <div class="ctrl-btn" id="reset-verify" title="${t('claude.ai-Verifizierung zurücksetzen (bei hängender Sicherheitsprüfung)', 'Reset claude.ai verification (when the security check is stuck)', 'Réinitialiser la vérification claude.ai (si la vérification est bloquée)', 'Reimposta la verifica claude.ai (se il controllo è bloccato)')}">
+    <svg viewBox="0 0 24 24" fill="none"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </div>
   <div class="ctrl-btn" id="theme-toggle" title="${t('Theme wechseln', 'Toggle theme', 'Changer de thème', 'Cambia tema')}">
     <svg id="theme-icon-dark" viewBox="0 0 24 24"${currentThemeMode() === 'dark' ? '' : ' style="display:none"'}><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
     <svg id="theme-icon-light" viewBox="0 0 24 24"${currentThemeMode() === 'light' ? '' : ' style="display:none"'}><circle cx="12" cy="12" r="5" stroke="currentColor" stroke-width="2" fill="none"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>
@@ -1450,6 +1520,7 @@ document.getElementById('new-tab').addEventListener('click',()=>window.tabAPI.ne
 document.getElementById('theme-toggle').addEventListener('click',()=>window.tabAPI.toggleTheme());
 document.getElementById('design-toggle').addEventListener('click',()=>window.tabAPI.toggleDesign());
 document.getElementById('bug-report').addEventListener('click',()=>window.tabAPI.bugReport());
+document.getElementById('reset-verify').addEventListener('click',()=>window.tabAPI.resetVerification());
 document.getElementById('export-btn').addEventListener('click',()=>window.tabAPI.exportConversation());
 document.getElementById('app-menu').addEventListener('click',(e)=>{
   const r=e.currentTarget.getBoundingClientRect();
@@ -1562,10 +1633,10 @@ function sendDesignUpdate() {
 function verifyScript() {
   const i18n = {
     msg: t(
-      'Die Sicherheitsprüfung hängt in einer Schleife. Zurücksetzen meldet dich von claude.ai ab und lädt die Seite neu.',
-      'The security check is stuck in a loop. Resetting will sign you out of claude.ai and reload the page.',
-      'La vérification de sécurité tourne en boucle. La réinitialisation vous déconnecte de claude.ai et recharge la page.',
-      'Il controllo di sicurezza è bloccato in un ciclo. La reimpostazione disconnette da claude.ai e ricarica la pagina.'
+      'Die Sicherheitsprüfung hängt in einer Schleife. „Zurücksetzen“ leert die claude.ai-Sitzung vollständig und behebt das in den meisten Fällen, du meldest dich danach neu an. Hilft das nicht, liegt es an deiner Netzwerk-Adresse: ein aktives VPN ist oft die Ursache (für claude.ai ausschalten), sonst hilft ein anderes Netzwerk.',
+      'The security check is stuck in a loop. "Reset" fully clears the claude.ai session and fixes this in most cases; you sign in again afterwards. If that does not help, it is your network address: an active VPN is often the cause (turn it off for claude.ai), otherwise try a different network.',
+      'La vérification de sécurité tourne en boucle. « Réinitialiser » efface entièrement la session claude.ai et résout le problème dans la plupart des cas ; vous vous reconnectez ensuite. Si cela ne suffit pas, cela vient de votre adresse réseau : un VPN actif en est souvent la cause (désactivez-le pour claude.ai), sinon essayez un autre réseau.',
+      'Il controllo di sicurezza è bloccato in un ciclo. "Reimposta" cancella completamente la sessione di claude.ai e nella maggior parte dei casi risolve; dopodiché accedi di nuovo. Se non basta, dipende dal tuo indirizzo di rete: una VPN attiva è spesso la causa (disattivala per claude.ai), altrimenti prova una rete diversa.'
     ),
     reset: t('Zurücksetzen', 'Reset', 'Réinitialiser', 'Reimposta'),
     dismiss: t('Schließen', 'Dismiss', 'Ignorer', 'Ignora')
@@ -2106,23 +2177,15 @@ async function resetClaudeVerification(targetTab) {
 
   try {
     const ses = session.fromPartition('persist:claude');
-    const origins = [
-      'https://claude.ai',
-      'https://www.claude.ai',
-      'https://api.claude.ai',
-      'https://cdn.claude.ai',
-      'https://claudeusercontent.com',
-      'https://www.claudeusercontent.com',
-      'https://claudemcpcontent.com',
-      'https://www.claudemcpcontent.com',
-      'https://claudemcp.com',
-      'https://www.claudemcp.com'
-    ];
-    const storages = ['cookies', 'localstorage', 'serviceworkers', 'cachestorage', 'indexdb', 'websql', 'filesystem'];
-    for (const origin of origins) {
-      try { await ses.clearStorageData({ origin, storages }); } catch {}
-    }
+    // Cloudflare bindet seinen Verdacht an Session-State (cf_clearance/__cf_bm, auch auf
+    // challenges.cloudflare.com, plus Cache und Auth-Cache). Origin-gefiltertes Loeschen
+    // liess davon genug stehen, dass die Partition CF-seitig "verbrannt" blieb und die
+    // Verifizierung weiter in der Schleife hing. Empirisch verifiziert: nur ein vollstaendiges
+    // Leeren der Partition (alle Origins, alle Caches) macht sie wieder durchlaessig.
+    try { await ses.clearStorageData(); } catch {}
     try { await ses.clearCache(); } catch {}
+    try { await ses.clearAuthCache(); } catch {}
+    try { await ses.clearCodeCaches({}); } catch {}
     try { await ses.clearHostResolverCache(); } catch {}
     domainCache.clear();
   } catch (e) {
@@ -3339,13 +3402,22 @@ document.addEventListener('keydown', (e) => {
 function getWhatsNewHTML(force = false) {
   const th = subTheme();
   const ac = accent();
-  const notes = getFilteredNotes(version, windowState.lastSeenVersion, force);
+  // Immer nur die Notes der aktuellen Version zeigen (alles seit dem letzten Release),
+  // nie kumuliert ueber uebersprungene Versionen. force=true erzwingt versionsToShow=[version].
+  const notes = getFilteredNotes(version, windowState.lastSeenVersion, true);
   const icons = {
     tray: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="12" cy="12" r="3"/></svg>',
     bolt: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="13 2 4 14 12 14 11 22 20 10 12 10 13 2"/></svg>',
     check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="8 12 11 15 16 9"/></svg>',
     settings: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
-    heart: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>'
+    heart: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>',
+    tabs: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 4v5"/></svg>',
+    mic: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v4"/></svg>',
+    palette: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="8" cy="10" r="1.1"/><circle cx="12" cy="8" r="1.1"/><circle cx="16" cy="10" r="1.1"/></svg>',
+    download: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>',
+    bell: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0"/></svg>',
+    shield: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
+    refresh: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>'
   };
   const i18n = {
     header: t('Neu in Claude v' + version, 'New in Claude v' + version, 'Nouveautés de Claude v' + version, 'Novità di Claude v' + version),
@@ -3353,17 +3425,36 @@ function getWhatsNewHTML(force = false) {
     close: t('Los geht\u2019s', 'Let\u2019s go', 'C’est parti', 'Iniziamo'),
     openSettings: t('App-Einstellungen \u00f6ffnen', 'Open app settings', 'Ouvrir les paramètres de l’application', 'Apri le impostazioni dell’app')
   };
-  const transNote = sysLang === 'fr'
-    ? 'Cette interface vient d’être traduite en français. Une formulation vous semble incorrecte ? Signalez-la via « Signaler un bug » dans le menu.'
-    : sysLang === 'it'
-    ? 'Questa interfaccia è stata appena tradotta in italiano. Una frase ti sembra sbagliata? Segnalala tramite « Segnala un bug » nel menu.'
-    : '';
-  const items = notes.map(n => `
-    <div class="tile">
-      <div class="tile-ic">${icons[n.icon] || icons.check}</div>
-      <div class="tile-title">${localize(n.title)}</div>
-      <div class="tile-text">${localize(n.text)}</div>
+  // Optionales Bild pro Note: 'image' kann eine data:-URL oder ein Pfad relativ zum
+  // App-Verzeichnis sein (z.B. 'whatsnew/1.4.8-feature.png'). Ohne Bild -> Icon.
+  const slideMedia = (n) => {
+    const fallback = `<div class="slide-ic">${icons[n.icon] || icons.check}</div>`;
+    if (!n.image) return fallback;
+    // image: String (ein Bild fuer alle Sprachen) ODER {de,en,fr,it}-Objekt (Bild pro
+    // Sprache, analog zu title/text). Der Screenshot ist die einzige sprachabhaengige Stelle.
+    let src = typeof n.image === 'string' ? n.image : localize(n.image);
+    if (!src) return fallback;
+    if (!src.startsWith('data:')) {
+      // Das Fenster laeuft als data:-URL (opaque origin) und darf keine file://-Bilder laden,
+      // darum das Asset zur Laufzeit lesen und als data-URL einbetten.
+      try {
+        const buf = fs.readFileSync(path.join(__dirname, n.image));
+        const ext = path.extname(n.image).slice(1).toLowerCase();
+        const mime = ext === 'svg' ? 'image/svg+xml' : (ext === 'jpg' || ext === 'jpeg') ? 'image/jpeg' : ext === 'webp' ? 'image/webp' : 'image/png';
+        src = `data:${mime};base64,${buf.toString('base64')}`;
+      } catch { return fallback; }
+    }
+    return `<img class="slide-img" src="${src}" alt="">`;
+  };
+  const slides = notes.map((n, i) => `
+    <div class="slide${i === 0 ? ' active' : ''}${n.image ? ' has-img' : ''}" data-i="${i}">
+      ${slideMedia(n)}
+      <div class="slide-title">${localize(n.title)}</div>
+      <div class="slide-text">${localize(n.text)}</div>
     </div>`).join('');
+  const dots = notes.map((_, i) => `<span class="dot${i === 0 ? ' active' : ''}" data-i="${i}"></span>`).join('');
+  const obNext = t('Weiter', 'Next', 'Suivant', 'Avanti');
+  const obBack = t('Zurück', 'Back', 'Retour', 'Indietro');
   return `<!DOCTYPE html><html><head>
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:;">
 <style>
@@ -3397,6 +3488,28 @@ ${customTitlebarCSS()}
 .tile-title{font-weight:600;font-size:13.5px;color:${th.textActive};letter-spacing:-.1px;line-height:1.3}
 .tile-text{color:${th.text};font-size:12px;line-height:1.55}
 .tile-text code{display:inline-block;margin:2px 0;padding:2px 6px;background:${th.bgActive};border:1px solid ${th.border};border-radius:4px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;color:${th.textActive};user-select:text}
+.slides{position:relative;flex:1;display:flex;align-items:center;justify-content:center;padding:8px 24px;overflow-y:auto}
+.slides::-webkit-scrollbar{width:8px}
+.slides::-webkit-scrollbar-thumb{background:${th.border};border-radius:4px}
+.slide{display:none;flex-direction:column;align-items:center;text-align:center;max-width:460px}
+.slide.active{display:flex}
+.slide.active .slide-ic{animation:obPop .5s cubic-bezier(.34,1.56,.64,1) both}
+.slide.active .slide-title{animation:obUp .42s ease .1s both}
+.slide.active .slide-text{animation:obUp .42s ease .18s both}
+@keyframes obPop{0%{opacity:0;transform:scale(.6) translateY(8px)}100%{opacity:1;transform:none}}
+@keyframes obUp{0%{opacity:0;transform:translateY(12px)}100%{opacity:1;transform:none}}
+.slide.has-img{max-width:500px}
+.slide-img{width:100%;max-width:460px;max-height:250px;object-fit:cover;border-radius:14px;border:1px solid ${th.border};margin-bottom:20px;box-shadow:0 10px 28px rgba(0,0,0,.28)}
+.slide.active .slide-img{animation:obImg .55s cubic-bezier(.22,1,.36,1) both}
+@keyframes obImg{0%{opacity:0;transform:scale(.96) translateY(12px)}100%{opacity:1;transform:none}}
+.slide-ic{width:66px;height:66px;border-radius:18px;background:linear-gradient(135deg,color-mix(in srgb,${ac.from} 20%,transparent),color-mix(in srgb,${ac.to} 15%,transparent));
+  border:1px solid color-mix(in srgb,${ac.from} 38%,transparent);display:flex;align-items:center;justify-content:center;color:${ac.from};margin-bottom:20px}
+.slide-ic svg{width:30px;height:30px}
+.slide-title{font-weight:700;font-size:20px;letter-spacing:-.3px;color:${th.textActive};margin-bottom:12px;line-height:1.2}
+.slide-text{color:${th.text};font-size:14px;line-height:1.65}
+.dots{display:flex;gap:7px;justify-content:center;padding:4px 0 2px;flex-shrink:0}
+.dot{width:7px;height:7px;border-radius:50%;background:${th.border};cursor:pointer;transition:background .2s,width .2s,border-radius .2s}
+.dot.active{background:${ac.from};width:20px;border-radius:4px}
 .footer{padding:14px 24px 20px;display:flex;justify-content:space-between;align-items:center;gap:10px;border-top:1px solid ${th.border};flex-shrink:0}
 .footer button{font-family:inherit;cursor:pointer;border:none;border-radius:8px;font-size:12.5px;font-weight:600;transition:filter .15s,color .15s,background .15s}
 .footer button.secondary{background:transparent;color:${th.text};padding:6px 0}
@@ -3411,16 +3524,37 @@ ${customTitlebarHTML(t('Neu in Claude', 'What’s new in Claude', 'Nouveautés d
   <div class="hero-title">${t('Was ist neu', 'What’s new', 'Nouveautés', 'Novità')}</div>
   <div class="hero-sub">${i18n.sub}</div>
 </div>
-<div class="body">${transNote ? `<div class="trans-note">${transNote}</div>` : ''}<div class="grid">${items}</div></div>
+<div class="body"><div class="slides">${slides}</div></div>
+<div class="dots">${dots}</div>
 <div class="footer">
-  <button class="secondary" id="opts">${i18n.openSettings}</button>
-  <button class="primary" id="close">${i18n.close}</button>
+  <button class="secondary" id="ob-back" style="visibility:hidden">${obBack}</button>
+  <button class="primary" id="ob-next">${obNext}</button>
 </div>
 <script>
-document.getElementById('close').addEventListener('click', () => window.whatsNewAPI.close());
-document.getElementById('cd-titlebar-close')?.addEventListener('click', () => window.whatsNewAPI.close());
-document.getElementById('opts').addEventListener('click', () => window.whatsNewAPI.openSettings());
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape' || e.key === 'Enter') window.whatsNewAPI.close(); });
+(function(){
+  var idx=0, total=${notes.length};
+  var slides=[].slice.call(document.querySelectorAll('.slide'));
+  var dots=[].slice.call(document.querySelectorAll('.dot'));
+  var back=document.getElementById('ob-back'), next=document.getElementById('ob-next');
+  var nextLbl=${JSON.stringify(obNext)}, doneLbl=${JSON.stringify(i18n.close)};
+  function show(i){
+    idx=Math.max(0,Math.min(total-1,i));
+    for(var j=0;j<slides.length;j++){slides[j].classList.toggle('active',j===idx);dots[j].classList.toggle('active',j===idx);}
+    back.style.visibility=idx===0?'hidden':'visible';
+    next.textContent=idx>=total-1?doneLbl:nextLbl;
+  }
+  back.addEventListener('click',function(){show(idx-1);});
+  next.addEventListener('click',function(){ if(idx>=total-1){window.whatsNewAPI.close();} else {show(idx+1);} });
+  for(var j=0;j<dots.length;j++){(function(k){dots[k].addEventListener('click',function(){show(k);});})(j);}
+  document.addEventListener('keydown',function(e){
+    if(e.key==='ArrowRight'){show(idx+1);} else if(e.key==='ArrowLeft'){show(idx-1);}
+    else if(e.key==='Escape'){window.whatsNewAPI.close();}
+    else if(e.key==='Enter'){ if(idx>=total-1){window.whatsNewAPI.close();} else {show(idx+1);} }
+  });
+  var tc=document.getElementById('cd-titlebar-close'); if(tc){tc.addEventListener('click',function(){window.whatsNewAPI.close();});}
+  if(total<=1){ next.textContent=doneLbl; }
+  show(0);
+})();
 </script>
 </body></html>`;
 }
@@ -4729,8 +4863,12 @@ function setupSession() {
 
   const chromeFull = process.versions.chrome;
   const chromeMajor = chromeFull.split('.')[0];
-  const secChUa = `"Chromium";v="${chromeMajor}", "Not(A:Brand";v="24", "Google Chrome";v="${chromeMajor}"`;
-  const secChUaFullVersionList = `"Chromium";v="${chromeFull}", "Not(A:Brand";v="24.0.0.0", "Google Chrome";v="${chromeFull}"`;
+  // Muss byte-genau dem entsprechen, was navigator.userAgentData im Renderer meldet,
+  // sonst ist die Differenz (Header behauptet einen Brand, den die JS-API leugnet) ein
+  // CF-Turnstile-Bot-Signal. Electron meldet [Not-A.Brand;v=24, Chromium;v=<major>] und
+  // KEIN "Google Chrome". GREASE-Token/Reihenfolge bei Electron-Upgrades gegenchecken.
+  const secChUa = `"Not-A.Brand";v="24", "Chromium";v="${chromeMajor}"`;
+  const secChUaFullVersionList = `"Not-A.Brand";v="24.0.0.0", "Chromium";v="${chromeFull}"`;
 
   ses.webRequest.onBeforeSendHeaders({
     urls: [
@@ -4743,7 +4881,6 @@ function setupSession() {
     ]
   }, (details, cb) => {
     const h = details.requestHeaders;
-    h['DNT'] = '1';
     h['Sec-Ch-Ua'] = secChUa;
     h['Sec-Ch-Ua-Mobile'] = '?0';
     h['Sec-Ch-Ua-Platform'] = '"Linux"';
@@ -5020,6 +5157,10 @@ ipcMain.on('claude-reset-verification', (event) => {
   if (!fromTab) return;
   resetClaudeVerification(fromTab);
 });
+
+// Reset-Button in der Tab-Bar-Toolbar (eigener Kanal, da die Tab-Bar-View nicht in `tabs`
+// steht und der Handler oben sie sonst verwirft). Wirkt auf den aktiven Tab.
+ipcMain.on('tabbar-reset-verification', () => resetClaudeVerification());
 
 ipcMain.on('quickprompt-submit', (event, text) => {
   if (!quickPromptWindow || quickPromptWindow.isDestroyed() || event.sender !== quickPromptWindow.webContents) return;

@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.4.8] - 2026-06-29 - Cloudflare Verification Fix
+
+### Added
+- **Reset button in the toolbar.** "Reset claude.ai verification" is now reachable directly via a shield icon in the tab-bar toolbar (own IPC channel `tabbar-reset-verification` -> `resetClaudeVerification()`), not only via the hamburger menu. The stuck-verification banner also appears faster now (after 8s instead of 18s).
+- **Redesigned What's-new window.** The update overview is now a slideshow: one slide per release note, navigable with next/back, dots or arrow keys, with a staggered entrance animation. Notes always show the current version only. Each note can carry an optional image (embedded as a data-URL at runtime, string or per-locale `{de,en,fr,it}`), shown above the title; the 1.4.8 lead note uses `whatsnew/cf-verify.png`.
+
+### Fixed
+- **Cloudflare verification client-hints mismatch.** The `onBeforeSendHeaders` rewrite forged a `Sec-Ch-Ua` / `Sec-Ch-Ua-Full-Version-List` brand set that included `"Google Chrome"` plus the GREASE token `"Not(A:Brand"`, while `navigator.userAgentData` in the same Electron 41 (Chromium 146) build reports only `[Not-A.Brand, Chromium]` with no Google Chrome. A header claiming a brand the JS Client-Hints API denies is a bot signal that could send the Cloudflare Turnstile check into a `"Verifying..."` loop. The header now mirrors the native brands exactly (`"Not-A.Brand";v="24", "Chromium";v="146"`, full-version-list to match), verified on the actual binary (wire header == `navigator.userAgentData`).
+
+### Changed
+- **Stopped sending `DNT: 1`.** The header rewrite added `DNT: 1` to every claude.ai / challenge request; stock Chrome on Linux does not send DNT, so it was dropped to match a default browser profile.
+- **Honest stuck-verification banner.** When the full-page Cloudflare interstitial loops past 8s, the in-page banner now states that Reset only clears cookies/cache (which only helps a stale-cookie loop) and that a persistent loop is most likely the network address: an active VPN is often the cause (turn it off for claude.ai), otherwise a different network helps. Updated in all four locales (de/en/fr/it). This steers the genuinely-stuck (IP-reputation) case toward the action that works instead of repeated resets.
+
+### Notes
+- The client-side bot signal is now removed, but Cloudflare's dominant factor is IP reputation, which is server-side and unaffected by any client change. A flagged network/VPN IP can still be challenged; switching to a better-reputation network is the only reliable fix in that case. The Snap build was audited for confinement-specific blocks (cookie persistence across revisions, AppArmor denials, DNS, TLS, GPU); none cause the verification loop.
+
+---
+
 ## [1.4.7] - 2026-06-24 - OLED Polish & Window Frame
 
 ### Added

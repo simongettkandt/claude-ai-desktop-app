@@ -3,7 +3,7 @@
   window._cdVerify = true;
 
   var I18N = __VERIFY_I18N__;
-  var DELAY = 18000;
+  var DELAY = 8000;
   var KEY_SINCE = '_cdVerifyStuckSince';
   var KEY_DISMISS = '_cdVerifyDismissed';
   var BANNER_ID = 'cd-verify-banner';

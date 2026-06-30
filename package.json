@@ -1,6 +1,6 @@
 {
   "name": "claude-desktop",
-  "version": "1.4.7",
+  "version": "1.4.8",
   "description": "Claude AI – Native Desktop App für Linux",
   "main": "main.js",
   "license": "MIT",
@@ -68,6 +68,7 @@
       "preload-about.js",
       "inject/**/*",
       "utils/**/*",
+      "whatsnew/**/*",
       "icon.png",
       "icon-original.png",
       "icon-tray.png",

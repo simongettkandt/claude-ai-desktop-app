@@ -14,7 +14,7 @@ sudo snap install claude-ai-desktop
 
 [![claude-ai-desktop](https://snapcraft.io/claude-ai-desktop/badge.svg)](https://snapcraft.io/claude-ai-desktop)
 
-> **v1.4.7** - OLED polish and a new window frame. OLED mode reads clearer (hairline separators on menus and the sidebar, a calmer focus ring, the settings content pane no longer a gray block), the window and dialogs get a subtle theme-aware frame, and the close button matches the design accent.
+> **v1.4.8** - Cloudflare verification fix. The browser identity sent in the request headers now matches what the built-in browser reports in JavaScript (no more forged "Google Chrome" brand that could loop the Cloudflare check), the non-default Do Not Track header is gone, and the stuck-verification banner now points to what actually helps (a different network, or turning off an active VPN, which is often the cause) instead of dead-end resets. A persistent loop is dominated by IP reputation, which is server-side and no client change can override.
 
 ---
 
@@ -176,6 +176,15 @@ The `--no-sandbox` flag is required for Electron AppImages on Linux because the 
 ---
 
 ## Changelog
+
+### v1.4.8 - Cloudflare Verification Fix (2026-06-29)
+
+- **Client-hints mismatch fixed.** The app's `Sec-Ch-Ua` headers forged a `"Google Chrome"` brand (and the GREASE token `"Not(A:Brand"`) that `navigator.userAgentData` in this Electron 41 / Chromium 146 build never reports, it only lists `[Not-A.Brand, Chromium]`. A header claiming a brand the JavaScript API denies is a bot signal that could loop Cloudflare's `"Verifying..."` check. The header now mirrors the native brand list exactly, verified on the real binary (wire header == `navigator.userAgentData`).
+- **`DNT: 1` removed.** It was added to every request but stock Chrome on Linux does not send Do Not Track; dropping it matches a default browser profile.
+- **Honest stuck-verification banner (all 4 locales).** When the Cloudflare interstitial loops, the banner now explains that Reset only clears cookies/cache and that a persistent loop is almost always the network address: an active VPN is often the cause (turn it off for claude.ai), otherwise a different network helps, instead of sending the user into repeated useless resets.
+- **Reset button in the toolbar.** "Reset claude.ai verification" now sits as a shield icon in the tab-bar toolbar (own IPC channel into `resetClaudeVerification()`), not only in the hamburger menu, and the stuck-verification banner appears after 8s instead of 18s.
+- **Redesigned What's-new window.** This update overview is now a slideshow: one slide per note, navigable with next/back, dots or arrow keys, with a staggered entrance animation, always showing the current version only. Each note can carry an optional image (embedded as a data-URL at runtime, a single string or a per-locale `{de,en,fr,it}` map) shown above the title.
+- **Honest scope.** These remove the one verified client-side bot signal and improve the stuck-state guidance; they do not change Cloudflare's IP-reputation scoring, which is the dominant, server-side factor and is only resolved by changing the network. The Snap build was audited for confinement-specific blocks (cookie persistence across revisions, AppArmor, DNS, TLS, GPU) and found clean.
 
 ### v1.4.7 - OLED Polish & Window Frame (2026-06-24)
 

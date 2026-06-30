@@ -1,5 +1,5 @@
 name: claude-ai-desktop
-version: '1.4.7'
+version: '1.4.8'
 summary: Unofficial desktop wrapper for Claude AI with tabs, tray and voice input
 description: |
   Unofficial desktop app for Claude AI on Linux. Runs claude.ai without
@@ -8,46 +8,36 @@ description: |
 
   Not affiliated with Anthropic.
 
-  What's new in v1.4.7:
+  What's new in v1.4.8:
 
-  * OLED mode polished - menus, dialogs and the sidebar now have thin
-    separators so dark areas no longer blur together, the settings
-    window's content pane is dark instead of light gray, and a subtle
-    theme-aware frame wraps the window.
-  * Calmer details - the focus ring is back to a thin subtle ring
-    instead of a bold red one, background stars are hidden while a
-    dialog is open, and the close button matches the design accent.
-  * Fixed a black window when tiling the app to half the screen - the
-    content now reliably reappears after the window is resized.
+  * Cloudflare verification fix - the browser identity sent in the
+    request headers now matches what the built-in browser reports in
+    JavaScript (no more forged "Google Chrome" brand that could loop
+    the Cloudflare check), and the non-default Do Not Track header is
+    gone. Note: a persistent loop is almost always your network address
+    (IP reputation), which no app change can fix - an active VPN is
+    often the cause (turn it off), otherwise a different network helps.
+  * When the check stays stuck, the on-page banner now points to what
+    actually helps instead of dead-end resets, and a reset button is now
+    in the toolbar (not only the menu).
+  * The What's-new window is now a slideshow, one slide per change.
+
+  Highlights from v1.4.7:
+
+  * OLED mode polished - thin separators so dark areas no longer blur
+    together, a dark settings content pane, and a subtle theme-aware
+    frame around the window. Fixed a black window when tiling to half
+    the screen.
 
   Highlights from v1.4.6:
 
-  * Fewer crash pop-ups - a stray "A JavaScript error occurred in the
-    main process" dialog from the background update check no longer
-    appears, and the in-app updater no longer runs on Snap since the
-    Store handles updates.
-  * Split-screen display fix - tiling the window to half the screen no
-    longer leaves the page shifted up with a gray strip at the bottom.
+  * Fewer crash pop-ups, the in-app updater no longer runs on Snap
+    (the Store handles updates), and a split-screen display fix.
 
   Highlights from v1.4.5:
 
-  * Keyboard focus after Alt+Tab - switching back to the window put the
-    focus on the Minimize button, where the first keystroke minimized
-    the window instead of writing. Focus now returns straight to the
-    chat.
-
-  Highlights from v1.4.4:
-
-  * Fewer security-check loops - the app no longer reports a
-    Sec-CH-UA-Platform-Version that real Chrome on Linux never sends
-    (the kernel version), which could trap the Cloudflare check in a
-    loop. It now matches a normal Linux Chrome.
-
-  Highlights from v1.4.3:
-
-  * Custom connectors connect in-app again, file dialogs go through
-    xdg-desktop-portal so you can reach files outside your home folder,
-    and the app is on Electron 41 with current Chromium security fixes.
+  * Keyboard focus returns straight to the chat after Alt+Tab instead
+    of landing on the Minimize button.
 
   System requirements:
 
