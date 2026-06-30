@@ -4,6 +4,7 @@ dist/
 parts/
 prime/
 stage/
+overlay/
 
 flatpak/
 build-flatpak.sh
@@ -20,3 +21,16 @@ SNAP-RELEASE.md
 SNAP-BUILD.md
 .backups/
 AppDir/
+
+# Cloudflare Wrangler: lokaler Cache/State
+cloudflare-worker/.wrangler/
+
+# Lokale Claude-Code-Config (auch via globaler gitignore, hier klon-fest)
+.claude/
+
+# OS- und Editor-Dateien
+.DS_Store
+Thumbs.db
+*.log
+.vscode/
+.idea/
