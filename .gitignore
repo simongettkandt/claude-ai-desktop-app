@@ -15,7 +15,8 @@ ORCHESTRATOR_REPORT*.md
 # Echte Notifications werden separat via GitHub-Web-UI direkt auf main hochgeladen.
 notifications.json
 
-# Persoenliche Snap-Release-Anleitung, bleibt lokal.
+# Persoenliche Snap-Anleitungen, bleiben lokal.
 SNAP-RELEASE.md
+SNAP-BUILD.md
 .backups/
 AppDir/
