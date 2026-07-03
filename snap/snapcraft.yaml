@@ -1,5 +1,5 @@
 name: claude-ai-desktop
-version: '1.4.8'
+version: '1.4.9'
 summary: Unofficial desktop wrapper for Claude AI with tabs, tray and voice input
 description: |
   Unofficial desktop app for Claude AI on Linux. Runs claude.ai without
@@ -8,7 +8,18 @@ description: |
 
   Not affiliated with Anthropic.
 
-  What's new in v1.4.8:
+  What's new in v1.4.9:
+
+  * OLED mode no longer paints light price-chip badges (e.g. on the
+    upgrade page) fully black - only the fully opaque background
+    classes are matched now, translucent tint variants are excluded.
+  * Classic/Modern recolor fix - the brand-color detection did not
+    understand newer CSS color functions (oklch(), color-mix()) that
+    claude.ai increasingly uses, so recoloring silently stopped
+    working on some pages; unrecognized values are now resolved via
+    canvas pixel sampling.
+
+  Highlights from v1.4.8:
 
   * Cloudflare verification fix - the browser identity sent in the
     request headers now matches what the built-in browser reports in
@@ -33,11 +44,6 @@ description: |
 
   * Fewer crash pop-ups, the in-app updater no longer runs on Snap
     (the Store handles updates), and a split-screen display fix.
-
-  Highlights from v1.4.5:
-
-  * Keyboard focus returns straight to the chat after Alt+Tab instead
-    of landing on the Minimize button.
 
   System requirements:
 

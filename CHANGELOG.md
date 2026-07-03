@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.4.9] - 2026-07-03 - OLED Checkout & Recolor Fix
+
+### Fixed
+- **Black bars on the OLED upgrade/checkout page.** `buildStaticCSS()` matched background tokens with substring selectors like `[class*="bg-neutral-9"]`, which also matched Tailwind's opacity-modifier classes, e.g. `bg-neutral-900/5` (a light tint used for a price chip), and painted them fully opaque black, making the dark text meant for a light chip background invisible. A new `safeBg(tokens, color)` helper now generates the selectors with `:not([class*="TOKEN/"])`, so the opacity variant is excluded while the plain class is still blackened.
+- **Classic/Modern brand recolor stopped working on some pages.** `buildVarsCSS()` detected the brand orange in claude.ai's CSS custom properties only through the regex-based `parseRGB()`, which understands hex/`rgb()`/`hsl()` but not newer CSS color functions like `oklch()` or `color-mix()` (Tailwind v4's default). A new `normalizeColor()` fallback renders unparseable color values onto a 1x1 canvas to get real sRGB pixels back, since `getComputedStyle()` does not reliably normalize these to `rgb()` in Electron 41 / Chromium 146 (verified against the running build; canvas pixel sampling does).
+
+---
+
 ## [1.4.8] - 2026-06-29 - Cloudflare Verification Fix
 
 ### Added

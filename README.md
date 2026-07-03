@@ -14,7 +14,7 @@ sudo snap install claude-ai-desktop
 
 [![claude-ai-desktop](https://snapcraft.io/claude-ai-desktop/badge.svg)](https://snapcraft.io/claude-ai-desktop)
 
-> **v1.4.8** - Cloudflare verification fix. The browser identity sent in the request headers now matches what the built-in browser reports in JavaScript (no more forged "Google Chrome" brand that could loop the Cloudflare check), the non-default Do Not Track header is gone, and the stuck-verification banner now points to what actually helps (a different network, or turning off an active VPN, which is often the cause) instead of dead-end resets. A persistent loop is dominated by IP reputation, which is server-side and no client change can override.
+> **v1.4.9** - OLED checkout & recolor fix. OLED mode no longer paints light-tint price chips (e.g. on the upgrade page) fully black, and the Classic/Modern brand recolor works again on pages where claude.ai sets colors via `oklch()` or `color-mix()`.
 
 ---
 

@@ -438,6 +438,38 @@ const RELEASE_NOTES_REVISIT = {
 };
 
 const RELEASE_NOTES = {
+  '1.4.9': [
+    {
+      icon: 'refresh',
+      title: {
+        de: 'OLED: schwarze Balken auf der Bezahlseite behoben',
+        en: 'OLED: black bars on the checkout page fixed',
+        fr: 'OLED : bandes noires corrigées sur la page de paiement',
+        it: 'OLED: barre nere corrette nella pagina di pagamento'
+      },
+      text: {
+        de: 'Auf der Upgrade-/Bezahlseite färbte der OLED-Modus auch helle Preis-Chips komplett schwarz. Die Erkennung unterschied eine helle Tönung (z.B. 5% Deckkraft) nicht von der voll deckenden Variante desselben Tokens, wodurch der für hellen Hintergrund gedachte dunkle Text darauf unlesbar wurde. Getönte Varianten werden jetzt gezielt ausgenommen.',
+        en: 'On the upgrade/checkout page, OLED mode also painted light price chips fully black. The detection did not distinguish a light tint (e.g. 5% opacity) from the fully opaque variant of the same token, making the dark text meant for a light background unreadable. Tinted variants are now specifically excluded.',
+        fr: 'Sur la page de mise à niveau/paiement, le mode OLED peignait aussi en noir plein des puces de prix claires. La détection ne distinguait pas une teinte claire (par ex. 5% d’opacité) de la variante entièrement opaque du même token, rendant illisible le texte sombre prévu pour un fond clair. Les variantes teintées sont désormais exclues spécifiquement.',
+        it: 'Nella pagina di aggiornamento/pagamento, la modalità OLED colorava di nero anche i chip di prezzo chiari. Il rilevamento non distingueva una tinta chiara (per es. 5% di opacità) dalla variante completamente opaca dello stesso token, rendendo illeggibile il testo scuro pensato per uno sfondo chiaro. Le varianti tinteggiate ora vengono escluse specificamente.'
+      }
+    },
+    {
+      icon: 'palette',
+      title: {
+        de: 'Classic/Modern-Umfärbung: modernere Farbwerte erkannt',
+        en: 'Classic/Modern recolor: modern color values now recognized',
+        fr: 'Recoloration Classic/Modern : valeurs de couleur modernes reconnues',
+        it: 'Ricolorazione Classic/Modern: valori di colore moderni riconosciuti'
+      },
+      text: {
+        de: 'Beim Umschalten zwischen Classic und Modern wurde das Marken-Orange auf manchen Seiten nicht mehr umgefärbt, weil claude.ai Farben zunehmend über modernere CSS-Funktionen wie oklch() oder color-mix() setzt, die die bisherige Farberkennung nicht verstand. Nicht erkannte Werte werden jetzt zusätzlich über ein unsichtbares Canvas in echte Pixelfarben umgerechnet.',
+        en: 'When switching between Classic and Modern, the brand orange stopped being recolored on some pages, because claude.ai increasingly sets colors through newer CSS functions like oklch() or color-mix(), which the existing color detection did not understand. Unrecognized values are now additionally converted to real pixel colors via an invisible canvas.',
+        fr: 'En basculant entre Classic et Modern, l’orange de la marque n’était plus recoloré sur certaines pages, car claude.ai définit de plus en plus les couleurs via des fonctions CSS plus récentes comme oklch() ou color-mix(), que la détection de couleur existante ne comprenait pas. Les valeurs non reconnues sont désormais aussi converties en véritables couleurs de pixel via un canevas invisible.',
+        it: 'Passando tra Classic e Modern, l’arancione del marchio non veniva più ricolorato in alcune pagine, perché claude.ai imposta sempre più spesso i colori tramite funzioni CSS più recenti come oklch() o color-mix(), che il rilevamento colore esistente non comprendeva. I valori non riconosciuti vengono ora convertiti anche in veri colori dei pixel tramite un canvas invisibile.'
+      }
+    }
+  ],
   '1.4.8': [
     {
       icon: 'shield',

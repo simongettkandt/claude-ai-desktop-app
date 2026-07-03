@@ -51,6 +51,30 @@
     return null;
   }
 
+  // parseRGB versteht nur Hex/rgb()/hsl(). Modernere Syntax (oklch(), lab(), color-mix() usw.,
+  // Tailwind-v4-Standard fuer Custom Properties) waere sonst nie als Orange erkennbar. Ueber
+  // getComputedStyle liesse sich das nicht robust normalisieren: neuere Chromium-Versionen geben
+  // oklch()/color-mix() unveraendert zurueck statt auf rgb() zu normalisieren (empirisch geprueft,
+  // Electron 41 / Chromium 146). Ein 1x1-Canvas rendert dagegen immer als sRGB-Pixel, unabhaengig
+  // vom verwendeten Farbraum. Nur als Fallback genutzt (teurer als parseRGB), daher erst wenn die
+  // schnelle Regex-Pruefung nichts findet.
+  var _colorCtx = null;
+  var COLOR_SENTINEL = [1, 2, 3];
+  function normalizeColor(v) {
+    if (!_colorCtx) {
+      var canvas = document.createElement('canvas');
+      canvas.width = 1;
+      canvas.height = 1;
+      _colorCtx = canvas.getContext('2d');
+    }
+    _colorCtx.fillStyle = '#' + COLOR_SENTINEL.map(function (n) { return ('0' + n.toString(16)).slice(-2); }).join('');
+    _colorCtx.fillStyle = v;
+    _colorCtx.fillRect(0, 0, 1, 1);
+    var d = _colorCtx.getImageData(0, 0, 1, 1).data;
+    if (d[0] === COLOR_SENTINEL[0] && d[1] === COLOR_SENTINEL[1] && d[2] === COLOR_SENTINEL[2]) return null;
+    return 'rgb(' + d[0] + ',' + d[1] + ',' + d[2] + ')';
+  }
+
   function hexA(hex, alpha) {
     var c = parseRGB(hex);
     if (!c) return hex;
@@ -148,6 +172,15 @@
     var O = 'html[data-cd-theme="oled"][data-cd-surface="dark"]';
     var SPARK = sparkleBg();
 
+    // [class*="X"] matcht auch Tailwinds Opacity-Modifier "X/NN" (z.B. eine helle 5%-Toenung
+    // fuer einen Preis-Chip), die sonst faelschlich volldeckend geschwaerzt wird und ihren
+    // eigenen (auf hell gedachten) Text unsichtbar macht. :not() schliesst genau diese Variante aus.
+    function safeBg(tokens, color) {
+      return tokens.map(function (t) {
+        return O + ' [class*="' + t + '"]:not([class*="' + t + '/"])';
+      }).join(',') + '{background-color:' + color + ' !important}';
+    }
+
     return [
       // --- OLED: html schwarz (Fallback) ---
       O + '{background-color:' + BG + ' !important}',
@@ -162,13 +195,13 @@
       O + ' nav,' + O + ' aside,' + O + ' header,' + O + ' [class*="sidebar" i],' + O + ' [class*="Sidebar"],' + O + ' [class*="topbar" i],' + O + ' [class*="TopBar"]{background-color:' + BG + ' !important;background-image:none !important}',
       // Sidebar gegen den gleich-schwarzen Chatbereich abgrenzen (sonst Kante 1.0:1 = unsichtbar).
       O + ' nav,' + O + ' aside,' + O + ' [class*="sidebar" i],' + O + ' [class*="Sidebar"]{border-right:1px solid ' + HAIR_DIM + ' !important}',
-      O + ' [class*="bg-bg-000"],' + O + ' [class*="bg-bg-100"],' + O + ' [class*="bg-bg-200"]{background-color:' + BG + ' !important}',
-      O + ' [class*="bg-bg-300"],' + O + ' [class*="bg-bg-400"]{background-color:' + BG_HI + ' !important}',
-      O + ' [class*="bg-bg-500"],' + O + ' [class*="bg-bg-600"]{background-color:#1a1517 !important}',
+      safeBg(['bg-bg-000', 'bg-bg-100', 'bg-bg-200'], BG),
+      safeBg(['bg-bg-300', 'bg-bg-400'], BG_HI),
+      safeBg(['bg-bg-500', 'bg-bg-600'], '#1a1517'),
       // claude.ais neuere surface-Tokens (z.B. Settings-Content bg-surface-2 = grau) ebenfalls schwaerzen.
-      O + ' [class*="bg-surface-0"],' + O + ' [class*="bg-surface-1"]{background-color:' + BG + ' !important}',
-      O + ' [class*="bg-surface-2"],' + O + ' [class*="bg-surface-3"]{background-color:' + BG_HI + ' !important}',
-      O + ' [class*="bg-black"],' + O + ' [class*="bg-neutral-9"],' + O + ' [class*="bg-zinc-9"],' + O + ' [class*="bg-gray-9"],' + O + ' [class*="bg-stone-9"],' + O + ' [class*="bg-slate-9"]{background-color:' + BG + ' !important}',
+      safeBg(['bg-surface-0', 'bg-surface-1'], BG),
+      safeBg(['bg-surface-2', 'bg-surface-3'], BG_HI),
+      safeBg(['bg-black', 'bg-neutral-900', 'bg-neutral-950', 'bg-zinc-900', 'bg-zinc-950', 'bg-gray-900', 'bg-gray-950', 'bg-stone-900', 'bg-stone-950', 'bg-slate-900', 'bg-slate-950'], BG),
       O + ' [class*="from-bg-"],' + O + ' [class*="to-bg-"],' + O + ' [class*="via-bg-"]{background-image:none !important}',
       O + ' header[class*="bg-"]{background-color:' + BG + ' !important;background-image:none !important}',
       // --- OLED: Navigation / Menues ---
@@ -213,6 +246,7 @@
             if (prop.indexOf('--') !== 0) continue;
             var val = rule.style.getPropertyValue(prop);
             var c = parseRGB(val);
+            if (!c && val.indexOf('(') >= 0) c = parseRGB(normalizeColor(val));
             if (!c) continue;
             // Brand-Recoloring (orange -> Brand-Rot) im Light-Mode NICHT anwenden,
             // sonst wirkt das warme Weiss roetlich. Nur Dark/OLED.
