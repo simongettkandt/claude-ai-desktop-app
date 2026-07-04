@@ -1,4 +1,4 @@
-# Unofficial Claude Desktop App for Linux
+# Unofficial Claude Desktop App for Linux Ubuntu
 
 Desktop wrapper for claude.ai. Runs as a native window on Linux without a browser tab.
 
