@@ -30,27 +30,6 @@ description: |
     working on some pages; unrecognized values are now resolved via
     canvas pixel sampling.
 
-  Highlights from v1.4.8:
-
-  * Cloudflare verification fix - the browser identity sent in the
-    request headers now matches what the built-in browser reports in
-    JavaScript (no more forged "Google Chrome" brand that could loop
-    the Cloudflare check), and the non-default Do Not Track header is
-    gone. Note: a persistent loop is almost always your network address
-    (IP reputation), which no app change can fix - an active VPN is
-    often the cause (turn it off), otherwise a different network helps.
-  * When the check stays stuck, the on-page banner now points to what
-    actually helps instead of dead-end resets, and a reset button is now
-    in the toolbar (not only the menu).
-  * The What's-new window is now a slideshow, one slide per change.
-
-  Highlights from v1.4.7:
-
-  * OLED mode polished - thin separators so dark areas no longer blur
-    together, a dark settings content pane, and a subtle theme-aware
-    frame around the window. Fixed a black window when tiling to half
-    the screen.
-
   System requirements:
 
   Tested on Ubuntu 20.04 (kernel 5.4) and newer, Fedora 32+, and recent
