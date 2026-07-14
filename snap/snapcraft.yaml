@@ -1,5 +1,5 @@
 name: claude-ai-desktop
-version: '1.4.9'
+version: '1.4.10'
 summary: Unofficial desktop wrapper for Claude AI with tabs, tray and voice input
 description: |
   Unofficial desktop app for Claude AI on Linux. Runs claude.ai without
@@ -8,7 +8,18 @@ description: |
 
   Not affiliated with Anthropic.
 
-  What's new in v1.4.9:
+  What's new in v1.4.10:
+
+  * Bug report clarity - the report window and this Store listing now
+    say plainly that a message reaches a single volunteer developer,
+    not Anthropic. Account, login, subscription, billing and anything
+    that also happens on claude.ai in a normal browser can only be
+    handled by Anthropic support.
+  * A required checkbox now gates the Send button (you confirm the
+    issue is about the Linux app itself), and a live hint points
+    account/login/billing wording to support.anthropic.com.
+
+  Highlights from v1.4.9:
 
   * OLED mode no longer paints light price-chip badges (e.g. on the
     upgrade page) fully black - only the fully opaque background
@@ -39,11 +50,6 @@ description: |
     together, a dark settings content pane, and a subtle theme-aware
     frame around the window. Fixed a black window when tiling to half
     the screen.
-
-  Highlights from v1.4.6:
-
-  * Fewer crash pop-ups, the in-app updater no longer runs on Snap
-    (the Store handles updates), and a split-screen display fix.
 
   System requirements:
 
@@ -82,18 +88,23 @@ description: |
 
   Get in touch:
 
-  Use the built-in "Report a Bug" button (App Menu -> Report a Bug) for
-  feedback and bug reports. Or contact:
-  claudeai.desktop.linux@gmail.com
+  This is an unofficial community wrapper around claude.ai for Linux,
+  built by one developer in their spare time. It is not made by,
+  endorsed by, or affiliated with Anthropic PBC. "Claude" and the
+  Claude logo are trademarks of Anthropic PBC.
+
+  For anything about your account, login, subscription, billing or
+  payment, or any problem that also happens on claude.ai in a normal
+  browser, only Anthropic can help. This app cannot:
+  https://support.anthropic.com
+
+  For bugs in this Linux app itself, use the built-in "Report a Bug"
+  button (App Menu -> Report a Bug), or email
+  claudeai.desktop.linux@gmail.com. That address reaches the
+  developer, not Anthropic support.
 
   Source code: https://github.com/simonlinuxcraft/claude-ai-desktop-app
   (MIT licence)
-
-  This is an unofficial community wrapper around claude.ai for Linux.
-  It is not made by, endorsed by, or affiliated with Anthropic PBC.
-  "Claude" and the Claude logo are trademarks of Anthropic PBC. For
-  account, login, subscription, billing or any service-side questions
-  please contact Anthropic directly at https://support.anthropic.com.
 
 base: core24
 grade: stable

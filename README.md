@@ -14,7 +14,7 @@ sudo snap install claude-ai-desktop
 
 [![claude-ai-desktop](https://snapcraft.io/claude-ai-desktop/badge.svg)](https://snapcraft.io/claude-ai-desktop)
 
-> **v1.4.9** - OLED checkout & recolor fix. OLED mode no longer paints light-tint price chips (e.g. on the upgrade page) fully black, and the Classic/Modern brand recolor works again on pages where claude.ai sets colors via `oklch()` or `color-mix()`.
+> **v1.4.10** - Bug Report Clarity. The report window and the Snap listing now make clear that a message reaches a single volunteer developer, not Anthropic; a required confirmation checkbox and a keyword hint keep account, login and billing questions pointed at Anthropic support.
 
 ---
 

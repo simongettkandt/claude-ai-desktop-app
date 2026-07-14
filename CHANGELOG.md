@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.4.10] - 2026-07-14 - Bug Report Clarity
+
+### Added
+- **Confirmation gate before a bug report is sent.** The Send button stays disabled until a required checkbox is ticked ("This is a problem with the Linux desktop app itself"). An affirmative action is harder to skip than a passive notice, which cuts down account/login/billing messages that belong with Anthropic support. Localized in DE/EN/FR/ES/IT.
+- **Support keyword hint in the report form.** When the description mentions login, password, subscription, billing, refund and similar, an inline note points to support.anthropic.com. It is a nudge, not a block; the checkbox stays the hard gate.
+
+### Changed
+- **Sharper unofficial-wrapper notice.** The bug report disclaimer now states plainly that the message reaches a single volunteer developer, not Anthropic, and that account/login/subscription/billing questions (and anything that also happens on claude.ai in a normal browser) can only be handled by Anthropic. The Snap Store description got the same rework, with the unofficial/trademark notice and the support link moved above the contact email.
+
+---
+
 ## [1.4.9] - 2026-07-03 - OLED Checkout & Recolor Fix
 
 ### Fixed

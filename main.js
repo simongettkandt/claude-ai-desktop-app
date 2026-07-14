@@ -190,10 +190,13 @@ const bugReportStrings = {
     title: 'Report a Bug',
     intro: 'Found a bug or have a suggestion? Send us a message — your feedback helps improve the app.',
     disclaimerTitle: 'Unofficial community app',
-    disclaimerBody: 'This is an unofficial community wrapper for claude.ai, not an official Anthropic product. We can only help with issues specific to this Linux desktop wrapper. For account, login, subscription, billing or payment questions please contact Anthropic support directly:',
+    disclaimerBody: 'This is an unofficial community wrapper for claude.ai, built by one volunteer in their spare time. It has no connection to Anthropic, and your message goes to that developer, not to Anthropic support. Anything about your account, login, subscription, billing or payment, or any problem that also happens on claude.ai in a normal browser, can only be handled by Anthropic:',
     disclaimerLink: 'support.anthropic.com',
     disclaimerLinkUrl: 'https://support.anthropic.com',
     serverSideHint: 'Quick check: does the same error also happen on claude.ai in a regular browser (Firefox/Chrome)? If yes, it is a server-side issue at Anthropic and not a wrapper bug.',
+    confirmLabel: 'This is a problem with the Linux desktop app itself',
+    confirmHint: 'Not about my account, login, subscription or billing, and it does not happen the same way on claude.ai in a normal browser.',
+    nudgeText: 'This sounds like an account, login or billing question. Only Anthropic can solve those, not this app:',
     descLabel: 'Description',
     descPlaceholder: 'What happened? What did you expect?',
     errorLabel: 'Error codes / messages (optional)',
@@ -219,10 +222,13 @@ const bugReportStrings = {
     title: 'Fehler melden',
     intro: 'Einen Fehler gefunden oder einen Vorschlag? Schick uns eine Nachricht – dein Feedback hilft, die App zu verbessern.',
     disclaimerTitle: 'Inoffizielle Community-App',
-    disclaimerBody: 'Das hier ist ein inoffizieller Community-Wrapper für claude.ai – kein offizielles Produkt von Anthropic. Wir können nur Probleme lösen, die diesen Linux-Desktop-Wrapper selbst betreffen. Bei Fragen zu Account, Login, Abo, Rechnung oder Bezahlung wende dich bitte direkt an den Anthropic-Support:',
+    disclaimerBody: 'Das hier ist ein inoffizieller Community-Wrapper für claude.ai, gebaut von einer Einzelperson in der Freizeit. Er hat nichts mit Anthropic zu tun, und deine Nachricht geht an diesen Entwickler, nicht an den Anthropic-Support. Alles zu Account, Login, Abo, Rechnung oder Bezahlung, sowie jedes Problem das auch auf claude.ai im normalen Browser auftritt, kann nur Anthropic bearbeiten:',
     disclaimerLink: 'support.anthropic.com',
     disclaimerLinkUrl: 'https://support.anthropic.com',
     serverSideHint: 'Kurzer Check: Tritt der gleiche Fehler auch auf claude.ai in einem normalen Browser (Firefox/Chrome) auf? Wenn ja, ist es ein serverseitiges Problem bei Anthropic und kein Wrapper-Bug.',
+    confirmLabel: 'Das ist ein Problem der Linux-Desktop-App selbst',
+    confirmHint: 'Nicht zu meinem Account, Login, Abo oder Bezahlung, und es tritt nicht genauso auf claude.ai im normalen Browser auf.',
+    nudgeText: 'Das klingt nach einer Account-, Login- oder Bezahl-Frage. Die kann nur Anthropic lösen, nicht diese App:',
     descLabel: 'Beschreibung',
     descPlaceholder: 'Was ist passiert? Was hast du erwartet?',
     errorLabel: 'Fehlercodes / Meldungen (optional)',
@@ -248,10 +254,13 @@ const bugReportStrings = {
     title: 'Signaler un bug',
     intro: 'Vous avez trouv\u00e9 un bug ou une suggestion ? Envoyez-nous un message \u2014 vos retours nous aident \u00e0 am\u00e9liorer l\u2019application.',
     disclaimerTitle: 'Application communautaire non officielle',
-    disclaimerBody: 'Ceci est un wrapper communautaire non officiel pour claude.ai, pas un produit officiel d\u2019Anthropic. Nous pouvons aider uniquement pour les probl\u00e8mes sp\u00e9cifiques \u00e0 ce wrapper Linux. Pour toute question concernant le compte, la connexion, l\u2019abonnement, la facturation ou le paiement, veuillez contacter directement le support d\u2019Anthropic :',
+    disclaimerBody: 'Ceci est un wrapper communautaire non officiel pour claude.ai, d\u00e9velopp\u00e9 par une seule personne sur son temps libre. Il n\u2019a aucun lien avec Anthropic, et votre message est envoy\u00e9 \u00e0 ce d\u00e9veloppeur, pas au support d\u2019Anthropic. Tout ce qui concerne le compte, la connexion, l\u2019abonnement, la facturation ou le paiement, ainsi que tout probl\u00e8me qui se produit aussi sur claude.ai dans un navigateur normal, ne peut \u00eatre trait\u00e9 que par Anthropic :',
     disclaimerLink: 'support.anthropic.com',
     disclaimerLinkUrl: 'https://support.anthropic.com',
     serverSideHint: 'V\u00e9rification rapide : la m\u00eame erreur appara\u00eet-elle sur claude.ai dans un navigateur normal (Firefox/Chrome) ? Si oui, c\u2019est un probl\u00e8me c\u00f4t\u00e9 serveur chez Anthropic et non un bug du wrapper.',
+    confirmLabel: 'C\u2019est un probl\u00e8me de l\u2019application de bureau Linux elle-m\u00eame',
+    confirmHint: 'Pas mon compte, ma connexion, mon abonnement ou mon paiement, et cela ne se produit pas de la m\u00eame fa\u00e7on sur claude.ai dans un navigateur normal.',
+    nudgeText: 'Cela ressemble \u00e0 une question de compte, de connexion ou de facturation. Seul Anthropic peut la r\u00e9soudre, pas cette application :',
     descLabel: 'Description',
     descPlaceholder: 'Que s\u2019est-il pass\u00e9 ? Qu\u2019attendiez-vous ?',
     errorLabel: 'Codes d\u2019erreur / messages (facultatif)',
@@ -277,10 +286,13 @@ const bugReportStrings = {
     title: 'Reportar un error',
     intro: '\u00bfHas encontrado un error o tienes una sugerencia? Env\u00edanos un mensaje \u2014 tu feedback ayuda a mejorar la app.',
     disclaimerTitle: 'Aplicaci\u00f3n comunitaria no oficial',
-    disclaimerBody: 'Esta es una aplicaci\u00f3n comunitaria no oficial para claude.ai, no un producto oficial de Anthropic. Solo podemos ayudar con problemas espec\u00edficos de este wrapper para Linux. Para cuestiones de cuenta, inicio de sesi\u00f3n, suscripci\u00f3n, facturaci\u00f3n o pagos, contacta directamente con el soporte de Anthropic:',
+    disclaimerBody: 'Esta es una aplicaci\u00f3n comunitaria no oficial para claude.ai, creada por una sola persona en su tiempo libre. No tiene ninguna relaci\u00f3n con Anthropic, y tu mensaje va a ese desarrollador, no al soporte de Anthropic. Todo lo relacionado con cuenta, inicio de sesi\u00f3n, suscripci\u00f3n, facturaci\u00f3n o pago, as\u00ed como cualquier problema que tambi\u00e9n ocurra en claude.ai en un navegador normal, solo puede resolverlo Anthropic:',
     disclaimerLink: 'support.anthropic.com',
     disclaimerLinkUrl: 'https://support.anthropic.com',
     serverSideHint: 'Comprobaci\u00f3n r\u00e1pida: \u00bfaparece el mismo error en claude.ai en un navegador normal (Firefox/Chrome)? Si es as\u00ed, es un problema del servidor de Anthropic y no un bug del wrapper.',
+    confirmLabel: 'Esto es un problema de la app de escritorio de Linux en s\u00ed',
+    confirmHint: 'No es sobre mi cuenta, inicio de sesi\u00f3n, suscripci\u00f3n o pago, y no ocurre igual en claude.ai en un navegador normal.',
+    nudgeText: 'Esto parece una cuesti\u00f3n de cuenta, inicio de sesi\u00f3n o pago. Solo Anthropic puede resolverla, no esta app:',
     descLabel: 'Descripci\u00f3n',
     descPlaceholder: '\u00bfQu\u00e9 pas\u00f3? \u00bfQu\u00e9 esperabas?',
     errorLabel: 'C\u00f3digos de error / mensajes (opcional)',
@@ -307,10 +319,13 @@ const bugReportStrings = {
     title: 'Segnala un bug',
     intro: 'Hai trovato un bug o hai un suggerimento? Inviaci un messaggio \u2014 il tuo feedback aiuta a migliorare l\u2019app.',
     disclaimerTitle: 'App di comunit\u00e0 non ufficiale',
-    disclaimerBody: 'Questa \u00e8 un\u2019app di comunit\u00e0 non ufficiale per claude.ai, non un prodotto ufficiale Anthropic. Possiamo aiutarti solo con problemi specifici di questo wrapper Linux. Per questioni di account, accesso, abbonamento, fatturazione o pagamenti, contatta direttamente il supporto Anthropic:',
+    disclaimerBody: 'Questa \u00e8 un\u2019app di comunit\u00e0 non ufficiale per claude.ai, creata da una singola persona nel tempo libero. Non ha alcun legame con Anthropic, e il tuo messaggio va a quello sviluppatore, non al supporto Anthropic. Tutto ci\u00f2 che riguarda account, accesso, abbonamento, fatturazione o pagamento, cos\u00ec come qualsiasi problema che si verifica anche su claude.ai in un browser normale, pu\u00f2 essere gestito solo da Anthropic:',
     disclaimerLink: 'support.anthropic.com',
     disclaimerLinkUrl: 'https://support.anthropic.com',
     serverSideHint: 'Verifica rapida: lo stesso errore compare anche su claude.ai in un browser normale (Firefox/Chrome)? Se s\u00ec, \u00e8 un problema lato server di Anthropic e non un bug del wrapper.',
+    confirmLabel: 'Riguarda l\u2019app desktop Linux stessa',
+    confirmHint: 'Non riguarda il mio account, accesso, abbonamento o pagamento, e non si verifica allo stesso modo su claude.ai in un browser normale.',
+    nudgeText: 'Sembra una domanda su account, accesso o pagamento. Solo Anthropic può risolverla, non questa app:',
     descLabel: 'Descrizione',
     descPlaceholder: 'Cosa \u00e8 successo? Cosa ti aspettavi?',
     errorLabel: 'Codici di errore / messaggi (facoltativo)',
@@ -438,6 +453,38 @@ const RELEASE_NOTES_REVISIT = {
 };
 
 const RELEASE_NOTES = {
+  '1.4.10': [
+    {
+      icon: 'check',
+      title: {
+        de: 'Fehler melden: klarer vom Anthropic-Support getrennt',
+        en: 'Bug Report: clearer separation from Anthropic support',
+        fr: 'Signaler un bug : séparation plus nette du support Anthropic',
+        it: 'Segnala un bug: separazione più netta dal supporto Anthropic'
+      },
+      text: {
+        de: 'Immer wieder landeten Account-, Login- und Bezahl-Anfragen im Fehler-melden-Fenster, obwohl das nur Anthropic lösen kann. Der Hinweis sagt jetzt deutlich, dass die Nachricht an einen einzelnen freiwilligen Entwickler geht, nicht an Anthropic. Vor dem Absenden bestätigt man zusätzlich mit einem Häkchen, dass es wirklich um die Linux-App selbst geht.',
+        en: 'Account, login and billing requests kept landing in the Bug Report window, even though only Anthropic can solve those. The notice now states clearly that the message goes to a single volunteer developer, not to Anthropic. Before sending, a checkbox also asks you to confirm the issue really is about the Linux app itself.',
+        fr: 'Des demandes de compte, de connexion et de facturation arrivaient sans cesse dans la fenêtre de signalement, alors que seul Anthropic peut les résoudre. Le message indique désormais clairement qu’il est envoyé à un développeur bénévole, pas à Anthropic. Avant l’envoi, une case à cocher vous demande aussi de confirmer qu’il s’agit bien de l’application Linux elle-même.',
+        it: 'Richieste di account, accesso e pagamento continuavano ad arrivare nella finestra di segnalazione, anche se solo Anthropic può risolverle. L’avviso ora indica chiaramente che il messaggio va a un singolo sviluppatore volontario, non ad Anthropic. Prima dell’invio, una casella di spunta ti chiede inoltre di confermare che si tratta davvero dell’app Linux stessa.'
+      }
+    },
+    {
+      icon: 'bell',
+      title: {
+        de: 'Sanfter Hinweis bei Account- oder Bezahl-Themen',
+        en: 'Gentle hint on account or billing topics',
+        fr: 'Indication discrète pour les sujets compte ou paiement',
+        it: 'Suggerimento discreto per temi di account o pagamento'
+      },
+      text: {
+        de: 'Klingt die Beschreibung nach Login, Passwort, Abo oder Rechnung, blendet das Formular jetzt live einen kurzen Hinweis mit Link zum Anthropic-Support ein. Das ist nur ein Hinweis, absenden lässt sich der Bericht trotzdem.',
+        en: 'If the description sounds like login, password, subscription or billing, the form now shows a short inline hint with a link to Anthropic support. It is only a hint, you can still send the report.',
+        fr: 'Si la description évoque une connexion, un mot de passe, un abonnement ou une facturation, le formulaire affiche désormais en direct une courte note avec un lien vers le support Anthropic. Ce n’est qu’une indication, vous pouvez quand même envoyer le rapport.',
+        it: 'Se la descrizione richiama accesso, password, abbonamento o fatturazione, il modulo mostra ora al volo una breve nota con un link al supporto Anthropic. È solo un suggerimento, puoi comunque inviare la segnalazione.'
+      }
+    }
+  ],
   '1.4.9': [
     {
       icon: 'refresh',
@@ -2257,7 +2304,7 @@ function showBugReportDialog() {
     mode: getAppMode()
   };
 
-  const brSize = { width: 500, height: 860 };
+  const brSize = { width: 540, height: 1000 };
   const brPos = centerOnMainWindow(brSize.width, brSize.height);
   const win = new BrowserWindow({
     ...brSize, ...brPos, resizable: false,
@@ -2307,6 +2354,26 @@ textarea.errcodes{min-height:70px;line-height:1.45;font-family:ui-monospace,Menl
 .auto-info-row .text{display:flex;flex-direction:column;gap:2px}
 .auto-info-row .label{font-size:13px;color:${fg};font-weight:500}
 .auto-info-row .hint{font-size:11.5px;color:${sub};line-height:1.4}
+.confirm-row{display:flex;align-items:flex-start;gap:10px;margin:2px 0 16px;
+  padding:11px 13px;border-radius:8px;cursor:pointer;user-select:none;
+  background:${dark ? 'rgba(224,169,62,0.10)' : 'rgba(224,150,40,0.12)'};
+  border:1.5px solid ${dark ? 'rgba(224,169,62,0.45)' : 'rgba(224,150,40,0.5)'};
+  transition:border-color .15s,background .15s}
+.confirm-row:hover{border-color:${inputFocus}}
+.confirm-row.checked{background:${inputBg};border-color:${inputBorder}}
+.confirm-row input[type=checkbox]{margin-top:2px;accent-color:${inputFocus};cursor:pointer;flex-shrink:0}
+.confirm-row .text{display:flex;flex-direction:column;gap:2px}
+.confirm-row .label{font-size:13px;color:${fg};font-weight:600}
+.confirm-row .hint{font-size:11.5px;color:${sub};line-height:1.4}
+.nudge{display:none;gap:9px;align-items:flex-start;padding:10px 12px;margin:-4px 0 14px;
+  background:${dark ? 'rgba(224,169,62,0.12)' : 'rgba(224,150,40,0.14)'};
+  border:1px solid ${dark ? 'rgba(224,169,62,0.5)' : 'rgba(224,150,40,0.55)'};
+  border-radius:8px;font-size:12.5px;line-height:1.45}
+.nudge.show{display:flex}
+.nudge .ico{flex:0 0 auto;color:${dark ? '#e0a93e' : '#c97e1c'};line-height:0;margin-top:1px}
+.nudge .txt{flex:1;color:${fg}}
+.nudge a{color:${inputFocus};text-decoration:underline;cursor:pointer;font-weight:500}
+.nudge a:hover{filter:brightness(1.15)}
 .actions{display:flex;gap:10px;justify-content:flex-end;margin-top:auto;padding-top:8px}
 button{border:none;padding:10px 20px;border-radius:9px;font-size:13.5px;cursor:pointer;
   font-weight:500;font-family:inherit;transition:filter .15s,background .15s,opacity .15s}
@@ -2338,7 +2405,11 @@ button:focus-visible{outline:2px solid ${ac.from};outline-offset:2px}
   background:${inputBg};padding:8px 14px;border-radius:6px;border:1px solid ${inputBorder}}
 .error-row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
 ${customTitlebarCSS()}
-.bugreport-main{flex:1;padding:18px 24px 24px;overflow:hidden;display:flex;flex-direction:column;min-height:0}
+.bugreport-main{flex:1;padding:18px 24px 24px;overflow-y:auto;display:flex;flex-direction:column;min-height:0}
+.bugreport-main::-webkit-scrollbar{width:10px}
+.bugreport-main::-webkit-scrollbar-track{background:transparent}
+.bugreport-main::-webkit-scrollbar-thumb{background:${inputBorder};border-radius:6px;border:3px solid ${bg};background-clip:padding-box}
+.bugreport-main::-webkit-scrollbar-thumb:hover{background:${sub};border:3px solid ${bg};background-clip:padding-box}
 .status-host{flex:1;display:flex;align-items:center;justify-content:center}
 </style></head><body>
 ${customTitlebarHTML(s.title)}
@@ -2357,6 +2428,12 @@ ${customTitlebarHTML(s.title)}
       <label for="desc">${s.descLabel}</label>
       <textarea id="desc" class="desc" required placeholder="${s.descPlaceholder}"></textarea>
     </div>
+
+    <div class="nudge" id="support-nudge" role="note">
+      <span class="ico"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span>
+      <span class="txt">${s.nudgeText} <a id="nudge-link" href="#" tabindex="0">${s.disclaimerLink}</a></span>
+    </div>
+
     <div class="field">
       <label for="errcodes">${s.errorLabel}</label>
       <textarea id="errcodes" class="errcodes" placeholder="${s.errorPlaceholder}"></textarea>
@@ -2376,9 +2453,17 @@ ${customTitlebarHTML(s.title)}
 
     <input type="text" name="botcheck" id="botcheck" class="honeypot" tabindex="-1" autocomplete="off">
 
+    <label class="confirm-row" for="confirmapp" id="confirm-row">
+      <input type="checkbox" id="confirmapp">
+      <span class="text">
+        <span class="label">${s.confirmLabel}</span>
+        <span class="hint">${s.confirmHint}</span>
+      </span>
+    </label>
+
     <div class="actions">
       <button type="button" class="secondary" id="cancel-btn">${s.cancelBtn}</button>
-      <button type="submit" class="primary" id="send-btn">${s.sendBtn}</button>
+      <button type="submit" class="primary" id="send-btn" disabled>${s.sendBtn}</button>
     </div>
   </form>
 </div>
@@ -2415,6 +2500,8 @@ ${customTitlebarHTML(s.title)}
   const errcodes = document.getElementById('errcodes');
   const emailInput = document.getElementById('email');
   const autoInfoCheckbox = document.getElementById('autoinfo');
+  const confirmCheckbox = document.getElementById('confirmapp');
+  const confirmRow = document.getElementById('confirm-row');
   const botcheck = document.getElementById('botcheck');
   const errEmail = document.getElementById('err-email');
   const copyBtn = document.getElementById('copy-btn');
@@ -2429,20 +2516,50 @@ ${customTitlebarHTML(s.title)}
   });
 
   cancelBtn.addEventListener('click', () => window.close());
+
+  const syncConfirm = () => {
+    sendBtn.disabled = !confirmCheckbox.checked;
+    confirmRow.classList.toggle('checked', confirmCheckbox.checked);
+  };
+  confirmCheckbox.addEventListener('change', syncConfirm);
+  syncConfirm();
+
   const tbClose = document.getElementById('cd-titlebar-close');
   if (tbClose) tbClose.addEventListener('click', () => window.close());
 
-  const anthropicLink = document.getElementById('anthropic-link');
-  if (anthropicLink) {
-    const openLink = (e) => {
+  function wireSupportLink(el) {
+    if (!el) return;
+    const open = (e) => {
       if (e) { e.preventDefault(); }
       try { window.bugAPI.openSupport(); } catch {}
     };
-    anthropicLink.addEventListener('click', openLink);
-    anthropicLink.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') openLink(e);
+    el.addEventListener('click', open);
+    el.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') open(e);
     });
   }
+  wireSupportLink(document.getElementById('anthropic-link'));
+  wireSupportLink(document.getElementById('nudge-link'));
+
+  // Wenn die Beschreibung nach Account/Login/Bezahlung klingt, dezent auf den
+  // Anthropic-Support hinweisen. Nur ein Nudge, das harte Gate bleibt die Checkbox.
+  const supportNudge = document.getElementById('support-nudge');
+  const NUDGE_KW = ['log in','login','logg','einlogg','anmeld','sign in','signin',
+    'password','passwort','kennwort','mot de passe','contrase',
+    'account','konto','cuenta','compte',
+    'subscription','abonn','abbonamento','suscrip','abo-','abo kündig','abo kundig',
+    'billing','rechnung','facturac','factura','fatturaz','invoice',
+    'payment','paiement','bezahl','zahlung','pagamento',
+    'refund','erstattung','remboursement','reembolso','rimborso','chargeback',
+    'cancel','kündig','kundig','annuler','cancelar','cancellare','disdire',
+    'credit card','kreditkarte','carte bancaire','tarjeta','carta di credito',
+    'upgrade','downgrade'];
+  const checkNudge = () => {
+    const t = (desc.value + ' ' + errcodes.value).toLowerCase();
+    supportNudge.classList.toggle('show', NUDGE_KW.some((k) => t.includes(k)));
+  };
+  desc.addEventListener('input', checkNudge);
+  errcodes.addEventListener('input', checkNudge);
 
   function showView(which) {
     formView.style.display = which === 'form' ? '' : 'none';
@@ -2454,6 +2571,7 @@ ${customTitlebarHTML(s.title)}
     e.preventDefault();
     const description = desc.value.trim();
     if (!description) { desc.focus(); return; }
+    if (!confirmCheckbox.checked) { confirmCheckbox.focus(); return; }
     if (botcheck.value) return;
 
     const userEmail = emailInput.value.trim();
@@ -2502,8 +2620,8 @@ ${customTitlebarHTML(s.title)}
       console.error('Bug-report submit failed:', err);
       showView('error');
     } finally {
-      sendBtn.disabled = false;
       sendBtn.textContent = cfg.strings.sendBtn;
+      sendBtn.disabled = !confirmCheckbox.checked;
     }
   });
 
