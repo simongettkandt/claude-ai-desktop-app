@@ -14,7 +14,7 @@ sudo snap install claude-ai-desktop
 
 [![claude-ai-desktop](https://snapcraft.io/claude-ai-desktop/badge.svg)](https://snapcraft.io/claude-ai-desktop)
 
-> **v1.4.10** - Bug Report Clarity. The report window and the Snap listing now make clear that a message reaches a single volunteer developer, not Anthropic; a required confirmation checkbox and a keyword hint keep account, login and billing questions pointed at Anthropic support.
+> **v1.4.11** - Theme Fix and Tab Persistence. Brand icons render coloured again in the Modern design (a hex value in `--accent-brand` broke claude.ai's HSL-based colour, so icons fell back to grey). Open tabs are restored after a restart, a dropped connection returns each tab to its own conversation instead of a new chat, and the View menu gained a Redraw entry (Ctrl+Alt+R) for a blank chat area.
 
 ---
 

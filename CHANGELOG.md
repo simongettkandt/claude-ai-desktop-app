@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.4.11] - 2026-07-19 - Theme Fix and Tab Persistence
+
+### Fixed
+- **Brand icons rendered grey instead of coloured.** In the Modern design with dark or OLED mode, the spark above the greeting and other accent icons fell back to the text colour. The Modern recolor wrote a hex value into `--accent-brand`, but claude.ai consumes that variable as a bare HSL triplet via `hsl(var(...))`; a hex made the declaration invalid, so the colour fell through to `inherit`. The variable is now skipped and `.text-accent-brand` is coloured directly. Measured before/after: `rgb(195,194,183)` vs `rgb(232,82,79)`.
+- **Tabs reset to a new chat after a connection dropout.** A tab's URL was recorded once at creation and never updated, so nothing knew which conversation a tab held. The offline page also replaced the active tab with a `data:` URL, which a later reload simply re-rendered, and background tabs stayed stuck on it permanently. Tab URLs now track navigation (including SPA route changes), reconnect restores every stuck tab to its own conversation, and the "Try Again" button returns to the conversation instead of opening a new chat.
+- **Sidebar could look missing in OLED mode.** The pre-paint stylesheet flattened `nav`/`aside` to the same black as the chat area but omitted the 1px divider from the theme controller, leaving a 1.0:1 edge. The divider is now part of the pre-paint sheet, so it holds even if the controller runs late.
+- **Artifact preview windows flashed white.** Child windows opened by claude.ai inherit the session but not `setBackgroundColor`, so they flashed white in OLED mode before painting.
+- **A tab could stay throttled at 10 fps.** `switchToTab` cleared background throttling but never restored the frame rate, which only `throttleActiveView` touches. If a window event was missed after minimizing, the tab kept rendering at the reduced rate.
+
+### Added
+- **Open tabs are restored after a restart.** The session's conversations are persisted and reopened on the next start. Restored tabs load lazily on first click rather than all at once.
+- **Redraw entry in the View menu (Ctrl+Alt+R).** Reattaches the compositor surface for the active view without switching tabs, for cases where the chat area goes blank. Mirrors the tab-switch workaround, which was previously the only way to recover.
+- **Relayout after window restore.** The settle relayout was bound to resize only, so a restored window with a stale surface had no trigger at all.
+- **Online state is checked on window focus.** Previously the app waited for the 60-second poll before noticing the connection was back.
+
+---
+
 ## [1.4.10] - 2026-07-14 - Bug Report Clarity
 
 ### Added

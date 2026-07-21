@@ -11,7 +11,8 @@ contextBridge.exposeInMainWorld('claudeDesktop', {
     }
     ipcRenderer.send('claude-response-done', { preview });
   },
-  resetVerification: () => ipcRenderer.send('claude-reset-verification')
+  resetVerification: () => ipcRenderer.send('claude-reset-verification'),
+  offlineRetry: () => ipcRenderer.send('cd-offline-retry')
 });
 
 // Anti-FOUC: OLED-Schwarz schon bei document-start setzen (laeuft vor dem ersten Paint),
@@ -53,7 +54,11 @@ contextBridge.exposeInMainWorld('claudeDesktop', {
         s.textContent = 'html{background-color:' + BG + ' !important}'
           + 'body{background-color:' + BG + ' !important;background-image:' + spark() + ' !important;background-size:620px 620px;background-attachment:fixed}'
           + '[class*="bg-bg-"],[class*="bg-black"],[class*="bg-neutral-9"],[class*="bg-zinc-9"],[class*="bg-gray-9"],[class*="bg-stone-9"],[class*="bg-slate-9"]{background-color:' + BG + ' !important}'
-          + 'nav,aside,header,[class*="sidebar" i],[class*="Sidebar"],[class*="topbar" i],[class*="TopBar"]{background-color:' + BG + ' !important;background-image:none !important}';
+          + 'nav,aside,header,[class*="sidebar" i],[class*="Sidebar"],[class*="topbar" i],[class*="TopBar"]{background-color:' + BG + ' !important;background-image:none !important}'
+          // Hairline wie theme.js HAIR_DIM. Ohne sie waere die Sidebar gegen den gleich
+          // schwarzen Chatbereich kantenlos, also unsichtbar - falls der Controller mal
+          // nicht laeuft, bleibt dieses Sheet aktiv und muss allein tragfaehig sein.
+          + 'nav,aside,[class*="sidebar" i],[class*="Sidebar"]{border-right:1px solid rgba(255,255,255,0.07) !important}';
         (document.head || de).appendChild(s);
       }
       return true;

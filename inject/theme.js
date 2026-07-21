@@ -223,6 +223,13 @@
   // ---------- Dynamische CSS-Variablen-Remaps (gescoped) ----------
   // Modern: orange Variablen -> Brand-Mid. OLED: dunkle Variablen -> dunkler (mapDark).
   var _varsKey = '';
+  // Variablen, die claude.ai nicht als fertige Farbe konsumiert. Ein Hex-Wert macht dort
+  // die Deklaration ungueltig, die Farbe faellt auf inherit zurueck und Brand-Icons
+  // (z.B. der Stern im Greeting, .text-accent-brand + fill-current) werden grau statt
+  // umgefaerbt. Gemessen: mit Override rgb(195,194,183), ohne rgb(217,119,87).
+  // Diese Variablen daher nicht anfassen, das Recoloring laeuft ueber ACCENT_CLASS_CSS.
+  var VAR_SKIP = { '--accent-brand': 1 };
+
   function buildVarsCSS() {
     // Cache: nur neu scannen, wenn sich Design/Mode oder die Anzahl Stylesheets aendert
     // (Letzteres faengt nachgeladenes claude.ai-CSS ab). Spart teure Rescans.
@@ -250,7 +257,7 @@
             if (!c) continue;
             // Brand-Recoloring (orange -> Brand-Rot) im Light-Mode NICHT anwenden,
             // sonst wirkt das warme Weiss roetlich. Nur Dark/OLED.
-            if (st.design === 'modern' && st.mode !== 'light' && !seenM[prop] && isOrange(c)) {
+            if (st.design === 'modern' && st.mode !== 'light' && !seenM[prop] && isOrange(c) && !VAR_SKIP[prop]) {
               modern += prop + ':' + mid + ' !important;';
               seenM[prop] = true;
             }
@@ -264,11 +271,17 @@
     } catch (e) {}
     var css = '';
     if (modern) css += 'html[data-cd-design="modern"]{' + modern + '}';
+    // Ersatz fuer das ausgelassene --accent-brand: die Utility-Klasse direkt einfaerben.
+    // color statt fill, weil die Icons per fill-current/currentColor erben.
+    if (st.design === 'modern' && st.mode !== 'light')
+      css += 'html[data-cd-design="modern"] .text-accent-brand{color:' + mid + ' !important}';
     if (oled) css += 'html[data-cd-theme="oled"][data-cd-surface="dark"]{' + oled + '}';
     setSheet('cd-theme-vars', css);
-    // Im OLED/Modern leeres Ergebnis = claude.ai-CSS war noch nicht (ganz) geladen.
+    // Im OLED/Modern leeres Scan-Ergebnis = claude.ai-CSS war noch nicht (ganz) geladen.
     // Cache-Key nicht festschreiben, damit der naechste applyAll/_cdSetTheme neu scannt.
-    if (!css && (st.mode === 'oled' || st.design === 'modern')) _varsKey = '';
+    // Auf die Scan-Treffer pruefen, nicht auf css: die .text-accent-brand-Regel wird
+    // unabhaengig vom Scan emittiert und wuerde den Rescan sonst faelschlich unterdruecken.
+    if (!modern && !oled && (st.mode === 'oled' || st.design === 'modern')) _varsKey = '';
   }
 
   // ---------- Composer taggen ----------

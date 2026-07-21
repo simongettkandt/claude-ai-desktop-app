@@ -441,7 +441,16 @@ const STATE_SCHEMA = [
         : [];
     } },
   { key: 'lastSeenVersion', get: () => windowState.lastSeenVersion || null,
-    set: () => { /* eigene Logik in What's-New, hier nur passthrough */ } }
+    set: () => { /* eigene Logik in What's-New, hier nur passthrough */ } },
+  // Offene Tabs. Fallback auf den zuletzt gespeicherten Wert ist zwingend: der
+  // closed-Handler leert `tabs` bevor before-quit synchron speichert, sonst wuerde
+  // beim Schliessen ueber das Fenster-X eine leere Liste die Session ueberschreiben.
+  // Restore liest windowState.tabs direkt, darum ist set ein Passthrough-No-op.
+  { key: 'tabs',
+    get: () => (tabs.length
+      ? tabs.map(tb => tb.url).filter(u => typeof u === 'string' && u.startsWith('https://'))
+      : (Array.isArray(windowState.tabs) ? windowState.tabs : [])).slice(0, 20),
+    set: () => { /* Restore laeuft in createWindow, hier nur passthrough */ } }
 ];
 
 // Wenn die aktuelle Version in dieser Map steht, werden die hier gelisteten
@@ -453,6 +462,83 @@ const RELEASE_NOTES_REVISIT = {
 };
 
 const RELEASE_NOTES = {
+  '1.4.11': [
+    {
+      icon: 'palette',
+      title: {
+        de: 'Farbige Brand-Symbole statt grauer',
+        en: 'Brand icons are coloured again',
+        fr: 'Les icônes de marque retrouvent leur couleur',
+        it: 'Le icone del marchio tornano colorate'
+      },
+      text: {
+        de: 'Im Design "Modern" mit Dunkel- oder OLED-Modus wurde der Stern über der Begrüßung und andere Akzent-Symbole grau statt farbig dargestellt. Ursache war die Umfärbung der Marken-Farbe: claude.ai erwartet an dieser Stelle keinen fertigen Farbwert, wodurch die Farbangabe ungültig wurde und die Symbole auf die Textfarbe zurückfielen. Die Umfärbung greift jetzt direkt an der richtigen Stelle.',
+        en: 'In the "Modern" design with dark or OLED mode, the spark above the greeting and other accent icons appeared grey instead of coloured. The cause was the brand colour remap: claude.ai does not expect a finished colour value there, so the declaration became invalid and the icons fell back to the text colour. The remap now applies at the right place.',
+        fr: 'Dans le design « Moderne » avec le mode sombre ou OLED, l’étoile au-dessus du message d’accueil et d’autres icônes d’accentuation apparaissaient en gris au lieu d’être colorées. En cause : la recoloration de la couleur de marque, car claude.ai n’attend pas ici une valeur de couleur finie, ce qui rendait la déclaration invalide et faisait retomber les icônes sur la couleur du texte. La recoloration s’applique désormais au bon endroit.',
+        it: 'Nel design "Moderno" con modalità scura o OLED, la stella sopra il saluto e altre icone di accento apparivano grigie invece che colorate. La causa era la ricolorazione del colore del marchio: claude.ai non si aspetta lì un valore di colore già pronto, quindi la dichiarazione diventava non valida e le icone ripiegavano sul colore del testo. Ora la ricolorazione agisce nel punto giusto.'
+      }
+    },
+    {
+      icon: 'refresh',
+      title: {
+        de: 'Offene Tabs überleben den Neustart',
+        en: 'Open tabs survive a restart',
+        fr: 'Les onglets ouverts survivent au redémarrage',
+        it: 'Le schede aperte sopravvivono al riavvio'
+      },
+      text: {
+        de: 'Die App merkt sich jetzt, welche Unterhaltungen offen waren, und stellt sie beim nächsten Start wieder her. Die zusätzlichen Tabs laden erst beim Anklicken, damit der Start nicht ausgebremst wird.',
+        en: 'The app now remembers which conversations were open and restores them on the next start. Additional tabs only load when you click them, so startup stays fast.',
+        fr: 'L’application retient désormais les conversations ouvertes et les restaure au démarrage suivant. Les onglets supplémentaires ne se chargent qu’au clic, pour ne pas ralentir le démarrage.',
+        it: 'L’app ora ricorda quali conversazioni erano aperte e le ripristina al successivo avvio. Le schede aggiuntive si caricano solo al clic, così l’avvio resta veloce.'
+      }
+    },
+    {
+      icon: 'bug',
+      title: {
+        de: 'Nach Verbindungsabbruch zurück in die richtige Unterhaltung',
+        en: 'Back to the right conversation after a dropout',
+        fr: 'Retour à la bonne conversation après une coupure',
+        it: 'Ritorno alla conversazione giusta dopo una disconnessione'
+      },
+      text: {
+        de: 'Brach die Verbindung ab, landete man danach in einem neuen Chat statt in der vorherigen Unterhaltung, und Tabs im Hintergrund blieben dauerhaft auf der Offline-Seite hängen. Die App merkt sich jetzt pro Tab die geöffnete Unterhaltung und kehrt beim Wiederverbinden dorthin zurück, auch über mehrere Tabs hinweg. Der Status wird außerdem sofort beim Zurückwechseln zum Fenster geprüft statt erst nach bis zu einer Minute.',
+        en: 'After a connection dropout you ended up in a new chat instead of the previous conversation, and background tabs stayed stuck on the offline page for good. The app now remembers the open conversation per tab and returns to it when the connection comes back, across multiple tabs. The status is also checked as soon as you switch back to the window, instead of after up to a minute.',
+        fr: 'Après une coupure de connexion, vous vous retrouviez dans une nouvelle conversation au lieu de la précédente, et les onglets en arrière-plan restaient bloqués sur la page hors ligne. L’application retient désormais la conversation ouverte pour chaque onglet et y revient au rétablissement de la connexion, sur plusieurs onglets. L’état est également vérifié dès que vous revenez sur la fenêtre, au lieu d’attendre jusqu’à une minute.',
+        it: 'Dopo una disconnessione finivi in una nuova chat invece che nella conversazione precedente, e le schede in secondo piano restavano bloccate sulla pagina offline. L’app ora ricorda la conversazione aperta per ogni scheda e vi ritorna al ripristino della connessione, anche su più schede. Lo stato viene inoltre verificato appena torni sulla finestra, invece che dopo fino a un minuto.'
+      }
+    },
+    {
+      icon: 'bolt',
+      title: {
+        de: 'Neu zeichnen bei leerem Chatbereich',
+        en: 'Redraw for a blank chat area',
+        fr: 'Redessiner en cas de zone de discussion vide',
+        it: 'Ridisegna in caso di area chat vuota'
+      },
+      text: {
+        de: 'Auf manchen Systemen bleibt der Chatbereich gelegentlich leer, bis man den Tab wechselt. Im Menü "Ansicht" gibt es dafür jetzt "Neu zeichnen" (Strg+Alt+R), das die Anzeige ohne Tabwechsel wiederherstellt. Zusätzlich wurde eine Drosselung behoben, durch die ein Tab nach dem Minimieren bei niedriger Bildrate hängen bleiben konnte.',
+        en: 'On some systems the chat area occasionally stays blank until you switch tabs. The View menu now has a "Redraw" entry (Ctrl+Alt+R) that restores the display without switching tabs. A throttling bug was also fixed that could leave a tab stuck at a low frame rate after minimizing.',
+        fr: 'Sur certains systèmes, la zone de discussion reste parfois vide jusqu’à ce que vous changiez d’onglet. Le menu « Affichage » propose désormais « Redessiner » (Ctrl+Alt+R), qui rétablit l’affichage sans changer d’onglet. Un problème de limitation a également été corrigé, qui pouvait laisser un onglet bloqué à faible fréquence d’images après réduction.',
+        it: 'Su alcuni sistemi l’area chat resta a volte vuota finché non cambi scheda. Nel menu "Visualizza" ora c’è "Ridisegna" (Ctrl+Alt+R), che ripristina la visualizzazione senza cambiare scheda. È stato inoltre corretto un problema di limitazione che poteva lasciare una scheda bloccata a bassa frequenza di fotogrammi dopo la riduzione a icona.'
+      }
+    },
+    {
+      icon: 'palette',
+      title: {
+        de: 'Seitenleiste bleibt im OLED-Modus sichtbar',
+        en: 'Sidebar stays visible in OLED mode',
+        fr: 'La barre latérale reste visible en mode OLED',
+        it: 'La barra laterale resta visibile in modalità OLED'
+      },
+      text: {
+        de: 'Im OLED-Modus konnte die Seitenleiste beim Laden mit dem gleich schwarzen Chatbereich verschmelzen und dadurch unsichtbar wirken. Die feine Trennlinie wird jetzt schon vor dem ersten Bild gesetzt, nicht erst danach. Außerdem blitzen Vorschau-Fenster für Code und Design nicht mehr weiß auf.',
+        en: 'In OLED mode the sidebar could blend into the equally black chat area while loading and appear to be gone. The thin divider is now applied before the first paint instead of after. Preview windows for code and design also no longer flash white.',
+        fr: 'En mode OLED, la barre latérale pouvait se fondre dans la zone de discussion tout aussi noire pendant le chargement et sembler avoir disparu. Le fin séparateur est désormais appliqué avant le premier rendu, et non après. Les fenêtres d’aperçu pour le code et le design ne clignotent plus en blanc.',
+        it: 'In modalità OLED la barra laterale poteva confondersi con l’area chat altrettanto nera durante il caricamento e sembrare scomparsa. Il sottile separatore viene ora applicato prima del primo disegno, non dopo. Inoltre le finestre di anteprima per codice e design non lampeggiano più in bianco.'
+      }
+    }
+  ],
   '1.4.10': [
     {
       icon: 'check',
@@ -1807,6 +1893,13 @@ function setupView(view) {
   // OAuth-Popup Lifecycle (nur wenn das neue Fenster wirklich OAuth ist)
   wc.on('did-create-window', (childWindow, details) => {
     const initialUrl = details && details.url ? details.url : '';
+    // Artefakt-/Preview-Fenster von claude.ai: kein OAuth-Lifecycle, aber sie erben
+    // setBackgroundColor nicht (das gilt nur fuer createContentView) und blitzen im
+    // OLED-Mode weiss auf. Nur die Hintergrundfarbe setzen, sonst nichts anfassen.
+    if (isAllowedDomain(initialUrl) && !isOAuthDomain(initialUrl)) {
+      try { childWindow.setBackgroundColor(theme().bg); } catch {}
+      return;
+    }
     if (!isOAuthDomain(initialUrl) && !looksLikeOAuthUrl(initialUrl)) return;
 
     let closed = false;
@@ -1899,6 +1992,15 @@ function setupView(view) {
   // SPA-Navigation (Chat-Wechsel): Scripts re-injizieren
   wc.on('did-navigate-in-page', () => reinjectScripts(wc));
 
+  // Aktuelle URL am Tab mitfuehren, damit Offline-Restore und Session-Wiederherstellung
+  // den echten Chat kennen. data: ausschliessen, sonst frisst die Offline-Seite die URL.
+  const syncTabUrl = (url) => {
+    const tab = tabs.find(tb => tb.view === view);
+    if (tab && url && !url.startsWith('data:')) tab.url = url;
+  };
+  wc.on('did-navigate', (_e, url) => syncTabUrl(url));
+  wc.on('did-navigate-in-page', (_e, url, isMainFrame) => { if (isMainFrame) syncTabUrl(url); });
+
   // Crash-Recovery
   wc.on('render-process-gone', (_, details) => {
     if (details.reason === 'clean-exit' || wc.isDestroyed()) return;
@@ -1961,19 +2063,23 @@ function getPooledView() {
 
 // Tab-Operationen
 
-function createTab(url = 'https://claude.ai') {
+// defer: Tab anlegen ohne zu laden und ohne zu aktivieren. Geladen wird beim ersten
+// Anklicken (pendingUrl in switchToTab). Fuer den Session-Restore, damit N Tabs nicht
+// gleichzeitig claude.ai anfragen.
+function createTab(url = 'https://claude.ai', defer = false) {
   if (!mainWindow || mainWindow.isDestroyed()) return null;
 
-  let view = (url === 'https://claude.ai') ? getPooledView() : null;
+  let view = (!defer && url === 'https://claude.ai') ? getPooledView() : null;
   if (!view) {
     view = createContentView();
     setupView(view);
-    view.webContents.loadURL(url);
+    if (!defer) view.webContents.loadURL(url);
   }
 
   mainWindow.contentView.addChildView(view);
-  tabs.push({ view, title: t('Neuer Chat', 'New Chat', 'Nouvelle conversation', 'Nuova chat'), url, crashCount: 0 });
-  switchToTab(tabs.length - 1);
+  tabs.push({ view, title: t('Neuer Chat', 'New Chat', 'Nouvelle conversation', 'Nuova chat'), url, crashCount: 0, pendingUrl: defer ? url : null });
+  if (!defer) switchToTab(tabs.length - 1);
+  else sendTabsUpdate();
   updateMenu();
   return tabs[tabs.length - 1];
 }
@@ -2035,6 +2141,27 @@ const settleActiveView = debounce(() => {
   } catch {}
 }, 200);
 
+// Manueller Repaint fuer den Fall, dass die Compositor-Surface leer bleibt. Bewusst
+// dieselbe setVisible-Sequenz wie switchToTab, denn das Weg-und-zurueck-Wechseln ist
+// der einzige nachweislich funktionierende Weg, die Surface neu anzuhaengen. Ueber
+// switchToTab selbst geht es nicht: dort greift der Early-Return auf den aktiven Tab.
+function repaintActiveView() {
+  const a = tabs[activeTabIndex];
+  if (!a || !alive(a.view)) return;
+  try {
+    a.view.webContents.setBackgroundThrottling(false);
+    if (typeof a.view.webContents.setFrameRate === 'function') a.view.webContents.setFrameRate(60);
+    a.view.setVisible(false);
+    setImmediate(() => {
+      if (!alive(a.view)) return;
+      a.view.setVisible(true);
+      lastViewBounds = '';
+      resizeActiveView();
+      focusActiveView();
+    });
+  } catch {}
+}
+
 function switchToTab(index) {
   if (index < 0 || index >= tabs.length || !mainWindow || mainWindow.isDestroyed()) return;
   const target = tabs[index];
@@ -2056,7 +2183,13 @@ function switchToTab(index) {
 
   target.view.setVisible(true);
   target.view.webContents.setBackgroundThrottling(false);
-  if (target.needsReload) { target.needsReload = false; target.view.webContents.reload(); }
+  // Gegenstueck zu throttleActiveView: ohne das bleibt eine View, die per minimize/hide
+  // auf 10 fps gedrosselt wurde, dort haengen, bis ein show/restore/focus-Event kommt.
+  try {
+    if (typeof target.view.webContents.setFrameRate === 'function') target.view.webContents.setFrameRate(60);
+  } catch {}
+  if (target.pendingUrl) { const u = target.pendingUrl; target.pendingUrl = null; target.view.webContents.loadURL(u); }
+  else if (target.needsReload) { target.needsReload = false; target.view.webContents.reload(); }
 
   lastViewBounds = '';
   resizeActiveView();
@@ -4259,6 +4392,7 @@ function updateMenu(force = false) {
       { label: t('Ansicht', 'View', 'Affichage', 'Visualizza'), submenu: [
         { label: t('Neu laden', 'Reload', 'Recharger', 'Ricarica'), accelerator: 'CmdOrCtrl+R', click: () => { if (tabs[activeTabIndex] && alive(tabs[activeTabIndex].view)) tabs[activeTabIndex].view.webContents.reload(); } },
         { label: t('Erzwungen neu laden', 'Force Reload', 'Recharger de force', 'Ricarica forzata'), accelerator: 'CmdOrCtrl+Shift+R', click: () => { if (tabs[activeTabIndex] && alive(tabs[activeTabIndex].view)) tabs[activeTabIndex].view.webContents.reloadIgnoringCache(); } },
+        { label: t('Neu zeichnen', 'Redraw', 'Redessiner', 'Ridisegna'), accelerator: 'CmdOrCtrl+Alt+R', click: () => repaintActiveView() },
         { type: 'separator' },
         { role: 'resetZoom', label: t('Zoom zur\u00fccksetzen', 'Reset Zoom', 'Réinitialiser le zoom', 'Reimposta zoom') },
         { role: 'zoomIn', label: t('Vergr\u00f6\u00dfern', 'Zoom In', 'Zoom avant', 'Aumenta zoom') },
@@ -4293,8 +4427,16 @@ function handleOnlineChange(online) {
     showOfflinePage();
     notify({ title: 'Claude', body: t('Keine Internetverbindung.', 'No internet connection.', 'Pas de connexion Internet.', 'Nessuna connessione a Internet.') });
   } else {
-    if (tabs[activeTabIndex] && alive(tabs[activeTabIndex].view))
-      tabs[activeTabIndex].view.webContents.reload();
+    // Jeder Tab, der auf der Offline-Seite haengt, muss per loadURL zurueck auf seinen
+    // echten Chat. reload() wuerde nur die data:-Seite neu laden. Inaktive Tabs bleiben
+    // sonst dauerhaft dort haengen, weil showOfflinePage nur den aktiven Tab trifft.
+    const active = tabs[activeTabIndex];
+    for (const tab of tabs) {
+      if (!alive(tab.view)) continue;
+      if (tab.view.webContents.getURL().startsWith('data:'))
+        tab.view.webContents.loadURL(tab.url || 'https://claude.ai');
+      else if (tab === active) tab.view.webContents.reload();
+    }
     notify({ title: 'Claude', body: t('Verbindung wiederhergestellt!', 'Connection restored!', 'Connexion rétablie !', 'Connessione ripristinata!') });
   }
 }
@@ -4317,7 +4459,7 @@ function showOfflinePage() {
     <h1>${t('Keine Verbindung', 'No Connection', 'Pas de connexion', 'Nessuna connessione')}</h1>
     <p>${t('Prüfe deine Netzwerkverbindung.', 'Check your network connection.', 'Vérifiez votre connexion réseau.', 'Controlla la connessione di rete.')}</p>
     <p class="pulse" style="font-size:12px">${t('Automatische Wiederverbindung\u2026', 'Reconnecting automatically\u2026', 'Reconnexion automatique…', 'Riconnessione automatica…')}</p>
-    <button onclick="location.href='https://claude.ai'">${t('Erneut versuchen', 'Try Again', 'Réessayer', 'Riprova')}</button>
+    <button onclick="if(window.claudeDesktop&amp;&amp;claudeDesktop.offlineRetry)claudeDesktop.offlineRetry();else location.href='https://claude.ai'">${t('Erneut versuchen', 'Try Again', 'Réessayer', 'Riprova')}</button>
     </body></html>`
   ));
 }
@@ -5300,6 +5442,14 @@ ipcMain.on('claude-response-done', (event, payload) => {
   } catch {}
 });
 
+ipcMain.on('cd-offline-retry', (event) => {
+  // Zurueck auf den Chat dieses Tabs, nicht auf einen neuen. Sender-Lookup, weil der
+  // Nutzer waehrend der Offline-Seite den Tab gewechselt haben kann.
+  const fromTab = tabs.find(tb => tb.view && tb.view.webContents === event.sender);
+  if (!fromTab || !alive(fromTab.view)) return;
+  fromTab.view.webContents.loadURL(fromTab.url || 'https://claude.ai');
+});
+
 ipcMain.on('claude-reset-verification', (event) => {
   // Nur aus einer echten Tab-View akzeptieren; den Reset auf genau diesen Tab anwenden,
   // nicht auf den aktiven (der Nutzer kann waehrend des Bestaetigungsdialogs wechseln).
@@ -5465,9 +5615,14 @@ function createWindow() {
   mainWindow.on('unmaximize', () => { saveWindowState(); lastViewBounds = ''; resizeActiveView(); sendWindowState(); });
   mainWindow.on('enter-full-screen', () => { lastViewBounds = ''; resizeActiveView(); });
   mainWindow.on('leave-full-screen', () => { lastViewBounds = ''; resizeActiveView(); });
-  mainWindow.on('show', () => { lastViewBounds = ''; resizeActiveView(); throttleActiveView(false); });
-  mainWindow.on('restore', () => { throttleActiveView(false); focusActiveView(); });
-  mainWindow.on('focus', () => { throttleActiveView(false); focusActiveView(); });
+  // settleActiveView auch hier: nach Restore/Show haelt die Compositor-Surface auf X11
+  // gern veralteten Inhalt fest, und resizeActiveView allein ist bei gleicher Fenstergroesse
+  // ein No-op. Debounced, kostet also nichts.
+  mainWindow.on('show', () => { lastViewBounds = ''; resizeActiveView(); settleActiveView(); throttleActiveView(false); });
+  mainWindow.on('restore', () => { throttleActiveView(false); focusActiveView(); settleActiveView(); });
+  // Online-Status beim Zurueckwechseln sofort pruefen statt bis zu 60s auf den Poll zu
+  // warten. handleOnlineChange ist flankengeguarded, also idempotent.
+  mainWindow.on('focus', () => { throttleActiveView(false); focusActiveView(); handleOnlineChange(net.isOnline()); });
   mainWindow.on('minimize', () => throttleActiveView(true));
   mainWindow.on('hide', () => throttleActiveView(true));
 
@@ -5487,9 +5642,14 @@ function createWindow() {
     drainPool();
   });
 
-  // Erster Tab + Pool verzögert füllen
+  // Erster Tab + Pool verzögert füllen. Weitere Tabs der letzten Sitzung werden
+  // deferred angelegt und laden erst beim Anklicken.
   mainWindow.webContents.once('did-finish-load', () => {
-    const tab = createTab('https://claude.ai');
+    const restored = Array.isArray(windowState.tabs)
+      ? windowState.tabs.filter(u => typeof u === 'string' && u.startsWith('https://')).slice(0, 20)
+      : [];
+    const tab = createTab(restored[0] || 'https://claude.ai');
+    for (let i = 1; i < restored.length; i++) createTab(restored[i], true);
     if (tab) {
       tab.view.webContents.once('did-finish-load', () => {
         lastViewBounds = '';

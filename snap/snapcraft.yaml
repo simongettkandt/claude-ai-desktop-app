@@ -1,5 +1,5 @@
 name: claude-ai-desktop
-version: '1.4.10'
+version: '1.4.11'
 summary: Unofficial desktop wrapper for Claude AI with tabs, tray and voice input
 description: |
   Unofficial desktop app for Claude AI on Linux. Runs claude.ai without
@@ -8,27 +8,28 @@ description: |
 
   Not affiliated with Anthropic.
 
-  What's new in v1.4.10:
+  What's new in v1.4.11:
 
-  * Bug report clarity - the report window and this Store listing now
-    say plainly that a message reaches a single volunteer developer,
-    not Anthropic. Account, login, subscription, billing and anything
-    that also happens on claude.ai in a normal browser can only be
-    handled by Anthropic support.
-  * A required checkbox now gates the Send button (you confirm the
-    issue is about the Linux app itself), and a live hint points
-    account/login/billing wording to support.anthropic.com.
+  * Brand icons are coloured again in the Modern design with dark or
+    OLED mode. The recolor wrote a hex value into claude.ai's accent
+    variable, which is consumed as a bare HSL triplet - the colour
+    became invalid and icons fell back to grey.
+  * Open tabs are restored after a restart, and they load lazily on
+    first click instead of all at once.
+  * A dropped connection no longer strands you in a new chat. Each tab
+    returns to its own conversation, including background tabs that
+    previously stayed stuck on the offline page.
+  * New Redraw entry in the View menu (Ctrl+Alt+R) for the case where
+    the chat area goes blank until you switch tabs.
+  * OLED mode keeps the sidebar divider visible while loading, so the
+    sidebar no longer blends into the chat area.
 
-  Highlights from v1.4.9:
+  Highlights from v1.4.10:
 
-  * OLED mode no longer paints light price-chip badges (e.g. on the
-    upgrade page) fully black - only the fully opaque background
-    classes are matched now, translucent tint variants are excluded.
-  * Classic/Modern recolor fix - the brand-color detection did not
-    understand newer CSS color functions (oklch(), color-mix()) that
-    claude.ai increasingly uses, so recoloring silently stopped
-    working on some pages; unrecognized values are now resolved via
-    canvas pixel sampling.
+  * Bug report clarity - the report window and this Store listing say
+    plainly that a message reaches a single volunteer developer, not
+    Anthropic. Account, login, subscription and billing questions can
+    only be handled by Anthropic support.
 
   System requirements:
 
