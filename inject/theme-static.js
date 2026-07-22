@@ -28,6 +28,7 @@
     // Trennung laeuft daher ueber 1px-Hairlines (Kante triggert, nicht Flaechenhelligkeit).
     var MENU_EDGE = 'rgba(232,82,79,0.12)', HAIR_DIM = 'rgba(255,255,255,0.07)', FOCUS = 'rgba(232,82,79,0.45)';
     var O = 'html[data-cd-theme="oled"][data-cd-surface="dark"]';
+    var W = 'html[data-cd-theme="light"]';
     var SPARK = sparkleBg(st);
 
     // [class*="X"] matcht auch Tailwinds Opacity-Modifier "X/NN" (z.B. eine helle 5%-Toenung
@@ -40,6 +41,14 @@
     }
 
     return [
+      // --- White: claude.ai bleibt technisch dark, wird per GPU-Invert hell. Beim Umschalten
+      // aendert sich nur die filter-Property am Wurzelknoten -> ~6ms Recalc (der Compositor
+      // faerbt um, kein Main-Thread-Repaint), statt ~480ms fuer claude.ais eigenen
+      // prefers-color-scheme-Palettenwechsel. hue-rotate(180) haelt die Farbtoene nah am
+      // Original (Rot bleibt Rot). Echte Medien (Fotos/Avatare/Thumbnails) zurueck-invertieren,
+      // damit sie nicht negativ erscheinen.
+      W + '{filter:invert(1) hue-rotate(180deg) !important;background-color:#fff !important}',
+      W + ' img,' + W + ' video,' + W + ' canvas,' + W + ' image,' + W + ' [style*="background-image"]{filter:invert(1) hue-rotate(180deg)}',
       // --- OLED: html schwarz (Fallback) ---
       O + '{background-color:' + BG + ' !important}',
       // body traegt das Sternen-Hintergrundbild (claude.ais Container darueber sind

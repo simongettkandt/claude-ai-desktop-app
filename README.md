@@ -18,7 +18,7 @@ sudo snap install claude-ai-desktop
 
 [![claude-ai-desktop](https://snapcraft.io/claude-ai-desktop/badge.svg)](https://snapcraft.io/claude-ai-desktop)
 
-> **v1.4.12** - Faster Theme Rendering. On a cold start the OLED theme no longer visibly builds up: the full theme is now applied before the first paint instead of ~1.7s in (it used to wait behind claude.ai's own startup work on the main thread). The starfield-behind-dialogs rule also moved off a CSS `:has()` selector that the browser re-evaluated on every page change and made streaming feel slow; it now uses a lightweight attribute toggle, plus smaller theme-load cleanups.
+> **v1.4.12** - Instant Theme Switching. Switching to the White theme no longer freezes for about half a second: instead of flipping claude.ai to its light palette (which made it restyle every visible element, ~480ms), White now keeps claude.ai in its dark palette and inverts the page on the GPU (~6ms, as fast as the OLED and Dark switch; White is a colour-faithful inversion of the dark theme). On a cold start the OLED theme also no longer visibly builds up (the full theme is applied before the first paint instead of ~1.7s in), and the starfield-behind-dialogs rule moved off a CSS `:has()` selector that made streaming feel slow.
 
 ---
 

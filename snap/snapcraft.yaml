@@ -10,6 +10,10 @@ description: |
 
   What's new in v1.4.12:
 
+  * Switching to the White theme is instant now instead of freezing
+    for about half a second. It keeps claude.ai in its dark palette
+    and inverts the page on the GPU, as fast as the OLED and Dark
+    switch.
   * The OLED theme is applied before the first paint, so on a cold
     start the interface no longer briefly shows claude.ai's default
     styling and then snaps to the dark theme.

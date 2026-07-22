@@ -7,9 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [1.4.12] - 2026-07-21 - Faster Theme Rendering
+## [1.4.12] - 2026-07-22 - Instant Theme Switching
 
 ### Fixed
+- **Switching to the White theme froze for about half a second.** White flipped claude.ai's whole page to its light palette (a `prefers-color-scheme` change), which made claude.ai recompute the style of every visible element, measured at ~480ms and unaffected by chat length. White now keeps claude.ai in its dark palette and inverts the page on the GPU instead (`filter: invert(1) hue-rotate(180deg)` at the root, with real images inverted back), so only one property changes on the root. Measured ~6ms instead of ~480ms, on par with the OLED and Dark switch. White is therefore a colour-faithful inversion of the dark theme rather than claude.ai's native light theme.
 - **The OLED theme visibly built up on a cold start.** The full theme was applied by a script injected at `dom-ready`, but that script waited behind claude.ai's own startup work on the main thread and only ran about 1.7s in, so the page first showed claude.ai's default styling and then snapped to the theme. The complete static theme is now applied before the first paint (from the same single source), so restored content appears already themed. The underlying multi-second main-thread block during claude.ai's load is claude.ai's own and unchanged.
 - **Theme rendering felt slow while a response streamed.** In OLED mode the starfield behind open dialogs was hidden with a CSS `:has()` selector, which the browser re-evaluated on every change to the page. While a response is being written claude.ai changes the page many times per second, so this ran constantly and made the display feel sluggish. Measured, the selector added noticeable cost per change; the starfield is now toggled by a lightweight attribute instead, with no measurable per-change cost.
 

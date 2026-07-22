@@ -469,6 +469,21 @@ const RELEASE_NOTES_REVISIT = {
 const RELEASE_NOTES = {
   '1.4.12': [
     {
+      icon: 'bolt',
+      title: {
+        de: 'Weiß-Wechsel ohne Ruckeln',
+        en: 'Switching to White no longer stutters',
+        fr: 'Le passage au thème clair ne saccade plus',
+        it: 'Il passaggio al tema chiaro non scatta più'
+      },
+      text: {
+        de: 'Der Wechsel zum weißen Theme fror kurz ein, weil dafür claude.ais komplette Farbpalette auf hell umgestellt wurde und claude.ai daraufhin die Darstellung jedes sichtbaren Elements neu berechnete (gemessen rund 480 ms, unabhängig von der Chatlänge). Weiß lässt claude.ai jetzt in seiner dunklen Palette und dreht die Seite stattdessen auf der Grafikkarte um; echte Bilder werden zurückgedreht. Statt 480 ms sind es rund 6 ms, so schnell wie der Wechsel zwischen OLED und Dunkel. Weiß ist dadurch eine farbtreue Umkehrung des dunklen Themes statt claude.ais eigenem hellen Theme.',
+        en: 'Switching to the White theme froze for a moment, because it flipped claude.ai\'s entire palette to light and claude.ai then recomputed the style of every visible element (measured at about 480ms, regardless of chat length). White now keeps claude.ai in its dark palette and inverts the page on the GPU instead, with real images inverted back. That is about 6ms instead of 480ms, as fast as switching between OLED and Dark. As a result White is a colour-faithful inversion of the dark theme rather than claude.ai\'s own light theme.',
+        fr: 'Le passage au thème clair se figeait un instant, car il basculait toute la palette de claude.ai en clair et claude.ai recalculait alors le style de chaque élément visible (environ 480 ms mesurées, quelle que soit la longueur de la conversation). Le thème clair garde désormais claude.ai dans sa palette sombre et inverse plutôt la page sur la carte graphique ; les vraies images sont réinversées. Cela représente environ 6 ms au lieu de 480 ms, aussi rapide que le passage entre OLED et sombre. Le thème clair est ainsi une inversion fidèle des couleurs du thème sombre plutôt que le thème clair natif de claude.ai.',
+        it: 'Il passaggio al tema chiaro si bloccava per un istante, perché convertiva l’intera palette di claude.ai in chiaro e claude.ai ricalcolava poi lo stile di ogni elemento visibile (circa 480 ms misurati, indipendentemente dalla lunghezza della chat). Il tema chiaro ora mantiene claude.ai nella sua palette scura e inverte invece la pagina sulla scheda grafica; le immagini reali vengono re-invertite. Sono circa 6 ms invece di 480 ms, veloce quanto il passaggio tra OLED e scuro. Di conseguenza il tema chiaro è un’inversione fedele nei colori del tema scuro anziché il tema chiaro nativo di claude.ai.'
+      }
+    },
+    {
       icon: 'palette',
       title: {
         de: 'Theme steht sofort beim Start',
@@ -484,7 +499,7 @@ const RELEASE_NOTES = {
       }
     },
     {
-      icon: 'bolt',
+      icon: 'refresh',
       title: {
         de: 'Flüssigeres Rendern des Themes',
         en: 'Smoother theme rendering',
@@ -5619,7 +5634,10 @@ ipcMain.on('theme-toggle', () => {
   const active = tabs[activeTabIndex]?.view;
   if (active && alive(active)) active.setBackgroundColor(bg);
 
-  nativeTheme.themeSource = isDarkMode ? 'dark' : 'light';
+  // claude.ai bleibt immer im dark-Modus; White entsteht per GPU-Invert im injizierten Theme
+  // (data-cd-theme="light" -> filter:invert am Wurzelknoten, ~6ms statt ~480ms fuer claude.ais
+  // prefers-color-scheme-Palettenwechsel). Deshalb kein Farbschema-Flip mehr.
+  nativeTheme.themeSource = 'dark';
   sendThemeUpdate();
 
   for (const tab of tabs) {
@@ -5634,7 +5652,9 @@ ipcMain.on('theme-toggle', () => {
 
 function createWindow() {
   const state = loadWindowState();
-  nativeTheme.themeSource = isDarkMode ? 'dark' : 'light';
+  // Immer dark: White laeuft ueber den Invert-Filter im injizierten Theme, nicht ueber
+  // claude.ais prefers-color-scheme (siehe theme-toggle).
+  nativeTheme.themeSource = 'dark';
 
   mainWindow = new BrowserWindow({
     width: state.width, height: state.height, x: state.x, y: state.y,
