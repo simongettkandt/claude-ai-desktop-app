@@ -48,17 +48,17 @@ contextBridge.exposeInMainWorld('claudeDesktop', {
       if (!document.getElementById('cd-theme-preload')) {
         var s = document.createElement('style');
         s.id = 'cd-theme-preload';
-        // Grosse Flaechen + Sternenfeld sofort, damit beim kalten Start nichts Helles/Graues
-        // aufblitzt und die Sterne nicht erst bei dom-ready aufploppen. Composer-Rand/Hover
-        // brauchen JS-Tagging und kommen weiter erst mit dem Controller.
-        s.textContent = 'html{background-color:' + BG + ' !important}'
-          + 'body{background-color:' + BG + ' !important;background-image:' + spark() + ' !important;background-size:620px 620px;background-attachment:fixed}'
+        // Das VOLLE statische Theme schon hier (vor dem ersten Paint), damit der Inhalt
+        // sofort gethemt erscheint statt ~1.7s claude.ai-Styling zu zeigen und dann sichtbar
+        // umzuspringen (der Controller haengt per executeJavaScript hinter Reacts Hydration).
+        // staticCSS kommt aus derselben Quelle wie der Controller (main -> theme-static.js).
+        // Fallback (Subset) nur, falls staticCSS mal leer ist, damit dieses Sheet allein traegt.
+        s.textContent = (st.staticCSS && st.staticCSS.length) ? st.staticCSS
+          : ('html{background-color:' + BG + ' !important}'
+          + 'body{background-color:' + BG + ' !important;background-image:' + spark() + ' !important;background-size:620px 620px}'
           + '[class*="bg-bg-"],[class*="bg-black"],[class*="bg-neutral-9"],[class*="bg-zinc-9"],[class*="bg-gray-9"],[class*="bg-stone-9"],[class*="bg-slate-9"]{background-color:' + BG + ' !important}'
           + 'nav,aside,header,[class*="sidebar" i],[class*="Sidebar"],[class*="topbar" i],[class*="TopBar"]{background-color:' + BG + ' !important;background-image:none !important}'
-          // Hairline wie theme.js HAIR_DIM. Ohne sie waere die Sidebar gegen den gleich
-          // schwarzen Chatbereich kantenlos, also unsichtbar - falls der Controller mal
-          // nicht laeuft, bleibt dieses Sheet aktiv und muss allein tragfaehig sein.
-          + 'nav,aside,[class*="sidebar" i],[class*="Sidebar"]{border-right:1px solid rgba(255,255,255,0.07) !important}';
+          + 'nav,aside,[class*="sidebar" i],[class*="Sidebar"]{border-right:1px solid rgba(255,255,255,0.07) !important}');
         (document.head || de).appendChild(s);
       }
       return true;

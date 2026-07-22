@@ -60,6 +60,9 @@
   // schnelle Regex-Pruefung nichts findet.
   var _colorCtx = null;
   var COLOR_SENTINEL = [1, 2, 3];
+  // Moderne Farbfunktionen, die parseRGB (nur Hex/rgb/hsl) nicht kann und die den
+  // Canvas-Fallback rechtfertigen. color-mix vor color, damit die Alternation greift.
+  var CD_COLORFN = /^\s*(oklch|oklab|lab|lch|hwb|color-mix|color)\(/i;
   function normalizeColor(v) {
     if (!_colorCtx) {
       var canvas = document.createElement('canvas');
@@ -121,6 +124,10 @@
     } else if (!sheet.isConnected) {
       (document.head || document.documentElement).appendChild(sheet);
     }
+    // Identisches CSS nicht neu setzen: textContent-Rewrite reparst das Sheet und
+    // erzwingt einen vollen Style-Recalc. Bei Reinject/SPA-Nav ist das Sheet meist
+    // unveraendert, der Guard spart den Recalc.
+    if (sheet.textContent === css) return;
     sheet.textContent = css;
   }
 
@@ -143,81 +150,13 @@
     de.style.setProperty('--cd-accent-to', ac.to || '#E83B6E');
   }
 
-  // ---------- Sternenfeld ----------
-  // Fixe Positionen, damit Sterne beim Reload nicht springen. Reine radial-gradient-Dots.
-  // Klassische 5-Punkt-Sterne in den Brand-Farben (passend zum Spark-Logo), als
-  // gekacheltes SVG-Hintergrundbild. Hauch-duenn ueber niedrige Deckkraft. Nur OLED.
-  function sparkUse(x, y, sc, op) {
-    return "<use href='#s' transform='translate(" + x + "," + y + ") scale(" + sc + ")' opacity='" + op + "'/>";
-  }
-  function sparkleBg() {
-    var f = (st.accent && st.accent.from) || '#F26A3F', t = (st.accent && st.accent.to) || '#E83B6E';
-    var svg = "<svg xmlns='http://www.w3.org/2000/svg' width='620' height='620' viewBox='0 0 620 620'>"
-      + "<defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='" + f + "'/><stop offset='1' stop-color='" + t + "'/></linearGradient>"
-      + "<path id='s' d='M0,-1 L.2245,-.309 L.951,-.309 L.363,.118 L.588,.809 L0,.382 L-.588,.809 L-.363,.118 L-.951,-.309 L-.2245,-.309 Z'/></defs>"
-      + "<g fill='url(#g)'>"
-      + sparkUse(110, 140, 11, .3) + sparkUse(430, 95, 7, .2) + sparkUse(540, 400, 9, .26)
-      + sparkUse(230, 500, 6, .18) + sparkUse(580, 580, 5, .16) + sparkUse(300, 280, 8, .22)
-      + "</g></svg>";
-    return 'url("data:image/svg+xml,' + encodeURIComponent(svg) + '")';
-  }
-
-  // ---------- Statisches Stylesheet (einmal, gescoped) ----------
-
+  // ---------- Statisches Stylesheet (aus gemeinsamer Quelle) ----------
+  // buildStaticCSS + sparkleBg liegen in inject/theme-static.js (window.cdThemeStatic),
+  // damit main.js dasselbe Sheet fuer den document-start-Preload erzeugen kann und beide
+  // nicht auseinanderlaufen. main prependet theme-static.js vor diesem Script.
   function buildStaticCSS() {
-    var BG = '#050306', BG_HI = '#120f12';
-    // OLED: Flaechen liegen alle unter 1.2:1 Kontrast -> auf near-black crush unsichtbar.
-    // Trennung laeuft daher ueber 1px-Hairlines (Kante triggert, nicht Flaechenhelligkeit).
-    var MENU_EDGE = 'rgba(232,82,79,0.12)', HAIR_DIM = 'rgba(255,255,255,0.07)', FOCUS = 'rgba(232,82,79,0.45)';
-    var O = 'html[data-cd-theme="oled"][data-cd-surface="dark"]';
-    var SPARK = sparkleBg();
-
-    // [class*="X"] matcht auch Tailwinds Opacity-Modifier "X/NN" (z.B. eine helle 5%-Toenung
-    // fuer einen Preis-Chip), die sonst faelschlich volldeckend geschwaerzt wird und ihren
-    // eigenen (auf hell gedachten) Text unsichtbar macht. :not() schliesst genau diese Variante aus.
-    function safeBg(tokens, color) {
-      return tokens.map(function (t) {
-        return O + ' [class*="' + t + '"]:not([class*="' + t + '/"])';
-      }).join(',') + '{background-color:' + color + ' !important}';
-    }
-
-    return [
-      // --- OLED: html schwarz (Fallback) ---
-      O + '{background-color:' + BG + ' !important}',
-      // body traegt das Sternen-Hintergrundbild (claude.ais Container darueber sind
-      // transparent, scheinen also durch). Composer/Sidebar/Panels haben eigenen opaken
-      // Hintergrund und decken die Sterne ab -> Sterne nur in leeren Flaechen sichtbar.
-      O + ' body{background-color:' + BG + ' !important;background-image:' + SPARK + ' !important;background-size:620px 620px;background-attachment:fixed}',
-      // Sterne ausblenden solange ein Modal offen ist, sonst schimmern sie unruhig durch den Backdrop.
-      O + ' body:has([role="dialog"]),' + O + ' body:has([aria-modal="true"]){background-image:none !important}',
-      O + ' #__next,' + O + ' #root,' + O + ' main,' + O + ' [role="main"]{background-color:transparent !important;background-image:none !important}',
-      // undurchsichtige Flaechen decken die Sterne ab
-      O + ' nav,' + O + ' aside,' + O + ' header,' + O + ' [class*="sidebar" i],' + O + ' [class*="Sidebar"],' + O + ' [class*="topbar" i],' + O + ' [class*="TopBar"]{background-color:' + BG + ' !important;background-image:none !important}',
-      // Sidebar gegen den gleich-schwarzen Chatbereich abgrenzen (sonst Kante 1.0:1 = unsichtbar).
-      O + ' nav,' + O + ' aside,' + O + ' [class*="sidebar" i],' + O + ' [class*="Sidebar"]{border-right:1px solid ' + HAIR_DIM + ' !important}',
-      safeBg(['bg-bg-000', 'bg-bg-100', 'bg-bg-200'], BG),
-      safeBg(['bg-bg-300', 'bg-bg-400'], BG_HI),
-      safeBg(['bg-bg-500', 'bg-bg-600'], '#1a1517'),
-      // claude.ais neuere surface-Tokens (z.B. Settings-Content bg-surface-2 = grau) ebenfalls schwaerzen.
-      safeBg(['bg-surface-0', 'bg-surface-1'], BG),
-      safeBg(['bg-surface-2', 'bg-surface-3'], BG_HI),
-      safeBg(['bg-black', 'bg-neutral-900', 'bg-neutral-950', 'bg-zinc-900', 'bg-zinc-950', 'bg-gray-900', 'bg-gray-950', 'bg-stone-900', 'bg-stone-950', 'bg-slate-900', 'bg-slate-950'], BG),
-      O + ' [class*="from-bg-"],' + O + ' [class*="to-bg-"],' + O + ' [class*="via-bg-"]{background-image:none !important}',
-      O + ' header[class*="bg-"]{background-color:' + BG + ' !important;background-image:none !important}',
-      // --- OLED: Navigation / Menues ---
-      O + ' nav a,' + O + ' nav button,' + O + ' aside a,' + O + ' aside button,' + O + ' [class*="sidebar" i] a,' + O + ' [class*="sidebar" i] button,' + O + ' [class*="Sidebar"] a,' + O + ' [class*="Sidebar"] button{background-color:transparent !important;border-color:transparent !important;box-shadow:none !important}',
-      O + ' nav a:hover,' + O + ' nav button:hover,' + O + ' aside a:hover,' + O + ' aside button:hover,' + O + ' [class*="sidebar" i] a:hover,' + O + ' [class*="sidebar" i] button:hover{background-color:#181417 !important}',
-      O + ' nav [aria-current="page"],' + O + ' nav [data-state="active"],' + O + ' nav [aria-selected="true"],' + O + ' aside [aria-current="page"],' + O + ' aside [data-state="active"],' + O + ' aside [aria-selected="true"]{background-color:#1c181b !important}',
-      O + ' [role="menu"],' + O + ' [role="dialog"],' + O + ' [role="listbox"],' + O + ' [role="tooltip"],' + O + ' [class*="opover"],' + O + ' [class*="ropdown"],' + O + ' [class*="enuContent"],' + O + ' [data-radix-popper-content-wrapper]>*{background-color:' + BG_HI + ' !important;background-image:none !important;border:1px solid ' + MENU_EDGE + ' !important;box-shadow:0 8px 28px rgba(0,0,0,0.6) !important}',
-      O + ' [role="menu"] [role="menuitem"],' + O + ' [role="menu"] button,' + O + ' [role="menu"] a,' + O + ' [role="listbox"] [role="option"]{background-color:transparent !important;border-color:transparent !important}',
-      O + ' [role="menu"] [role="menuitem"]:hover,' + O + ' [role="menu"] button:hover,' + O + ' [role="menu"] a:hover,' + O + ' [role="listbox"] [role="option"]:hover,' + O + ' [role="menuitem"][data-highlighted]{background-color:#1c181b !important}',
-      O + ' input:focus,' + O + ' textarea:focus,' + O + ' [role="searchbox"]:focus,' + O + ' [role="combobox"]:focus{outline:1.5px solid ' + FOCUS + ' !important;outline-offset:2px !important}',
-      // --- OLED: Composer-Gradient-Rand ---
-      '@keyframes cdGradShift{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}',
-      O + ' .cd-composer{position:relative;border-color:transparent !important;overflow:visible !important;background-color:' + BG + ' !important}',
-      O + ' .cd-composer::before{content:"";position:absolute;inset:-2px;border-radius:var(--cd-composer-radius,14px);padding:2px;background:linear-gradient(135deg,var(--cd-accent-from),var(--cd-accent-to),var(--cd-accent-from),var(--cd-accent-to));background-size:300% 300%;animation:cdGradShift 6s ease-in-out infinite;-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);mask-composite:exclude;pointer-events:none;z-index:5}',
-      ''
-    ].join('');
+    return (window.cdThemeStatic && window.cdThemeStatic.buildStaticCSS)
+      ? window.cdThemeStatic.buildStaticCSS(st) : '';
   }
 
   // ---------- Dynamische CSS-Variablen-Remaps (gescoped) ----------
@@ -253,7 +192,11 @@
             if (prop.indexOf('--') !== 0) continue;
             var val = rule.style.getPropertyValue(prop);
             var c = parseRGB(val);
-            if (!c && val.indexOf('(') >= 0) c = parseRGB(normalizeColor(val));
+            // Canvas-Fallback (GPU-Readback) nur fuer moderne Farbfunktionen, die parseRGB
+            // nicht kennt. var()/calc()/cubic-bezier()/gradient/url() liefern ohnehin kein
+            // Pixel (ungueltiges fillStyle -> null); frueher liefen dafuer hunderte
+            // verschwendete Readbacks pro Scan.
+            if (!c && CD_COLORFN.test(val)) c = parseRGB(normalizeColor(val));
             if (!c) continue;
             // Brand-Recoloring (orange -> Brand-Rot) im Light-Mode NICHT anwenden,
             // sonst wirkt das warme Weiss roetlich. Nur Dark/OLED.
@@ -310,6 +253,17 @@
     }
   }
 
+  // Ersetzt die frueheren body:has(...)-Regeln: ein einziges querySelector pro
+  // gedrosseltem Mutations-Batch (nur OLED) statt :has()-Auswertung bei jedem
+  // Style-Recalc. Setzt data-cd-modal am <html>, worauf das statische Sheet reagiert.
+  function updateModalFlag() {
+    var de = document.documentElement;
+    if (st.mode !== 'oled') { if (de.hasAttribute('data-cd-modal')) de.removeAttribute('data-cd-modal'); return; }
+    var open = !!document.querySelector('[role="dialog"],[aria-modal="true"]');
+    if (open === de.hasAttribute('data-cd-modal')) return;
+    if (open) de.setAttribute('data-cd-modal', ''); else de.removeAttribute('data-cd-modal');
+  }
+
   // ---------- Modern: orange SVGs recoloren ----------
 
   function recolorEl(el) {
@@ -351,6 +305,7 @@
     setSheet('cd-theme-static', buildStaticCSS());
     buildVarsCSS();
     tagComposer();
+    updateModalFlag();
     deferHeavy();
   }
 
@@ -363,6 +318,7 @@
     setSheet('cd-theme-static', buildStaticCSS());
     buildVarsCSS();
     tagComposer();
+    updateModalFlag();
     deferHeavy();
   };
 
@@ -381,20 +337,35 @@
       }
     }
     var ob = new MutationObserver(function (muts) {
-      if (st.design === 'modern' && st.mode !== 'light') {
+      var wantSVG = (st.design === 'modern' && st.mode !== 'light');
+      var wantVars = (st.mode === 'oled' || wantSVG);
+      var sheetsAdded = false;
+      if (wantSVG || wantVars) {
         for (var i = 0; i < muts.length; i++) {
           var added = muts[i].addedNodes;
           for (var j = 0; j < added.length; j++) {
             var n = added[j];
             if (n.nodeType !== 1) continue;
-            if (n.tagName === 'svg' || n.tagName === 'SVG') svgRoots.push(n);
-            else if (n.querySelector && n.querySelector('svg')) svgRoots.push(n);
+            if (wantSVG) {
+              if (n.tagName === 'svg' || n.tagName === 'SVG') svgRoots.push(n);
+              else if (n.querySelector && n.querySelector('svg')) svgRoots.push(n);
+            }
+            // claude.ai laedt CSS-Bundles lazy nach dom-ready nach. Neues STYLE/LINK ->
+            // Variablen-Remap nachziehen, statt bis window.load zu warten (Kaltstart-Nachladen).
+            if (wantVars && (n.tagName === 'STYLE' || n.tagName === 'LINK')) sheetsAdded = true;
           }
         }
-        if (svgRoots.length && !svgScheduled) { svgScheduled = true; idle(flushSVG, 500); }
+        if (wantSVG && svgRoots.length && !svgScheduled) { svgScheduled = true; idle(flushSVG, 500); }
+        // buildVarsCSS ist ueber styleSheets.length gecacht, rescant also nur bei echtem Zuwachs.
+        if (sheetsAdded) buildVarsCSS();
       }
       // unsere Artefakte wiederherstellen, falls claude.ai sie entfernt
       if (!document.getElementById('cd-theme-static') || !document.getElementById('cd-theme-static').isConnected) setSheet('cd-theme-static', buildStaticCSS());
+      // Modal-Flag direkt im Observer, NICHT im rAF: requestAnimationFrame pausiert bei
+      // verdecktem/unsichtbarem Fenster, dann bliebe das Sternenfeld-Ausblenden aus. Der
+      // MutationObserver laeuft dagegen auch dann. Frueher hielt die CSS-:has()-Regel das
+      // immer, jetzt uebernimmt das dieser Aufruf. Billig: ein querySelector pro Batch, nur OLED.
+      updateModalFlag();
       if (pending) return;
       pending = true;
       requestAnimationFrame(function () { pending = false; tagComposer(); });

@@ -1,5 +1,5 @@
 name: claude-ai-desktop
-version: '1.4.11'
+version: '1.4.12'
 summary: Unofficial desktop wrapper for Claude AI with tabs, tray and voice input
 description: |
   Unofficial desktop app for Claude AI on Linux. Runs claude.ai without
@@ -8,28 +8,27 @@ description: |
 
   Not affiliated with Anthropic.
 
-  What's new in v1.4.11:
+  What's new in v1.4.12:
+
+  * The OLED theme is applied before the first paint, so on a cold
+    start the interface no longer briefly shows claude.ai's default
+    styling and then snaps to the dark theme.
+  * Smoother rendering while a reply streams - the starfield-behind-
+    dialogs rule moved off an expensive CSS selector the browser had
+    to re-evaluate on every change to the page.
+  * More reliable startup on distributions without a setuid Chromium
+    sandbox helper, and a private shared-memory area so the renderer
+    no longer competes with other Chromium-based snaps.
+
+  Highlights from v1.4.11:
 
   * Brand icons are coloured again in the Modern design with dark or
-    OLED mode. The recolor wrote a hex value into claude.ai's accent
-    variable, which is consumed as a bare HSL triplet - the colour
-    became invalid and icons fell back to grey.
-  * Open tabs are restored after a restart, and they load lazily on
-    first click instead of all at once.
-  * A dropped connection no longer strands you in a new chat. Each tab
-    returns to its own conversation, including background tabs that
-    previously stayed stuck on the offline page.
-  * New Redraw entry in the View menu (Ctrl+Alt+R) for the case where
-    the chat area goes blank until you switch tabs.
-  * OLED mode keeps the sidebar divider visible while loading, so the
-    sidebar no longer blends into the chat area.
-
-  Highlights from v1.4.10:
-
-  * Bug report clarity - the report window and this Store listing say
-    plainly that a message reaches a single volunteer developer, not
-    Anthropic. Account, login, subscription and billing questions can
-    only be handled by Anthropic support.
+    OLED mode.
+  * Open tabs are restored after a restart and load lazily on first
+    click. A dropped connection returns each tab to its own
+    conversation instead of a new chat.
+  * New Redraw entry in the View menu (Ctrl+Alt+R) for a blank chat
+    area.
 
   System requirements:
 
@@ -93,6 +92,14 @@ confinement: strict
 platforms:
   amd64:
 
+# Eigener /dev/shm fuer diesen Snap. Ohne teilen sich alle Snaps mit browser-support
+# (Chromium, andere Electron-Apps) denselben /dev/shm-Namensraum -> Chromium-Renderer
+# koennen dort scheitern ("Creating shared memory in /dev/shm ... failed"), ein bekannter
+# Snap-Freeze-Ausloeser. private:true auto-connectet ohne manuellen Store-Review.
+plugs:
+  shared-memory:
+    private: true
+
 apps:
   claude-ai-desktop:
     command: app/electron-launch
@@ -115,6 +122,7 @@ apps:
       - gsettings
       - opengl
       - screen-inhibit-control
+      - shared-memory
 
 parts:
   electron-app:

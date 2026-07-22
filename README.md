@@ -1,6 +1,10 @@
-# Unofficial Claude Desktop App for Linux Ubuntu
+<p align="center">
+  <img src="icon.png" width="120" alt="Claude Desktop logo">
+</p>
 
-Desktop wrapper for claude.ai. Runs as a native window on Linux without a browser tab.
+<h1 align="center">Unofficial Claude Desktop App for Linux</h1>
+
+<p align="center">Desktop wrapper for claude.ai. Runs as a native window on Linux without a browser tab.</p>
 
 ## Installation
 
@@ -14,7 +18,7 @@ sudo snap install claude-ai-desktop
 
 [![claude-ai-desktop](https://snapcraft.io/claude-ai-desktop/badge.svg)](https://snapcraft.io/claude-ai-desktop)
 
-> **v1.4.11** - Theme Fix and Tab Persistence. Brand icons render coloured again in the Modern design (a hex value in `--accent-brand` broke claude.ai's HSL-based colour, so icons fell back to grey). Open tabs are restored after a restart, a dropped connection returns each tab to its own conversation instead of a new chat, and the View menu gained a Redraw entry (Ctrl+Alt+R) for a blank chat area.
+> **v1.4.12** - Faster Theme Rendering. On a cold start the OLED theme no longer visibly builds up: the full theme is now applied before the first paint instead of ~1.7s in (it used to wait behind claude.ai's own startup work on the main thread). The starfield-behind-dialogs rule also moved off a CSS `:has()` selector that the browser re-evaluated on every page change and made streaming feel slow; it now uses a lightweight attribute toggle, plus smaller theme-load cleanups.
 
 ---
 

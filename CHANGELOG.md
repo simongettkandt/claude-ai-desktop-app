@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.4.12] - 2026-07-21 - Faster Theme Rendering
+
+### Fixed
+- **The OLED theme visibly built up on a cold start.** The full theme was applied by a script injected at `dom-ready`, but that script waited behind claude.ai's own startup work on the main thread and only ran about 1.7s in, so the page first showed claude.ai's default styling and then snapped to the theme. The complete static theme is now applied before the first paint (from the same single source), so restored content appears already themed. The underlying multi-second main-thread block during claude.ai's load is claude.ai's own and unchanged.
+- **Theme rendering felt slow while a response streamed.** In OLED mode the starfield behind open dialogs was hidden with a CSS `:has()` selector, which the browser re-evaluated on every change to the page. While a response is being written claude.ai changes the page many times per second, so this ran constantly and made the display feel sluggish. Measured, the selector added noticeable cost per change; the starfield is now toggled by a lightweight attribute instead, with no measurable per-change cost.
+
+### Changed
+- The colour-variable scan no longer runs a canvas fallback on values that can never be colours (`var()`, `calc()`, timing functions), removing a few hundred wasted GPU read-backs per scan.
+- An identical theme stylesheet is no longer rewritten on tab switches or in-page navigation, so the browser does not re-parse and re-style for no change.
+
+---
+
 ## [1.4.11] - 2026-07-19 - Theme Fix and Tab Persistence
 
 ### Fixed

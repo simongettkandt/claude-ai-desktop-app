@@ -38,7 +38,8 @@ if (app.isPackaged) process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = 'true';
 // ohne Argumente gestartet wird (z.B. nach Auto-Update durch quitAndInstall, oder
 // per Doppelklick aus dem Dateimanager). chrome-sandbox-Helper ist auf üblichen
 // Linux-Distributionen nicht setuid-konfiguriert, ohne diesen Switch crasht der
-// Renderer beim Start.
+// Renderer beim Start. Idempotent zum Wrapper-Flag; muss vor app.whenReady() stehen.
+app.commandLine.appendSwitch('no-sandbox');
 
 // Single Instance
 if (!app.requestSingleInstanceLock()) { app.quit(); }
@@ -78,7 +79,11 @@ const MAX_NOTIFICATIONS_VISIBLE = 1;                        // ein Banner gleich
 
 const NOTIFY_SCRIPT = fs.readFileSync(path.join(__dirname, 'inject', 'notify.js'), 'utf8');
 const VERIFY_SCRIPT = fs.readFileSync(path.join(__dirname, 'inject', 'verify-banner.js'), 'utf8');
-const THEME_SCRIPT = fs.readFileSync(path.join(__dirname, 'inject', 'theme.js'), 'utf8');
+// theme-static.js zuerst: definiert window.cdThemeStatic, das theme.js nutzt. Dieselbe
+// Quelle liefert das statische Sheet auch fuer den document-start-Preload (buildStaticCSS unten).
+const THEME_STATIC_SRC = fs.readFileSync(path.join(__dirname, 'inject', 'theme-static.js'), 'utf8');
+const THEME_SCRIPT = THEME_STATIC_SRC + '\n' + fs.readFileSync(path.join(__dirname, 'inject', 'theme.js'), 'utf8');
+const { buildStaticCSS: cdBuildStaticCSS } = require(path.join(__dirname, 'inject', 'theme-static.js'));
 
 // State
 
@@ -462,6 +467,38 @@ const RELEASE_NOTES_REVISIT = {
 };
 
 const RELEASE_NOTES = {
+  '1.4.12': [
+    {
+      icon: 'palette',
+      title: {
+        de: 'Theme steht sofort beim Start',
+        en: 'Theme is there right at startup',
+        fr: 'Le thème est là dès le démarrage',
+        it: 'Il tema è pronto già all’avvio'
+      },
+      text: {
+        de: 'Beim Kaltstart baute sich das Theme sichtbar auf: kurz war claude.ais Standard-Darstellung zu sehen, dann sprang alles auf das dunkle Theme um. Grund war, dass das vollständige Theme von einem Skript kam, das erst rund 1,7 Sekunden nach dem Laden an die Reihe kam, weil claude.ai in der Zwischenzeit den Hauptprozess belegt. Das komplette Theme wird jetzt schon vor dem ersten Bild gesetzt, sodass wiederhergestellte Inhalte gleich richtig dargestellt werden. Die kurze Nicht-Reagierbarkeit während claude.ai selbst lädt, bleibt davon unberührt.',
+        en: 'On a cold start the theme visibly built up: claude.ai\'s default look flashed for a moment, then everything snapped to the dark theme. The full theme came from a script that only got its turn about 1.7 seconds into the load, because claude.ai occupies the main process until then. The complete theme is now set before the first paint, so restored content appears correct right away. The brief unresponsiveness while claude.ai itself loads is unaffected.',
+        fr: 'Au démarrage à froid, le thème se construisait visiblement : l’apparence par défaut de claude.ai apparaissait un instant, puis tout basculait vers le thème sombre. Le thème complet venait d’un script qui n’intervenait qu’environ 1,7 seconde après le chargement, car claude.ai occupe le processus principal jusque-là. Le thème complet est désormais appliqué avant le premier rendu, si bien que le contenu restauré s’affiche correctement d’emblée. La brève absence de réponse pendant que claude.ai se charge n’est pas concernée.',
+        it: 'All’avvio a freddo il tema si costruiva visibilmente: per un istante compariva l’aspetto predefinito di claude.ai, poi tutto passava al tema scuro. Il tema completo proveniva da uno script che entrava in gioco solo circa 1,7 secondi dopo il caricamento, perché claude.ai occupa il processo principale fino ad allora. Il tema completo viene ora impostato prima del primo disegno, così i contenuti ripristinati appaiono subito corretti. La breve mancanza di risposta mentre claude.ai stesso si carica non è interessata.'
+      }
+    },
+    {
+      icon: 'bolt',
+      title: {
+        de: 'Flüssigeres Rendern des Themes',
+        en: 'Smoother theme rendering',
+        fr: 'Rendu du thème plus fluide',
+        it: 'Rendering del tema più fluido'
+      },
+      text: {
+        de: 'Im OLED-Modus wurde das Sternenfeld hinter offenen Dialogen über einen aufwändigen CSS-Selektor ausgeblendet, den der Browser bei jeder Änderung an der Seite neu auswerten musste. Während eine Antwort entsteht, ändert claude.ai die Seite viele Male pro Sekunde, wodurch das ständig lief und die Darstellung träge wirken ließ. Das Ausblenden läuft jetzt über einen leichtgewichtigen Schalter, der messbar keine Zusatzkosten pro Änderung verursacht.',
+        en: 'In OLED mode the starfield behind open dialogs was hidden with an expensive CSS selector that the browser had to re-evaluate on every change to the page. While a response is being written, claude.ai changes the page many times per second, so this ran constantly and made the display feel sluggish. The hiding now uses a lightweight switch that measurably adds no cost per change.',
+        fr: 'En mode OLED, le champ d’étoiles derrière les dialogues ouverts était masqué par un sélecteur CSS coûteux que le navigateur devait réévaluer à chaque changement de la page. Pendant qu’une réponse s’écrit, claude.ai modifie la page de nombreuses fois par seconde, ce qui s’exécutait en permanence et rendait l’affichage lent. Le masquage utilise désormais un commutateur léger qui, d’après les mesures, n’ajoute aucun coût par changement.',
+        it: 'In modalità OLED il campo stellare dietro le finestre di dialogo aperte veniva nascosto con un selettore CSS costoso che il browser doveva rivalutare a ogni modifica della pagina. Mentre una risposta viene scritta, claude.ai modifica la pagina molte volte al secondo, quindi ciò veniva eseguito di continuo e rendeva la visualizzazione lenta. Ora l’occultamento usa un interruttore leggero che, secondo le misurazioni, non aggiunge alcun costo per modifica.'
+      }
+    }
+  ],
   '1.4.11': [
     {
       icon: 'palette',
@@ -1736,6 +1773,17 @@ const THEME_VARS={
 };
 window.tabAPI.onThemeUpdate(mode=>{
   const m=(mode==='light'||mode==='oled')?mode:'dark';
+  // Weicher Wechsel: bei echtem Moduswechsel (nicht beim ersten Aufruf) kurz eine
+  // Farb-Transition einblenden, damit die Leiste mit dem Inhalt zusammen fadet statt
+  // hart umzuspringen. Danach leeren, damit Hover etc. nicht dauerhaft mitanimieren.
+  if(window.__tbMode!==undefined && window.__tbMode!==m){
+    let ts=document.getElementById('tb-trans');
+    if(!ts){ts=document.createElement('style');ts.id='tb-trans';document.head.appendChild(ts);}
+    ts.textContent='*{transition:background-color .28s ease,color .28s ease,border-color .28s ease !important}';
+    clearTimeout(window.__tbTransT);
+    window.__tbTransT=setTimeout(()=>{const s=document.getElementById('tb-trans');if(s)s.textContent='';},360);
+  }
+  window.__tbMode=m;
   const v=THEME_VARS[m];
   const r=document.documentElement.style;
   r.setProperty('--bg',v[0]);r.setProperty('--bgh',v[1]);r.setProperty('--bga',v[2]);
@@ -1819,10 +1867,17 @@ function themeScript() {
   return 'window._cdTheme=' + JSON.stringify(themeState()) + ';' + THEME_SCRIPT;
 }
 
-// Anti-FOUC: preload-content.js holt den aktuellen Theme-State synchron bei document-start,
-// um OLED-Schwarz VOR dem ersten claude.ai-Paint zu setzen (sonst blitzt beim kalten Start
-// claude.ais eigenes Grau auf, bis der Controller bei dom-ready greift).
-ipcMain.on('cd-theme-mode', (e) => { e.returnValue = themeState(); });
+// Anti-FOUC: preload-content.js holt Theme-State + das volle statische Sheet synchron bei
+// document-start, um das komplette OLED-Theme VOR dem ersten claude.ai-Paint zu setzen. Sonst
+// rendert claude.ai ~1.7s mit eigenem Styling, bis der per executeJavaScript bei dom-ready
+// eingereihte Controller hinter Reacts Hydration im Main-Thread endlich drankommt und alles
+// sichtbar umspringt. staticCSS kommt aus derselben Quelle wie der Controller (theme-static.js).
+ipcMain.on('cd-theme-mode', (e) => {
+  const st = themeState();
+  let staticCSS = '';
+  try { if (st.mode === 'oled') staticCSS = cdBuildStaticCSS(st); } catch {}
+  e.returnValue = Object.assign({}, st, { staticCSS });
+});
 
 function injectScripts(wc) {
   if (!alive(wc)) return;
