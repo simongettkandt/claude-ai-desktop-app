@@ -1,4 +1,4 @@
-const { app, BrowserWindow, WebContentsView, shell, Menu, Tray, globalShortcut, nativeImage, nativeTheme, dialog, Notification, session, ipcMain, net, screen, clipboard } = require('electron');
+const { app, BrowserWindow, WebContentsView, shell, Menu, Tray, globalShortcut, nativeImage, nativeTheme, dialog, Notification, session, ipcMain, net, screen, clipboard, powerMonitor } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const fs = require('fs');
@@ -467,6 +467,38 @@ const RELEASE_NOTES_REVISIT = {
 };
 
 const RELEASE_NOTES = {
+  '1.4.13': [
+    {
+      icon: 'refresh',
+      title: {
+        de: 'Schwarze Chatfläche repariert sich selbst',
+        en: 'Blank chat area repairs itself',
+        fr: 'La zone de discussion noire se répare d’elle-même',
+        it: 'L’area chat nera si ripristina da sola'
+      },
+      text: {
+        de: 'Auf manchen Systemen blieb der Chatbereich nach einer Weile schwarz, während die Tab-Leiste normal weiterlief; erst ein Tabwechsel baute die Seite neu auf. Die App erkennt diesen Zustand jetzt selbst und zeichnet die Anzeige nach rund 20 Sekunden neu. Zusätzlich wird nachgezeichnet, wenn das Fenster auf einen anderen Monitor wandert, sich die Bildschirmkonfiguration ändert oder der Bildschirm aus dem Ruhezustand kommt.',
+        en: 'On some systems the chat area went black after a while, while the tab bar kept working normally, and only switching tabs rebuilt the page. The app now detects that state on its own and redraws the display within about 20 seconds. It also redraws when the window moves to another monitor, when the display configuration changes, and after the screen wakes up.',
+        fr: 'Sur certains systèmes, la zone de discussion devenait noire au bout d’un moment, alors que la barre d’onglets continuait de fonctionner normalement ; seul un changement d’onglet reconstruisait la page. L’application détecte désormais cet état d’elle-même et redessine l’affichage en 20 secondes environ. Elle redessine également lorsque la fenêtre passe sur un autre écran, lorsque la configuration d’affichage change et après le réveil de l’écran.',
+        it: 'Su alcuni sistemi l’area chat diventava nera dopo un po’, mentre la barra delle schede continuava a funzionare normalmente; solo cambiando scheda la pagina veniva ricostruita. L’app ora rileva da sola questo stato e ridisegna la visualizzazione entro circa 20 secondi. Ridisegna anche quando la finestra passa su un altro monitor, quando cambia la configurazione dello schermo e dopo il risveglio dello schermo.'
+      }
+    },
+    {
+      icon: 'bolt',
+      title: {
+        de: 'Hintergrund-Tabs bremsen nicht mehr',
+        en: 'Background tabs no longer slow things down',
+        fr: 'Les onglets en arrière-plan ne ralentissent plus',
+        it: 'Le schede in secondo piano non rallentano più'
+      },
+      text: {
+        de: 'Tabs im Hintergrund sollten gedrosselt werden, wurden es aber nie: die Drosselung wurde erst nach dem Ausblenden gesetzt und blieb dadurch wirkungslos. Jeder einmal geöffnete Tab rechnete unsichtbar mit voller Last weiter. Gemessen halbiert sich die Prozessorlast bei drei Hintergrund-Tabs. Im OLED-Theme fiel das am stärksten ins Gewicht, weil dort eine dauerhafte Animation am Eingabefeld läuft.',
+        en: 'Background tabs were supposed to be throttled but never were: the throttle was applied after hiding the tab, which made it a no-op. Every tab you had opened kept rendering at full cost while invisible. Measured, processor load halves with three background tabs. This weighed most in the OLED theme, where a permanent animation runs on the input field.',
+        fr: 'Les onglets en arrière-plan devaient être ralentis, mais ne l’étaient jamais : la limitation était appliquée après le masquage et restait donc sans effet. Chaque onglet déjà ouvert continuait de calculer à pleine charge sans être visible. Mesurée, la charge du processeur est divisée par deux avec trois onglets en arrière-plan. C’était le plus pénalisant dans le thème OLED, où une animation permanente tourne sur le champ de saisie.',
+        it: 'Le schede in secondo piano dovevano essere limitate, ma non lo erano mai: la limitazione veniva impostata dopo aver nascosto la scheda e restava quindi inefficace. Ogni scheda già aperta continuava a calcolare a pieno carico pur non essendo visibile. Misurato, il carico del processore si dimezza con tre schede in secondo piano. Nel tema OLED pesava di più, perché lì è attiva un’animazione permanente sul campo di immissione.'
+      }
+    }
+  ],
   '1.4.12': [
     {
       icon: 'bolt',
@@ -2159,12 +2191,8 @@ let lastViewBounds = '';
 function throttleActiveView(throttleOn) {
   const active = tabs[activeTabIndex];
   if (!active || !alive(active.view)) return;
-  try {
-    active.view.webContents.setBackgroundThrottling(throttleOn);
-    if (typeof active.view.webContents.setFrameRate === 'function') {
-      active.view.webContents.setFrameRate(throttleOn ? 10 : 60);
-    }
-  } catch {}
+  // Kein setFrameRate hier: das wirkt laut Electron-API nur bei Offscreen-Rendering.
+  try { active.view.webContents.setBackgroundThrottling(throttleOn); } catch {}
 }
 
 // Beim Fenster-Fokus (z.B. Alt+Tab) landet der Tastaturfokus sonst im Tabbar
@@ -2219,17 +2247,41 @@ function repaintActiveView() {
   const a = tabs[activeTabIndex];
   if (!a || !alive(a.view)) return;
   try {
-    a.view.webContents.setBackgroundThrottling(false);
-    if (typeof a.view.webContents.setFrameRate === 'function') a.view.webContents.setFrameRate(60);
+    // Throttling-Flag wie in switchToTab um das setVisible-Paar herum, sonst unterdrueckt
+    // das gepinnte "nie hidden" den Hide-Uebergang und der Toggle laeuft ins Leere.
+    a.view.webContents.setBackgroundThrottling(true);
     a.view.setVisible(false);
     setImmediate(() => {
       if (!alive(a.view)) return;
       a.view.setVisible(true);
+      a.view.webContents.setBackgroundThrottling(false);
       lastViewBounds = '';
       resizeActiveView();
       focusActiveView();
     });
   } catch {}
+}
+
+// Ausloeser-unabhaengiger Auffangpfad fuer die schwarze Flaeche. Haengt die Compositor-
+// Surface, bekommt der Renderer keine BeginFrames mehr und requestAnimationFrame verstummt,
+// waehrend IPC und Timer weiterlaufen. Genau das misst der Heartbeat. Drei stumme Runden am
+// fokussierten Fenster loesen denselben Repaint aus wie Strg+Alt+R. Nur die aktive View wird
+// gepingt: Hintergrund-Tabs bekommen absichtlich keine Frames.
+const FRAME_CHECK_MS = 5000, FRAME_MISS_LIMIT = 3;
+let frameSeen = true, frameMisses = 0;
+
+function startSurfaceWatchdog() {
+  ipcMain.on('cd-frame-pong', () => { frameSeen = true; });
+  setInterval(() => {
+    const a = tabs[activeTabIndex];
+    const watchable = mainWindow && !mainWindow.isDestroyed() && mainWindow.isVisible()
+      && !mainWindow.isMinimized() && a && alive(a.view) && a.view.getVisible();
+    if (!watchable) { frameSeen = true; frameMisses = 0; return; }
+    frameMisses = frameSeen ? 0 : frameMisses + 1;
+    frameSeen = false;
+    try { a.view.webContents.send('cd-frame-ping'); } catch {}
+    if (frameMisses >= FRAME_MISS_LIMIT) { frameMisses = 0; frameSeen = true; repaintActiveView(); }
+  }, FRAME_CHECK_MS);
 }
 
 function switchToTab(index) {
@@ -2245,19 +2297,19 @@ function switchToTab(index) {
   // Alten Tab verstecken
   const prev = tabs[activeTabIndex];
   if (prev && alive(prev.view)) {
-    prev.view.setVisible(false);
+    // setBackgroundThrottling VOR setVisible: das Flag wirkt erst beim naechsten
+    // Sichtbarkeitswechsel. Andersherum bleibt die View auf "nie hidden" gepinnt und
+    // rendert unsichtbar mit voller Last weiter (gemessen: 3 Hintergrund-Tabs halbieren
+    // die Renderer-CPU, wenn die Reihenfolge stimmt).
     prev.view.webContents.setBackgroundThrottling(true);
+    prev.view.setVisible(false);
   }
 
   activeTabIndex = index;
 
+  // Erst sichtbar machen, dann entdrosseln: der Show-Uebergang braucht das Flag noch gesetzt.
   target.view.setVisible(true);
   target.view.webContents.setBackgroundThrottling(false);
-  // Gegenstueck zu throttleActiveView: ohne das bleibt eine View, die per minimize/hide
-  // auf 10 fps gedrosselt wurde, dort haengen, bis ein show/restore/focus-Event kommt.
-  try {
-    if (typeof target.view.webContents.setFrameRate === 'function') target.view.webContents.setFrameRate(60);
-  } catch {}
   if (target.pendingUrl) { const u = target.pendingUrl; target.pendingUrl = null; target.view.webContents.loadURL(u); }
   else if (target.needsReload) { target.needsReload = false; target.view.webContents.reload(); }
 
@@ -5685,7 +5737,11 @@ function createWindow() {
   }, 3000);
 
   mainWindow.on('resize', () => { saveWindowState(); resizeActiveView(); settleActiveView(); });
-  mainWindow.on('move', saveWindowState);
+  // Auf X11 bleibt die Compositor-Surface der WebContentsView gelegentlich schwarz stehen,
+  // waehrend die Tab-Bar (eigenes WebContents) weiter rendert. Das Bounds-Delta in
+  // settleActiveView haengt sie wieder an. Auf 'move' noetig, weil das Ziehen auf einen
+  // anderen Monitor kein resize ausloest, solange die Fenstergroesse gleich bleibt.
+  mainWindow.on('move', () => { saveWindowState(); settleActiveView(); });
   mainWindow.on('maximize', () => { saveWindowState(); lastViewBounds = ''; resizeActiveView(); sendWindowState(); });
   mainWindow.on('unmaximize', () => { saveWindowState(); lastViewBounds = ''; resizeActiveView(); sendWindowState(); });
   mainWindow.on('enter-full-screen', () => { lastViewBounds = ''; resizeActiveView(); });
@@ -5697,7 +5753,9 @@ function createWindow() {
   mainWindow.on('restore', () => { throttleActiveView(false); focusActiveView(); settleActiveView(); });
   // Online-Status beim Zurueckwechseln sofort pruefen statt bis zu 60s auf den Poll zu
   // warten. handleOnlineChange ist flankengeguarded, also idempotent.
-  mainWindow.on('focus', () => { throttleActiveView(false); focusActiveView(); handleOnlineChange(net.isOnline()); });
+  // settleActiveView auch hier: wird die Flaeche schwarz waehrend die App im Hintergrund
+  // liegt, faellt es dem Nutzer erst beim Zurueckkommen auf. Debounced, kein Flackern.
+  mainWindow.on('focus', () => { throttleActiveView(false); focusActiveView(); settleActiveView(); handleOnlineChange(net.isOnline()); });
   mainWindow.on('minimize', () => throttleActiveView(true));
   mainWindow.on('hide', () => throttleActiveView(true));
 
@@ -5775,6 +5833,15 @@ app.whenReady().then(() => {
   setupSession();
   setupWeb3FormsHeaderRewrite();
   createWindow();
+  // Gleiche Ursache wie der 'move'-Handler: Monitorwechsel, geaenderte Skalierung und ein
+  // aufgewachter Bildschirm (DPMS/Sperrbildschirm) lassen die Surface leer zurueck, ohne
+  // dass ein Fenster-Event feuert. Einmalig registriert, createWindow kann wiederkehren.
+  screen.on('display-metrics-changed', () => settleActiveView());
+  screen.on('display-added', () => settleActiveView());
+  screen.on('display-removed', () => settleActiveView());
+  powerMonitor.on('resume', () => settleActiveView());
+  powerMonitor.on('unlock-screen', () => settleActiveView());
+  startSurfaceWatchdog();
   updateMenu(true);
   setupDownloadManager();
   setupAutoUpdater();

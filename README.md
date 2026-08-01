@@ -18,7 +18,7 @@ sudo snap install claude-ai-desktop
 
 [![claude-ai-desktop](https://snapcraft.io/claude-ai-desktop/badge.svg)](https://snapcraft.io/claude-ai-desktop)
 
-> **v1.4.12** - Instant Theme Switching. Switching to the White theme no longer freezes for about half a second: instead of flipping claude.ai to its light palette (which made it restyle every visible element, ~480ms), White now keeps claude.ai in its dark palette and inverts the page on the GPU (~6ms, as fast as the OLED and Dark switch; White is a colour-faithful inversion of the dark theme). On a cold start the OLED theme also no longer visibly builds up (the full theme is applied before the first paint instead of ~1.7s in), and the starfield-behind-dialogs rule moved off a CSS `:has()` selector that made streaming feel slow.
+> **v1.4.13** - Blank Screen Recovery. The chat area could go black after a while, most visibly in the OLED theme, and only came back on a tab switch: the page was fine, the compositor surface of the content view had stalled. The app now notices when the renderer stops receiving frames and redraws within about 20 seconds, and it also redraws on events that were previously unhandled (window moved to another monitor, display configuration change, screen wake-up, window focus). Background tabs are now actually throttled too, which was broken by an ordering mistake and cost measurable CPU for every tab you had ever opened.
 
 ---
 

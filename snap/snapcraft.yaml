@@ -1,5 +1,5 @@
 name: claude-ai-desktop
-version: '1.4.12'
+version: '1.4.13'
 summary: Unofficial desktop wrapper for Claude AI with tabs, tray and voice input
 description: |
   Unofficial desktop app for Claude AI on Linux. Runs claude.ai without
@@ -8,31 +8,30 @@ description: |
 
   Not affiliated with Anthropic.
 
-  What's new in v1.4.12:
+  What's new in v1.4.13:
 
-  * Switching to the White theme is instant now instead of freezing
-    for about half a second. It keeps claude.ai in its dark palette
-    and inverts the page on the GPU, as fast as the OLED and Dark
-    switch.
+  * The chat area could go black after a while, most visibly in the
+    OLED theme, and only came back on a tab switch. The app now
+    notices when the display stops updating and redraws it within
+    about 20 seconds.
+  * It also redraws after the window is moved to another monitor,
+    after a display configuration change and when the screen wakes
+    up - cases that previously went unhandled.
+  * Background tabs are actually throttled now. An ordering mistake
+    made the throttle a no-op, so every tab you had ever opened kept
+    rendering at full cost while invisible.
+
+  Highlights from v1.4.12:
+
+  * Switching to the White theme is instant instead of freezing for
+    about half a second. It keeps claude.ai in its dark palette and
+    inverts the page on the GPU.
   * The OLED theme is applied before the first paint, so on a cold
     start the interface no longer briefly shows claude.ai's default
     styling and then snaps to the dark theme.
-  * Smoother rendering while a reply streams - the starfield-behind-
-    dialogs rule moved off an expensive CSS selector the browser had
-    to re-evaluate on every change to the page.
-  * More reliable startup on distributions without a setuid Chromium
-    sandbox helper, and a private shared-memory area so the renderer
-    no longer competes with other Chromium-based snaps.
-
-  Highlights from v1.4.11:
-
-  * Brand icons are coloured again in the Modern design with dark or
-    OLED mode.
-  * Open tabs are restored after a restart and load lazily on first
-    click. A dropped connection returns each tab to its own
-    conversation instead of a new chat.
-  * New Redraw entry in the View menu (Ctrl+Alt+R) for a blank chat
-    area.
+  * Smoother rendering while a reply streams, and more reliable
+    startup on distributions without a setuid Chromium sandbox
+    helper.
 
   System requirements:
 

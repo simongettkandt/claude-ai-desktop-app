@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.4.13] - 2026-08-01 - Blank Screen Recovery
+
+### Fixed
+- **The chat area went black after a while and only came back on a tab switch.** The tab bar kept rendering normally, so the page itself was fine: what stalled was the compositor surface of the content view. It was most visible in the OLED theme, where the view's background colour is the same black as an empty frame. The app now watches whether the renderer still receives frames (`requestAnimationFrame` goes silent when the surface stalls, while IPC and timers keep running) and redraws after three silent checks, so within about 20 seconds. The redraw is also triggered by events that were previously unhandled: moving the window to another monitor (which produces no resize on X11 as long as the window size stays the same), display configuration changes, screen wake-up after DPMS or the lock screen, and regaining window focus.
+- **Background tabs were never actually throttled.** The throttle was applied after hiding the tab, but the flag only takes effect on the next visibility change, so it was a no-op and every tab you had opened kept rendering at full cost while invisible. Measured with three background tabs, renderer CPU drops from 13.5% to 6.7%. The same ordering mistake made "Redraw" (Ctrl+Alt+R) weaker than a real tab switch.
+
+### Changed
+- Removed the `setFrameRate` calls used for throttling. Per the Electron API they only take effect with offscreen rendering, which this app does not use, so they never did anything.
+
+---
+
 ## [1.4.12] - 2026-07-22 - Instant Theme Switching
 
 ### Fixed
