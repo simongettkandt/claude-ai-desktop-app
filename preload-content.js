@@ -6,8 +6,10 @@ const { contextBridge, ipcRenderer } = require('electron');
 // Frame-Heartbeat fuer den Surface-Watchdog in main.js: requestAnimationFrame feuert nur,
 // solange der Compositor BeginFrames liefert. Haengt die Surface, bleibt die Antwort aus,
 // waehrend IPC und Timer normal weiterlaufen.
+// Zwei Antworten: 'alive' sofort (der Renderer lebt), 'raf' nur wenn auch Frames laufen.
 ipcRenderer.on('cd-frame-ping', () => {
-  requestAnimationFrame(() => ipcRenderer.send('cd-frame-pong'));
+  ipcRenderer.send('cd-frame-pong', 'alive');
+  requestAnimationFrame(() => ipcRenderer.send('cd-frame-pong', 'raf'));
 });
 
 contextBridge.exposeInMainWorld('claudeDesktop', {

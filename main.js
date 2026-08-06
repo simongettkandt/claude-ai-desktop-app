@@ -467,6 +467,38 @@ const RELEASE_NOTES_REVISIT = {
 };
 
 const RELEASE_NOTES = {
+  '1.4.14': [
+    {
+      icon: 'bug',
+      title: {
+        de: 'Schwarze Chatfläche an der Wurzel behoben',
+        en: 'Black chat area fixed at the root',
+        fr: 'Zone de discussion noire corrigée à la racine',
+        it: 'Area chat nera risolta alla radice'
+      },
+      text: {
+        de: 'Der Auslöser war die Bremse für Hintergrund-Tabs: solange sie für den sichtbaren Tab abgeschaltet war, waren sich App und Anzeige uneinig darüber, ob der Chat gerade sichtbar ist. Beim Zurückwechseln forderte dann niemand mehr ein neues Bild an, und die Fläche blieb auf ihrer Hintergrundfarbe stehen, im OLED-Theme also schwarz. Die Bremse wird nicht mehr von Hand gesteuert; Hintergrund-Tabs werden weiterhin gedrosselt, das übernimmt jetzt die eingebaute Automatik.',
+        en: 'The trigger was the throttle for background tabs: while it was switched off for the visible tab, the app and the display disagreed about whether the chat was visible. On the way back nobody asked for a new picture, so the area kept showing its background colour, which in the OLED theme is black. The throttle is no longer steered by hand; background tabs are still throttled, that is now handled automatically.',
+        fr: 'Le déclencheur était la limitation des onglets en arrière-plan : tant qu’elle était désactivée pour l’onglet visible, l’application et l’affichage n’étaient pas d’accord sur la visibilité de la discussion. Au retour, plus personne ne demandait de nouvelle image et la zone restait sur sa couleur de fond, donc noire dans le thème OLED. La limitation n’est plus pilotée à la main ; les onglets en arrière-plan restent ralentis, c’est désormais automatique.',
+        it: 'La causa era la limitazione delle schede in secondo piano: finché era disattivata per la scheda visibile, app e visualizzazione non concordavano sul fatto che la chat fosse visibile. Al ritorno nessuno chiedeva più una nuova immagine e l’area restava sul suo colore di sfondo, quindi nera nel tema OLED. La limitazione non viene più gestita a mano; le schede in secondo piano restano limitate, ora in automatico.'
+      }
+    },
+    {
+      icon: 'refresh',
+      title: {
+        de: 'Selbstreparatur greift schneller und gibt nicht auf',
+        en: 'Self-repair is quicker and does not give up',
+        fr: 'La réparation automatique est plus rapide et n’abandonne pas',
+        it: 'Il ripristino automatico è più rapido e non si arrende'
+      },
+      text: {
+        de: 'Falls die Anzeige doch einmal stehen bleibt, wird das nach rund 8 statt 20 Sekunden bemerkt, und die Reparatur geht in Stufen vor, bis das Bild zurück ist, statt denselben wirkungslosen Versuch zu wiederholen. Die letzte Stufe hängt die Chatansicht neu ein, ohne die Seite neu zu laden. Zusätzlich zeigt „Diagnose-Info kopieren" jetzt, wie oft repariert werden musste, was einen Fehlerbericht dazu deutlich brauchbarer macht.',
+        en: 'If the display does stall, it is now noticed after about 8 seconds instead of 20, and the repair escalates until the picture is back instead of repeating one attempt that did not work. The last step re-attaches the chat view without reloading the page. "Copy diagnostics info" now also reports how often a repair was needed, which makes a bug report about it far more useful.',
+        fr: 'Si l’affichage se fige malgré tout, cela est détecté après environ 8 secondes au lieu de 20, et la réparation monte en puissance jusqu’au retour de l’image au lieu de répéter une tentative sans effet. La dernière étape rattache la vue de discussion sans recharger la page. « Copier les infos de diagnostic » indique désormais combien de réparations ont été nécessaires, ce qui rend un rapport de bogue bien plus utile.',
+        it: 'Se la visualizzazione dovesse comunque bloccarsi, ora viene rilevato dopo circa 8 secondi invece di 20 e il ripristino procede per gradi finché l’immagine non torna, invece di ripetere un tentativo inefficace. L’ultimo passo riaggancia la vista della chat senza ricaricare la pagina. Inoltre "Copia informazioni di diagnostica" mostra quante riparazioni sono state necessarie, il che rende molto più utile una segnalazione.'
+      }
+    }
+  ],
   '1.4.13': [
     {
       icon: 'refresh',
@@ -2188,12 +2220,13 @@ function createTab(url = 'https://claude.ai', defer = false) {
 
 let lastViewBounds = '';
 
-function throttleActiveView(throttleOn) {
-  const active = tabs[activeTabIndex];
-  if (!active || !alive(active.view)) return;
-  // Kein setFrameRate hier: das wirkt laut Electron-API nur bei Offscreen-Rendering.
-  try { active.view.webContents.setBackgroundThrottling(throttleOn); } catch {}
-}
+// setBackgroundThrottling wird zur Laufzeit bewusst NICHT mehr angefasst. Gemessen mit
+// Electron 41.7.1: setBackgroundThrottling(false) setzt disable_hidden_ im RenderWidgetHost,
+// danach ignoriert der Renderer jedes Verstecken (View unsichtbar, rAF laeuft trotzdem
+// weiter). Der Renderer haelt sich fuer sichtbar, die native View ist es nicht - und beim
+// Wiederanzeigen faellt dann kein WasShown an, also auch kein neuer Frame: die Flaeche
+// bleibt auf der Hintergrundfarbe stehen, in OLED schwarz. Der Default aus webPreferences
+// (backgroundThrottling: true) drosselt versteckte Tabs ohnehin korrekt.
 
 // Beim Fenster-Fokus (z.B. Alt+Tab) landet der Tastaturfokus sonst im Tabbar
 // (Top-Level-WebContents) auf dem ersten Button (win-min) statt im Chat-Inhalt,
@@ -2229,6 +2262,9 @@ const resizeActiveView = throttle(() => {
 // der eine Neukomposition erzwingt.
 const settleActiveView = debounce(() => {
   if (!mainWindow || mainWindow.isDestroyed() || !tabs[activeTabIndex] || !alive(tabs[activeTabIndex].view)) return;
+  // Nicht am unsichtbaren Fenster herumschieben: ein Bounds-Wechsel ohne Sichtbarkeit
+  // hinterlaesst eine Surface-ID, auf deren Frame der Compositor dann wartet.
+  if (!mainWindow.isVisible() || mainWindow.isMinimized()) return;
   lastViewBounds = '';
   resizeActiveView();
   const view = tabs[activeTabIndex].view;
@@ -2247,40 +2283,72 @@ function repaintActiveView() {
   const a = tabs[activeTabIndex];
   if (!a || !alive(a.view)) return;
   try {
-    // Throttling-Flag wie in switchToTab um das setVisible-Paar herum, sonst unterdrueckt
-    // das gepinnte "nie hidden" den Hide-Uebergang und der Toggle laeuft ins Leere.
-    a.view.webContents.setBackgroundThrottling(true);
     a.view.setVisible(false);
-    setImmediate(() => {
-      if (!alive(a.view)) return;
+    // Echte Verzoegerung statt setImmediate: das Verstecken muss einen Frame lang stehen,
+    // sonst zieht der Compositor Hide und Show zu einem No-op zusammen.
+    setTimeout(() => {
+      if (!alive(a.view) || tabs[activeTabIndex] !== a) return;
       a.view.setVisible(true);
-      a.view.webContents.setBackgroundThrottling(false);
       lastViewBounds = '';
       resizeActiveView();
       focusActiveView();
-    });
+    }, 50);
+  } catch {}
+}
+
+// Letzte Eskalationsstufe: View abhaengen und neu anhaengen. Erzwingt eine frische
+// Layer/Surface, ohne die Seite neu zu laden - der Chat-Zustand bleibt erhalten.
+function reattachActiveView() {
+  const a = tabs[activeTabIndex];
+  if (!a || !alive(a.view) || !mainWindow || mainWindow.isDestroyed()) return;
+  try {
+    mainWindow.contentView.removeChildView(a.view);
+    mainWindow.contentView.addChildView(a.view);
+    a.view.setVisible(true);
+    lastViewBounds = '';
+    resizeActiveView();
+    focusActiveView();
   } catch {}
 }
 
 // Ausloeser-unabhaengiger Auffangpfad fuer die schwarze Flaeche. Haengt die Compositor-
 // Surface, bekommt der Renderer keine BeginFrames mehr und requestAnimationFrame verstummt,
-// waehrend IPC und Timer weiterlaufen. Genau das misst der Heartbeat. Drei stumme Runden am
-// fokussierten Fenster loesen denselben Repaint aus wie Strg+Alt+R. Nur die aktive View wird
+// waehrend IPC und Timer weiterlaufen. Genau das misst der Heartbeat. Nur die aktive View wird
 // gepingt: Hintergrund-Tabs bekommen absichtlich keine Frames.
-const FRAME_CHECK_MS = 5000, FRAME_MISS_LIMIT = 3;
-let frameSeen = true, frameMisses = 0;
+// Der Renderer antwortet zweimal: sofort ('alive', beweist nur dass er lebt) und aus
+// requestAnimationFrame ('raf', kommt nur solange Frames laufen). Erst beide zusammen sind
+// aussagekraeftig - lebendig plus stumm heisst haengende Surface, gar keine Antwort heisst
+// nur beschaeftigter Renderer, dagegen hilft kein Repaint.
+const FRAME_CHECK_MS = 4000, FRAME_MISS_LIMIT = 2;
+let frameRaf = true, frameAlive = false, frameMisses = 0, repairStep = 0, surfaceRepairs = 0;
+
+// Reparieren in Stufen. Hilft die billigste nicht, ist der naechste Durchlauf eine Stufe
+// haerter, statt denselben wirkungslosen Repaint alle paar Sekunden zu wiederholen.
+function repairSurface() {
+  surfaceRepairs++;
+  const step = repairStep++;
+  console.warn(`Surface stumm, Reparatur Stufe ${step} (#${surfaceRepairs})`);
+  if (step === 0) repaintActiveView();
+  else if (step === 1) settleActiveView();
+  else { reattachActiveView(); repairStep = 2; }
+}
 
 function startSurfaceWatchdog() {
-  ipcMain.on('cd-frame-pong', () => { frameSeen = true; });
+  ipcMain.on('cd-frame-pong', (e, kind) => {
+    const a = tabs[activeTabIndex];
+    if (!a || !alive(a.view) || e.sender !== a.view.webContents) return;
+    if (kind === 'raf') frameRaf = true; else frameAlive = true;
+  });
   setInterval(() => {
     const a = tabs[activeTabIndex];
     const watchable = mainWindow && !mainWindow.isDestroyed() && mainWindow.isVisible()
       && !mainWindow.isMinimized() && a && alive(a.view) && a.view.getVisible();
-    if (!watchable) { frameSeen = true; frameMisses = 0; return; }
-    frameMisses = frameSeen ? 0 : frameMisses + 1;
-    frameSeen = false;
+    if (!watchable) { frameRaf = true; frameMisses = 0; repairStep = 0; return; }
+    if (frameRaf || !frameAlive) { frameMisses = 0; repairStep = 0; }
+    else frameMisses++;
+    frameRaf = false; frameAlive = false;
     try { a.view.webContents.send('cd-frame-ping'); } catch {}
-    if (frameMisses >= FRAME_MISS_LIMIT) { frameMisses = 0; frameSeen = true; repaintActiveView(); }
+    if (frameMisses >= FRAME_MISS_LIMIT) { frameMisses = 0; repairSurface(); }
   }, FRAME_CHECK_MS);
 }
 
@@ -2296,20 +2364,11 @@ function switchToTab(index) {
 
   // Alten Tab verstecken
   const prev = tabs[activeTabIndex];
-  if (prev && alive(prev.view)) {
-    // setBackgroundThrottling VOR setVisible: das Flag wirkt erst beim naechsten
-    // Sichtbarkeitswechsel. Andersherum bleibt die View auf "nie hidden" gepinnt und
-    // rendert unsichtbar mit voller Last weiter (gemessen: 3 Hintergrund-Tabs halbieren
-    // die Renderer-CPU, wenn die Reihenfolge stimmt).
-    prev.view.webContents.setBackgroundThrottling(true);
-    prev.view.setVisible(false);
-  }
+  if (prev && alive(prev.view)) prev.view.setVisible(false);
 
   activeTabIndex = index;
 
-  // Erst sichtbar machen, dann entdrosseln: der Show-Uebergang braucht das Flag noch gesetzt.
   target.view.setVisible(true);
-  target.view.webContents.setBackgroundThrottling(false);
   if (target.pendingUrl) { const u = target.pendingUrl; target.pendingUrl = null; target.view.webContents.loadURL(u); }
   else if (target.needsReload) { target.needsReload = false; target.view.webContents.reload(); }
 
@@ -2429,6 +2488,7 @@ async function copyDiagnosticsInfo() {
   lines.push(`Session: XDG_SESSION_TYPE=${process.env.XDG_SESSION_TYPE || '?'}  WAYLAND_DISPLAY=${process.env.WAYLAND_DISPLAY || ''}  DISPLAY=${process.env.DISPLAY || ''}`);
   lines.push(`Locale: ${app.getLocale()}  sysLang: ${sysLang}`);
   lines.push(`UA: ${chromeUA}`);
+  lines.push(`Surface-Repairs: ${surfaceRepairs}  Stufe: ${repairStep}`);
 
   try {
     const features = app.getGPUFeatureStatus ? app.getGPUFeatureStatus() : null;
@@ -5749,15 +5809,13 @@ function createWindow() {
   // settleActiveView auch hier: nach Restore/Show haelt die Compositor-Surface auf X11
   // gern veralteten Inhalt fest, und resizeActiveView allein ist bei gleicher Fenstergroesse
   // ein No-op. Debounced, kostet also nichts.
-  mainWindow.on('show', () => { lastViewBounds = ''; resizeActiveView(); settleActiveView(); throttleActiveView(false); });
-  mainWindow.on('restore', () => { throttleActiveView(false); focusActiveView(); settleActiveView(); });
+  mainWindow.on('show', () => { lastViewBounds = ''; resizeActiveView(); settleActiveView(); });
+  mainWindow.on('restore', () => { focusActiveView(); settleActiveView(); });
   // Online-Status beim Zurueckwechseln sofort pruefen statt bis zu 60s auf den Poll zu
   // warten. handleOnlineChange ist flankengeguarded, also idempotent.
   // settleActiveView auch hier: wird die Flaeche schwarz waehrend die App im Hintergrund
   // liegt, faellt es dem Nutzer erst beim Zurueckkommen auf. Debounced, kein Flackern.
-  mainWindow.on('focus', () => { throttleActiveView(false); focusActiveView(); settleActiveView(); handleOnlineChange(net.isOnline()); });
-  mainWindow.on('minimize', () => throttleActiveView(true));
-  mainWindow.on('hide', () => throttleActiveView(true));
+  mainWindow.on('focus', () => { focusActiveView(); settleActiveView(); handleOnlineChange(net.isOnline()); });
 
   mainWindow.on('close', (e) => {
     if (!isQuitting && minimizeOnClose && tray) {

@@ -1,5 +1,5 @@
 name: claude-ai-desktop
-version: '1.4.13'
+version: '1.4.14'
 summary: Unofficial desktop wrapper for Claude AI with tabs, tray and voice input
 description: |
   Unofficial desktop app for Claude AI on Linux. Runs claude.ai without
@@ -8,30 +8,26 @@ description: |
 
   Not affiliated with Anthropic.
 
-  What's new in v1.4.13:
+  What's new in v1.4.14:
 
-  * The chat area could go black after a while, most visibly in the
-    OLED theme, and only came back on a tab switch. The app now
-    notices when the display stops updating and redraws it within
-    about 20 seconds.
-  * It also redraws after the window is moved to another monitor,
+  * The black chat area is fixed at the root. The throttle for
+    background tabs made the app and the display disagree about
+    whether the chat was visible, and nobody asked for a new picture
+    on the way back, so the area kept showing its background colour.
+  * If it ever happens again, the self-repair now starts after about
+    8 seconds instead of 20 and escalates until the picture is back,
+    instead of repeating one redraw that did not help.
+  * Copy diagnostics info reports how often the display had to be
+    repaired, which makes a bug report about it far more useful.
+
+  Highlights from v1.4.13:
+
+  * The app notices on its own when the chat area stops updating and
+    redraws it, including after the window moves to another monitor,
     after a display configuration change and when the screen wakes
-    up - cases that previously went unhandled.
-  * Background tabs are actually throttled now. An ordering mistake
-    made the throttle a no-op, so every tab you had ever opened kept
-    rendering at full cost while invisible.
-
-  Highlights from v1.4.12:
-
-  * Switching to the White theme is instant instead of freezing for
-    about half a second. It keeps claude.ai in its dark palette and
-    inverts the page on the GPU.
-  * The OLED theme is applied before the first paint, so on a cold
-    start the interface no longer briefly shows claude.ai's default
-    styling and then snaps to the dark theme.
-  * Smoother rendering while a reply streams, and more reliable
-    startup on distributions without a setuid Chromium sandbox
-    helper.
+    up.
+  * Background tabs are actually throttled now, so tabs you had
+    opened no longer keep rendering at full cost while invisible.
 
   System requirements:
 

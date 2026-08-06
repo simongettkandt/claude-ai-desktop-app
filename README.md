@@ -18,7 +18,7 @@ sudo snap install claude-ai-desktop
 
 [![claude-ai-desktop](https://snapcraft.io/claude-ai-desktop/badge.svg)](https://snapcraft.io/claude-ai-desktop)
 
-> **v1.4.13** - Blank Screen Recovery. The chat area could go black after a while, most visibly in the OLED theme, and only came back on a tab switch: the page was fine, the compositor surface of the content view had stalled. The app now notices when the renderer stops receiving frames and redraws within about 20 seconds, and it also redraws on events that were previously unhandled (window moved to another monitor, display configuration change, screen wake-up, window focus). Background tabs are now actually throttled too, which was broken by an ordering mistake and cost measurable CPU for every tab you had ever opened.
+> **v1.4.14** - Blank Screen Root Fix. The chat area could still go black after a while. The cause is now measured: turning off background throttling for the active view pins the render widget as "never hidden", so the renderer and the native view disagree about visibility, and on the way back no new frame is requested and the area keeps showing its background colour, which in the OLED theme is black. The runtime throttling calls are gone (hiding a tab throttles it anyway), the watchdog detects a stalled surface in about 8 seconds instead of 20, and it escalates until the picture is back instead of repeating one redraw that did not help.
 
 ---
 

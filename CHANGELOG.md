@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.4.14] - 2026-08-06 - Blank Screen Root Fix
+
+### Fixed
+- **The chat area still went black after a while.** This time the cause is measured instead of inferred: `webContents.setBackgroundThrottling(false)` sets `disable_hidden_` on the render widget host, after which the renderer ignores every hide. With the content view hidden, `requestAnimationFrame` keeps firing, so renderer and native view disagree about visibility. On the way back no `WasShown` arrives, no new frame is requested, and the layer keeps showing its background colour, which in the OLED theme is the same black as an empty frame. All runtime `setBackgroundThrottling` calls are gone. Background tabs are throttled by hiding them, which the webPreferences default already does, verified in `test/frame-watchdog.test.js`.
+- **A redraw that did not help was repeated forever.** The watchdog now escalates: redraw, then a bounds nudge, then detaching and re-attaching the content view, which gives it a fresh compositor layer without reloading the page. Detection is more reliable as well: the renderer answers each heartbeat twice, immediately and from `requestAnimationFrame`, so "alive but no frames" is distinguishable from a merely busy renderer. A stalled surface is caught in about 8 seconds instead of 20.
+- The content view's bounds are no longer nudged while the window is hidden or minimized. That left behind a surface id whose frame the compositor then waited for.
+
+### Added
+- "Copy diagnostics info" reports how often the surface had to be repaired and at which escalation stage.
+
+---
+
 ## [1.4.13] - 2026-08-01 - Blank Screen Recovery
 
 ### Fixed
