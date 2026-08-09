@@ -4,7 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 const { version } = require('./package.json');
-const { compareVersions, safeJson, isClaudeAiOrigin, validateAccelerator } = require('./utils/pure');
+const { compareVersions, safeJson, isClaudeAiOrigin, isPaymentFrameDomain, validateAccelerator } = require('./utils/pure');
 
 // Electron "Object has been destroyed" Error-Dialog abfangen
 const _origErrorBox = dialog.showErrorBox;
@@ -467,6 +467,38 @@ const RELEASE_NOTES_REVISIT = {
 };
 
 const RELEASE_NOTES = {
+  '1.4.15': [
+    {
+      icon: 'bug',
+      title: {
+        de: 'Abo-Kauf war nicht möglich',
+        en: 'Buying a subscription was impossible',
+        fr: 'L’achat d’un abonnement était impossible',
+        it: 'L’acquisto di un abbonamento era impossibile'
+      },
+      text: {
+        de: 'Wer auf Upgrade klickte und einen Plan auswählte, sah nur noch pulsierende Platzhalter statt des Bezahlformulars. claude.ai wickelt die Bezahlung über Stripe ab, das seine Eingabefelder in eigene, eingebettete Bereiche legt. Der Schutz, der fremde eingebettete Inhalte in der App fernhält, hat diese Bereiche allesamt abgewiesen, und zwar ohne jede Fehlermeldung, weshalb die Seite endlos weiterlud. Die Adressen, die der Bezahlvorgang wirklich braucht, sind jetzt zugelassen, aber nur auf claude.ai selbst und ohne dass die App in diesen Bereichen etwas verändert. Auch Google Pay war betroffen und steht wieder zur Verfügung.',
+        en: 'Clicking Upgrade and picking a plan left you with pulsing placeholders instead of the payment form. claude.ai handles payment through Stripe, which puts its input fields into its own embedded areas. The protection that keeps foreign embedded content out of the app rejected all of them, and it did so without any error message, so the page kept loading forever. The addresses the checkout genuinely needs are now allowed, but only on claude.ai itself, and the app does not touch anything inside those areas. Google Pay was affected too and works again.',
+        fr: 'En cliquant sur Upgrade puis en choisissant une formule, il ne restait que des espaces réservés clignotants à la place du formulaire de paiement. claude.ai gère le paiement via Stripe, qui place ses champs de saisie dans ses propres zones intégrées. La protection qui tient à l’écart les contenus intégrés externes les rejetait toutes, sans le moindre message d’erreur, si bien que la page chargeait indéfiniment. Les adresses réellement nécessaires au paiement sont désormais autorisées, uniquement sur claude.ai, et l’application ne modifie rien à l’intérieur de ces zones. Google Pay était également touché et fonctionne à nouveau.',
+        it: 'Facendo clic su Upgrade e scegliendo un piano restavano solo segnaposto lampeggianti al posto del modulo di pagamento. claude.ai gestisce il pagamento tramite Stripe, che inserisce i propri campi in aree incorporate dedicate. La protezione che tiene fuori dall’app i contenuti incorporati esterni le rifiutava tutte, senza alcun messaggio di errore, per cui la pagina caricava all’infinito. Gli indirizzi realmente necessari al pagamento sono ora consentiti, solo su claude.ai, e l’app non modifica nulla all’interno di quelle aree. Era interessato anche Google Pay, che ora funziona di nuovo.'
+      }
+    },
+    {
+      icon: 'palette',
+      title: {
+        de: 'Falsche Farben in der Design-Ansicht',
+        en: 'Wrong colours in the Design view',
+        fr: 'Couleurs incorrectes dans la vue Design',
+        it: 'Colori errati nella vista Design'
+      },
+      text: {
+        de: 'Drei Fehler in der Einfärbung sind behoben. Im hellen Thema erschienen Artefakte und die Design-Ansicht als Farbnegativ, weil sie in einem eigenen eingebetteten Bereich laufen, der von der Umkehrung nicht ausgenommen war. Im OLED-Thema blieb der Teilen-Knopf unsichtbar: die App überschrieb eine Farbe von claude.ai mit dem Wert des hellen Themas, wodurch Schrift und Fläche exakt gleich hell wurden. Und im Modern-Design fielen zwei benachbarte Stufen derselben Farbpalette auf denselben Rotton zusammen, sodass sich Rot und Orange nicht mehr unterscheiden ließen.',
+        en: 'Three colouring bugs are fixed. In the light theme, artifacts and the Design view appeared as a colour negative, because they run in their own embedded area that was not excluded from the inversion. In the OLED theme the Share button stayed invisible: the app overrode one of claude.ai’s colours with the light theme’s value, leaving text and surface at exactly the same brightness. And in the Modern design, two neighbouring steps of the same palette collapsed onto one shade of red, so red and orange could no longer be told apart.',
+        fr: 'Trois erreurs de coloration sont corrigées. Dans le thème clair, les artefacts et la vue Design apparaissaient en négatif, car ils s’exécutent dans une zone intégrée qui n’était pas exclue de l’inversion. Dans le thème OLED, le bouton Partager restait invisible : l’application remplaçait une couleur de claude.ai par la valeur du thème clair, si bien que le texte et le fond avaient exactement la même luminosité. Et dans le design Modern, deux paliers voisins de la même palette se confondaient en une seule nuance de rouge, rendant le rouge et l’orange impossibles à distinguer.',
+        it: 'Corretti tre errori di colorazione. Nel tema chiaro gli artefatti e la vista Design apparivano come negativo, perché vengono eseguiti in un’area incorporata che non era esclusa dall’inversione. Nel tema OLED il pulsante Condividi restava invisibile: l’app sovrascriveva un colore di claude.ai con il valore del tema chiaro, lasciando testo e sfondo esattamente alla stessa luminosità. E nel design Modern due livelli vicini della stessa palette si riducevano a un’unica tonalità di rosso, rendendo rosso e arancione indistinguibili.'
+      }
+    }
+  ],
   '1.4.14': [
     {
       icon: 'bug',
@@ -2097,7 +2129,17 @@ function setupView(view) {
     const navUrl = event.url;
     // Subframes enger: ein blosses looksLikeOAuthUrl reicht fuer ein eingebettetes
     // iframe nicht, nur zulassen wenn die Top-Level-Seite selbst claude.ai ist.
-    if (isAllowedDomain(navUrl) || isOAuthDomain(navUrl) || (isAllowedDomain(wc.getURL()) && looksLikeOAuthUrl(navUrl))) return;
+    const topAllowed = isAllowedDomain(wc.getURL());
+    if (isAllowedDomain(navUrl) || isOAuthDomain(navUrl) || (topAllowed && looksLikeOAuthUrl(navUrl))) return;
+    // Stripe rendert den Bezahlvorgang komplett in eigene iframes. Nur freigeben, wenn
+    // die Seite darueber wirklich claude.ai ist, und bewusst nicht ueber isAllowedDomain:
+    // Skript-Injection, Theme und window.open sollen dort weiterhin nicht greifen.
+    if (topAllowed && isPaymentFrameDomain(navUrl)) return;
+    // Electron cancelt hier ohne did-fail-load und ohne Konsolenmeldung. Ein fehlender
+    // Host in der Allowlist sieht fuer den Nutzer deshalb aus wie "haengt einfach", zuletzt
+    // beim Turnstile-iframe (1.3.11) und bei den Stripe-Frames. Diese Zeile macht den
+    // naechsten Fall aus einem Terminal-Start heraus sofort sichtbar.
+    console.warn('[nav] subframe blocked:', navUrl, '| top:', wc.getURL());
     event.preventDefault();
   });
 

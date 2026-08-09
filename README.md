@@ -18,7 +18,7 @@ sudo snap install claude-ai-desktop
 
 [![claude-ai-desktop](https://snapcraft.io/claude-ai-desktop/badge.svg)](https://snapcraft.io/claude-ai-desktop)
 
-> **v1.4.14** - Blank Screen Root Fix. The chat area could still go black after a while. The cause is now measured: turning off background throttling for the active view pins the render widget as "never hidden", so the renderer and the native view disagree about visibility, and on the way back no new frame is requested and the area keeps showing its background colour, which in the OLED theme is black. The runtime throttling calls are gone (hiding a tab throttles it anyway), the watchdog detects a stalled surface in about 8 seconds instead of 20, and it escalates until the picture is back instead of repeating one redraw that did not help.
+> **v1.4.15** - Checkout and Colour Fixes. Buying a subscription was impossible: claude.ai renders the checkout with Stripe, which puts its whole payment UI into its own iframes, and the subframe guard blocked every one of them. Electron cancels a blocked frame without a load error, so nothing surfaced and the form stayed a pulsing placeholder. The six hosts the checkout needs are now allowed as subframes, but only when the page above them is claude.ai itself, and blocked subframes are logged so the next missing host is not silent. Three colouring bugs are fixed alongside it: artifacts and the Design view appeared as a colour negative in the White theme, the Share button was invisible in OLED, and the Modern design collapsed two steps of the same palette onto one red.
 
 ---
 

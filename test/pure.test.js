@@ -6,6 +6,7 @@ const {
   compareVersions,
   safeJson,
   isClaudeAiOrigin,
+  isPaymentFrameDomain,
   validateAccelerator
 } = require('../utils/pure');
 
@@ -84,6 +85,35 @@ test('isClaudeAiOrigin: ungueltige URL abgelehnt', () => {
   assert.equal(isClaudeAiOrigin(''), false);
   assert.equal(isClaudeAiOrigin(null), false);
   assert.equal(isClaudeAiOrigin(undefined), false);
+});
+
+// Stripe rendert den Bezahlvorgang auf claude.ai/upgrade komplett in eigene iframes.
+// Fehlt einer dieser Hosts, blockt der Subframe-Guard ihn still und der Kauf bleibt
+// im pulsierenden Platzhalter haengen, ohne Fehlermeldung. Die Hostliste ist gegen
+// eine echte Sitzung gemessen, dieser Test haelt sie fest.
+test('isPaymentFrameDomain: gemessene Stripe-Frame-Hosts erlaubt', () => {
+  assert.equal(isPaymentFrameDomain('https://js.stripe.com/v3/controller-with-preconnect-abc.html'), true);
+  assert.equal(isPaymentFrameDomain('https://js.stripe.com/v3/elements-inner-card-abc.html'), true);
+  assert.equal(isPaymentFrameDomain('https://m.stripe.network/inner.html'), true);
+  assert.equal(isPaymentFrameDomain('https://b.stripecdn.com/stripethirdparty-srv/assets/v33.6/HCaptchaInvisible.html'), true);
+  assert.equal(isPaymentFrameDomain('https://newassets.hcaptcha.com/captcha/v1/abc/static/hcaptcha.html'), true);
+  assert.equal(isPaymentFrameDomain('https://hooks.stripe.com/3d_secure_2/hosted'), true);
+  assert.equal(isPaymentFrameDomain('https://pay.google.com/gp/p/ui/payframe'), true);
+});
+
+test('isPaymentFrameDomain: reine XHR-Hosts nicht in der Frame-Allowlist', () => {
+  // Diese laufen als XHR und passieren den Frame-Guard nie, sie gehoeren nicht hinein.
+  assert.equal(isPaymentFrameDomain('https://r.stripe.com/b'), false);
+  assert.equal(isPaymentFrameDomain('https://m.stripe.com/6'), false);
+  assert.equal(isPaymentFrameDomain('https://merchant-ui-api.stripe.com/x'), false);
+});
+
+test('isPaymentFrameDomain: Spoofing und http abgelehnt', () => {
+  assert.equal(isPaymentFrameDomain('https://js.stripe.com.evil.net/x'), false);
+  assert.equal(isPaymentFrameDomain('https://evil-js.stripe.com'), false);
+  assert.equal(isPaymentFrameDomain('https://stripe.com'), false);
+  assert.equal(isPaymentFrameDomain('http://js.stripe.com/v3/controller.html'), false);
+  assert.equal(isPaymentFrameDomain('not a url'), false);
 });
 
 test('validateAccelerator: simple Modifier+Key', () => {

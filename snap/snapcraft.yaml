@@ -1,5 +1,5 @@
 name: claude-ai-desktop
-version: '1.4.14'
+version: '1.4.15'
 summary: Unofficial desktop wrapper for Claude AI with tabs, tray and voice input
 description: |
   Unofficial desktop app for Claude AI on Linux. Runs claude.ai without
@@ -8,26 +8,29 @@ description: |
 
   Not affiliated with Anthropic.
 
-  What's new in v1.4.14:
+  What's new in v1.4.15:
 
-  * The black chat area is fixed at the root. The throttle for
+  * Buying a subscription works again. claude.ai renders the payment
+    form in its own embedded areas, and the protection that keeps
+    foreign embedded content out of the app rejected all of them
+    without any error, so only pulsing placeholders were left. Google
+    Pay was affected as well.
+  * In the light theme, artifacts and the Design view no longer show
+    up as a colour negative. They run in their own embedded area that
+    was not excluded from the inversion.
+  * In the OLED theme the Share button is visible again. The app
+    overrode one of claude.ai's colours with the light theme's value,
+    leaving text and surface at exactly the same brightness.
+  * The Modern design no longer flattens colour scales, so red and
+    orange stay distinguishable in the Design view.
+
+  Highlights from v1.4.14:
+
+  * The black chat area is fixed at the root: the throttle for
     background tabs made the app and the display disagree about
-    whether the chat was visible, and nobody asked for a new picture
-    on the way back, so the area kept showing its background colour.
-  * If it ever happens again, the self-repair now starts after about
-    8 seconds instead of 20 and escalates until the picture is back,
-    instead of repeating one redraw that did not help.
-  * Copy diagnostics info reports how often the display had to be
-    repaired, which makes a bug report about it far more useful.
-
-  Highlights from v1.4.13:
-
-  * The app notices on its own when the chat area stops updating and
-    redraws it, including after the window moves to another monitor,
-    after a display configuration change and when the screen wakes
-    up.
-  * Background tabs are actually throttled now, so tabs you had
-    opened no longer keep rendering at full cost while invisible.
+    whether the chat was visible.
+  * If it happens again, the self-repair starts after about 8 seconds
+    instead of 20 and escalates until the picture is back.
 
   System requirements:
 

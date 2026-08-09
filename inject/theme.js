@@ -169,13 +169,26 @@
   // Diese Variablen daher nicht anfassen, das Recoloring laeuft ueber ACCENT_CLASS_CSS.
   var VAR_SKIP = { '--accent-brand': 1 };
 
+  // Nummerierte Stufen einer Farbskala (--cds-red-350, --cds-orange-350, ...). Das
+  // Brand-Recoloring ersetzt jede orange Variable durch EINEN Wert; bei einer Skala
+  // faellt damit Stufe auf Stufe und benachbarte Toene werden ununterscheidbar. Im
+  // Design-Feature, das eine eigene abgestufte Palette faehrt, sah man genau das.
+  // Semantische Akzente (--om-accent-primary, --cds-clay, --qk-send-bg) haben keine
+  // Stufennummer und werden weiterhin umgefaerbt.
+  var VAR_SCALE_RE = /-\d{2,4}$/;
+
   function buildVarsCSS() {
     // Cache: nur neu scannen, wenn sich Design/Mode oder die Anzahl Stylesheets aendert
     // (Letzteres faengt nachgeladenes claude.ai-CSS ab). Spart teure Rescans.
     var key = st.design + '|' + st.mode + '|' + document.styleSheets.length;
     if (key === _varsKey && document.getElementById('cd-theme-vars')) return;
     _varsKey = key;
-    var modern = '', oled = '', seenM = {}, seenO = {}, mid = st.accent.mid || '#E8524F';
+    var modern = '', oled = '', seenM = {}, mid = st.accent.mid || '#E8524F';
+    // Ein Token kann mehrfach definiert sein, hell unter :root und dunkel unter
+    // [data-theme="dark"]. Die dunkle Definition ist die, die unter OLED wirklich gilt,
+    // also muss sie gewinnen. Wert und Rang getrennt merken, damit eine dark-Definition
+    // ein frueheres Mapping auch dann verdraengt, wenn mapDark sie gar nicht mappt.
+    var oledVal = {}, oledRank = {};
     try {
       for (var i = 0; i < document.styleSheets.length; i++) {
         var cr;
@@ -187,6 +200,10 @@
           var sel = rule.selectorText;
           var isRoot = sel.indexOf(':root') >= 0 || sel.indexOf('.dark') >= 0
             || sel.indexOf('[data-theme') >= 0 || sel === 'html' || sel === 'body' || sel === '*';
+          // Rang 1 = gilt nur im Dark-Kontext, Rang 0 = Basis. Unter OLED faehrt claude.ai
+          // immer data-theme="dark", die Dark-Definition ist dort also die massgebliche.
+          var rank = (sel.indexOf('.dark') >= 0 || sel.indexOf('data-theme="dark"') >= 0
+            || sel.indexOf("data-theme='dark'") >= 0) ? 1 : 0;
           for (var k = 0; k < rule.style.length; k++) {
             var prop = rule.style[k];
             if (prop.indexOf('--') !== 0) continue;
@@ -200,18 +217,20 @@
             if (!c) continue;
             // Brand-Recoloring (orange -> Brand-Rot) im Light-Mode NICHT anwenden,
             // sonst wirkt das warme Weiss roetlich. Nur Dark/OLED.
-            if (st.design === 'modern' && st.mode !== 'light' && !seenM[prop] && isOrange(c) && !VAR_SKIP[prop]) {
+            if (st.design === 'modern' && st.mode !== 'light' && !seenM[prop] && isOrange(c)
+                && !VAR_SKIP[prop] && !VAR_SCALE_RE.test(prop)) {
               modern += prop + ':' + mid + ' !important;';
               seenM[prop] = true;
             }
-            if (st.mode === 'oled' && isRoot && !seenO[prop]) {
-              var m = mapDark(c);
-              if (m) { oled += prop + ':' + m + ' !important;'; seenO[prop] = true; }
+            if (st.mode === 'oled' && isRoot && (oledRank[prop] === undefined || rank >= oledRank[prop])) {
+              oledVal[prop] = mapDark(c);
+              oledRank[prop] = rank;
             }
           }
         }
       }
     } catch (e) {}
+    for (var p in oledVal) if (oledVal[p]) oled += p + ':' + oledVal[p] + ' !important;';
     var css = '';
     if (modern) css += 'html[data-cd-design="modern"]{' + modern + '}';
     // Ersatz fuer das ausgelassene --accent-brand: die Utility-Klasse direkt einfaerben.

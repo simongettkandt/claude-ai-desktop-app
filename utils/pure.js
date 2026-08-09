@@ -36,6 +36,25 @@ function isClaudeAiOrigin(url) {
   } catch { return false; }
 }
 
+// Frames, die der Bezahlvorgang auf claude.ai braucht. Stripe rendert seine gesamte UI
+// in eigene iframes; ohne diese Freigabe bricht der Subframe-Guard sie ab und das
+// Kartenformular bleibt als pulsierender Platzhalter stehen. Alle bis auf hooks.stripe.com
+// sind am echten Formular gemessen, hooks traegt die 3DS-Challenge nach dem Absenden.
+// pay.google.com ist die Google-Pay-Option, ohne sie fehlt eine Zahlungsart.
+// Exakter Hostname-Vergleich, kein endsWith: eine Subdomain-Regel wuerde hier auch
+// angreiferkontrollierte Hosts unter denselben Domains einschliessen.
+const PAYMENT_FRAME_HOSTS = new Set([
+  'js.stripe.com', 'm.stripe.network', 'b.stripecdn.com',
+  'newassets.hcaptcha.com', 'hooks.stripe.com', 'pay.google.com'
+]);
+
+function isPaymentFrameDomain(url) {
+  try {
+    const u = new URL(url);
+    return u.protocol === 'https:' && PAYMENT_FRAME_HOSTS.has(u.hostname);
+  } catch { return false; }
+}
+
 const HOTKEY_RE = /^(?:(?:Command|Cmd|Control|Ctrl|CommandOrControl|CmdOrCtrl|Alt|Option|AltGr|Shift|Super|Meta)\+)*[A-Za-z0-9]+$|^(?:(?:Command|Cmd|Control|Ctrl|CommandOrControl|CmdOrCtrl|Alt|Option|AltGr|Shift|Super|Meta)\+)*(?:F1[0-9]?|F20|F[1-9]|Plus|Space|Tab|Backspace|Delete|Insert|Return|Enter|Up|Down|Left|Right|Home|End|PageUp|PageDown|Escape|Esc|VolumeUp|VolumeDown|VolumeMute|MediaPlayPause|PrintScreen|numdec|numadd|numsub|nummult|numdiv|num[0-9])$/;
 
 function validateAccelerator(accel) {
@@ -43,4 +62,4 @@ function validateAccelerator(accel) {
   return HOTKEY_RE.test(accel) ? accel : null;
 }
 
-module.exports = { compareVersions, safeJson, isClaudeAiOrigin, validateAccelerator, HOTKEY_RE };
+module.exports = { compareVersions, safeJson, isClaudeAiOrigin, isPaymentFrameDomain, validateAccelerator, HOTKEY_RE };

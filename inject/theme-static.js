@@ -48,7 +48,11 @@
       // Original (Rot bleibt Rot). Echte Medien (Fotos/Avatare/Thumbnails) zurueck-invertieren,
       // damit sie nicht negativ erscheinen.
       W + '{filter:invert(1) hue-rotate(180deg) !important;background-color:#fff !important}',
-      W + ' img,' + W + ' video,' + W + ' canvas,' + W + ' image,' + W + ' [style*="background-image"]{filter:invert(1) hue-rotate(180deg)}',
+      // iframe gehoert dazu: Artefakte, das Design-Feature und der Stripe-Bezahlvorgang
+      // laufen cross-origin und bringen ihr eigenes Farbschema mit. Ohne Rueck-Invertierung
+      // erscheint ihr Inhalt als Negativ (gemessen am Design-Feature: gelb wurde oliv,
+      // Hauttoene kippten). Unser Filter darf nur claude.ais eigene Oberflaeche umdrehen.
+      W + ' img,' + W + ' video,' + W + ' canvas,' + W + ' image,' + W + ' iframe,' + W + ' [style*="background-image"]{filter:invert(1) hue-rotate(180deg)}',
       // --- OLED: html schwarz (Fallback) ---
       O + '{background-color:' + BG + ' !important}',
       // body traegt das Sternen-Hintergrundbild (claude.ais Container darueber sind

@@ -1,7 +1,7 @@
 {
   "name": "claude-desktop",
-  "version": "1.4.14",
-  "description": "Claude AI – Native Desktop App für Linux",
+  "version": "1.4.15",
+  "description": "Claude AI Native Desktop App für Linux",
   "main": "main.js",
   "license": "MIT",
   "homepage": "https://github.com/simonlinuxcraft/claude-ai-desktop-app",
@@ -16,7 +16,8 @@
   "scripts": {
     "start": "electron .",
     "dev": "electron . --no-sandbox --ozone-platform=x11",
-    "test": "node --test test/",
+    "test": "node --test test/pure.test.js",
+    "test:electron": "electron test/frame-watchdog.test.js --no-sandbox",
     "build": "electron-builder --linux",
     "build-appimage": "electron-builder --linux AppImage",
     "build-deb": "electron-builder --linux deb"

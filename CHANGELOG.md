@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.4.15] - 2026-08-09 - Checkout and Colour Fixes
+
+### Fixed
+- **Buying a subscription was impossible: the payment form stayed as pulsing placeholders.** claude.ai renders the checkout with Stripe, which puts its whole payment UI into its own iframes. The subframe guard blocked every single one of them, so the payment element never finished loading. Electron cancels a blocked frame without a load error, so the page had nothing to report either and simply kept showing its skeleton. The six hosts the checkout actually needs are now allowed as subframes, and only when the page above them is claude.ai itself. Script injection, theming and `window.open` deliberately stay out of those frames. Verified against the real card form: it now loads completely, including the Google Pay option, which was blocked as well.
+- **In the White theme, artifacts and the Design view were shown as a colour negative.** White inverts the whole page on the GPU and inverts real media back again. Artifacts run in a cross-origin iframe, which was missing from that list, so their own colour scheme was turned inside out: yellow came out olive, skin tones flipped. Iframes are inverted back as well now, which also covers the Stripe payment form and captcha frames, since all of them bring their own colours.
+- **In the OLED theme the Share button was invisible.** claude.ai defines `--om-accent-black` twice, dark under `:root` and light under `[data-theme="dark"]`. The variable scan took the first definition, mapped the light theme's dark value to OLED black and pushed it over the correct one with `!important`. Text and surface ended up at identical luminance, measured contrast exactly zero. Definitions that only apply in a dark context now take precedence, which is what the cascade does anyway.
+- **The Modern design flattened colour scales.** Brand recolouring replaces every colour it reads as orange with one single red. In the Design view that caught `--cds-red-350` and `--cds-orange-350`, two different steps of the same palette, which then became indistinguishable. Variables carrying a numeric scale step are left alone now; semantic accents are still recoloured, so the Modern look is unchanged.
+
+### Changed
+- A blocked subframe is now written to the console. The same class of bug hit the Cloudflare Turnstile iframe in 1.3.11, and both times it cost a full diagnosis because a missing host in the allowlist fails completely silently.
+
+---
+
 ## [1.4.14] - 2026-08-06 - Blank Screen Root Fix
 
 ### Fixed
