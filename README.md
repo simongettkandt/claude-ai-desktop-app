@@ -6,17 +6,13 @@
 
 <p align="center">Desktop wrapper for claude.ai. Runs as a native window on Linux without a browser tab.</p>
 
-## Installation
+<p align="center"><strong>8,000+ active installs</strong> from the Snap Store</p>
 
-[![Get it from the Snap Store](https://snapcraft.io/static/images/badges/en/snap-store-black.svg)](https://snapcraft.io/claude-ai-desktop)
-
-Or via Terminal:
-
-​```bash
-sudo snap install claude-ai-desktop
-​```
-
-[![claude-ai-desktop](https://snapcraft.io/claude-ai-desktop/badge.svg)](https://snapcraft.io/claude-ai-desktop)
+<p align="center">
+  <a href="https://snapcraft.io/claude-ai-desktop"><img src="https://snapcraft.io/static/images/badges/en/snap-store-black.svg" alt="Get it from the Snap Store"></a>
+  <br>
+  <a href="https://snapcraft.io/claude-ai-desktop"><img src="https://snapcraft.io/claude-ai-desktop/badge.svg" alt="Snap build status"></a>
+</p>
 
 > **v1.4.15** - Checkout and Colour Fixes. Buying a subscription was impossible: claude.ai renders the checkout with Stripe, which puts its whole payment UI into its own iframes, and the subframe guard blocked every one of them. Electron cancels a blocked frame without a load error, so nothing surfaced and the form stayed a pulsing placeholder. The six hosts the checkout needs are now allowed as subframes, but only when the page above them is claude.ai itself, and blocked subframes are logged so the next missing host is not silent. Three colouring bugs are fixed alongside it: artifacts and the Design view appeared as a colour negative in the White theme, the Share button was invisible in OLED, and the Modern design collapsed two steps of the same palette onto one red.
 
@@ -29,25 +25,29 @@ sudo snap install claude-ai-desktop
 - **Custom App Menu (Hamburger)** – In-app menu with keyboard navigation, replaces the native menu bar; quick access to all actions including new tab, export, settings, updates and bug report
 - **Tab System** – Multiple chats side by side with a visual tab bar (Ctrl+T, Ctrl+W, Ctrl+Tab); direct buttons in the tab bar for Markdown export and bug report
 - **Markdown Export** – Save the active conversation as a `.md` file via `Ctrl+Shift+E`, including code blocks, lists, headings and links
+- **Frameless Window** – Own title bar with the tab bar integrated, no doubled system frame
 - **System Tray** – Optional minimize-to-tray instead of closing the window
 - **Global Quick-Prompt Hotkey** – Configurable hotkey opens a frameless prompt window that injects your text into a new chat
 - **Prompt Templates** – Define named prefixes (e.g. "Translate to English:"), pick them with Tab in the Quick-Prompt window
 - **Clipboard Hotkey** – Separate global hotkey that opens a new chat with your clipboard text already inserted
 - **Background-Tab Response Notifications** – Optional native notification when Claude finishes a response in a tab you're not currently viewing
-- **In-App Bug Report** – Description, optional error codes, optional contact email; auto-includes app/OS info on opt-in. Includes a clear notice that this is an unofficial community wrapper (not an official Anthropic product) with a direct link to https://support.anthropic.com for account/login/billing/payment questions. Localized in DE, EN, FR, ES, IT
+- **In-App Bug Report** – Description, optional error codes, optional contact email; auto-includes app/OS info on opt-in. Includes a clear notice that this is an unofficial community wrapper (not an official Anthropic product) with a direct link to [support.anthropic.com](https://support.anthropic.com) for account/login/billing/payment questions. Since v1.4.10 a required checkbox gates the Send button. Localized in DE, EN, FR, ES, IT
 - **App Settings Window** – Configure hotkeys, minimize-to-tray, autostart, background notifications and templates from `Claude → App Settings…`
 - **Autostart** – Optional launch on system boot (Linux: writes a `.desktop` file to `~/.config/autostart/`; Snap: native autostart directive)
-- **Custom Design System** – Modern gradient theme or Classic mode toggle
-- **Dark/Light Mode Toggle** – Moon/Sun button in the tab bar
+- **Themes** – Dark, White and OLED, switched from the tab bar, plus a Modern or Classic design. The theme is applied before the first paint, so restored content appears already themed. claude.ai always runs in its dark palette; White is a GPU inversion of it, which switches in ~6ms instead of ~480ms for a real palette flip
+- **Session Restore** – Open conversations are remembered and reopened on the next start; restored tabs load on first click, not all at once
+- **Blank-Screen Watchdog** – Detects when the chat area stops receiving frames and repairs it in escalating steps (redraw, bounds nudge, re-attaching the view), or manually via `Ctrl+Alt+R`
+- **Reset claude.ai Verification** – Toolbar button and menu entry that clears cookies and cache for all claude.ai origins, for when the Cloudflare security check is stuck in a loop (requires a new login afterwards)
+- **Copy Diagnostics Info** – Collects app version, Electron/Chrome build, kernel, display session, GPU vendor and WebGL renderer into the clipboard for bug reports
 - **Auto-Update** – Updates via GitHub Releases (AppImage) or `snapd` (Snap). Since v1.3.7 the AppImage also rewrites stale `.desktop` and autostart entries on startup, so the menu shortcut keeps pointing at the current file after `electron-updater` replaces the AppImage
 - **Manual Update Check** – Menu entry shows a dialog with the result
-- **What's-New Popup** – Shows the changelog once after each version upgrade, including notes for skipped versions
+- **What's-New Popup** – Shows the changelog once after each version upgrade, including notes for skipped versions, as a slideshow with one slide per change
 - **In-App OAuth Popups** – Google, GitHub, Google Drive, GitLab, Bitbucket, Microsoft, Auth0, Higgsfield
 - **Multilingual UI** – Full interface in German, English, French and Italian, selected by system language with English fallback (the bug-report dialog covers additional languages)
 - **Offline Detection** – Automatic reconnect when connection is restored
 - **Crash Recovery** – Crashed tabs reload automatically (max 3 retries)
-- **Background Throttling** – Reduces CPU usage when the window is minimized
-- **Security** – Sandbox enabled, IPC validation, CSP headers
+- **Background Throttling** – Hidden tabs stop rendering; measured with three background tabs, renderer CPU drops from 13.5% to 6.7%
+- **Security** – Sandbox enabled, IPC validation, CSP headers, subframe allowlist
 - **Performance** – GPU acceleration, disk caching, tab preloading
 
 ---
@@ -97,7 +97,7 @@ cat > ~/.local/share/applications/claude-desktop.desktop << EOF
 [Desktop Entry]
 Name=Claude Desktop
 Comment=Claude AI Desktop App
-Exec=/path/to/Claude-Desktop-1.4.1.AppImage --no-sandbox
+Exec=/path/to/Claude-Desktop-1.4.15.AppImage --no-sandbox
 Icon=/path/to/icon.png
 Type=Application
 Categories=Utility;
@@ -153,8 +153,11 @@ The `--no-sandbox` flag is required for Electron AppImages on Linux because the 
 | Ctrl+Shift+Tab | Previous tab |
 | Ctrl+1–9 | Switch to tab |
 | Ctrl+N | New chat |
+| Ctrl+Shift+E | Export conversation as Markdown |
 | Ctrl+, | Settings |
 | Ctrl+R | Reload |
+| Ctrl+Shift+R | Force reload |
+| Ctrl+Alt+R | Redraw (chat area stays blank) |
 | Ctrl++ / Ctrl+- | Zoom |
 | F11 | Fullscreen |
 | *(configurable)* | Quick-Prompt window |
@@ -171,7 +174,11 @@ The `--no-sandbox` flag is required for Electron AppImages on Linux because the 
   - `preload-quickprompt.js` – quick-prompt window
   - `preload-whatsnew.js` – what's-new popup
   - `preload-messagebox.js` – custom message boxes
-- Theme toggle via `nativeTheme.themeSource` (claude.ai responds natively)
+  - `preload-appmenu.js` – hamburger menu
+  - `preload-bugreport.js` – bug report form
+  - `preload-about.js` – about window
+  - `preload-content.js` – claude.ai page itself
+- Theming from a single source: `inject/theme-static.js` runs before the first paint, `inject/theme.js` keeps it in sync afterwards. claude.ai stays in its dark palette in every theme; White is a root-level GPU inversion with images and iframes inverted back
 - Custom design via CSS variable overrides + DOM injection
 - Session: `persist:claude` partition shared between tabs and OAuth popups
 - Tray icon via `nativeImage.createFromPath()` with separate sparkle icons for Modern/Classic
