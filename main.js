@@ -2013,7 +2013,7 @@ function themeScript() {
 ipcMain.on('cd-theme-mode', (e) => {
   const st = themeState();
   let staticCSS = '';
-  try { if (st.mode === 'oled') staticCSS = cdBuildStaticCSS(st); } catch {}
+  try { if (st.mode === 'oled' || st.mode === 'midnight') staticCSS = cdBuildStaticCSS(st); } catch {}
   e.returnValue = Object.assign({}, st, { staticCSS });
 });
 

@@ -31,12 +31,19 @@
     var W = 'html[data-cd-theme="light"]';
     var SPARK = sparkleBg(st);
 
+    // Mitternachtsblau. Die drei Stufen entsprechen bg/bgHover/bgActive des THEME-Objekts
+    // in main.js, damit App-Fenster und Seite dieselbe Treppe zeigen. Kanten und Fokus in
+    // kuehlem Blau; der Fokus-Ring nimmt das Neon-Cyan des Theme-Akzents auf.
+    var MBG = '#060f24', MBG_HI = '#0e1c3f', MBG_TOP = '#16295c';
+    var M_EDGE = 'rgba(47,127,255,0.22)', M_HAIR = 'rgba(125,147,184,0.22)', M_FOCUS = 'rgba(0,229,255,0.55)';
+    var M = 'html[data-cd-theme="midnight"][data-cd-surface="dark"]';
+
     // [class*="X"] matcht auch Tailwinds Opacity-Modifier "X/NN" (z.B. eine helle 5%-Toenung
     // fuer einen Preis-Chip), die sonst faelschlich volldeckend geschwaerzt wird und ihren
     // eigenen (auf hell gedachten) Text unsichtbar macht. :not() schliesst genau diese Variante aus.
-    function safeBg(tokens, color) {
+    function safeBg(scope, tokens, color) {
       return tokens.map(function (t) {
-        return O + ' [class*="' + t + '"]:not([class*="' + t + '/"])';
+        return scope + ' [class*="' + t + '"]:not([class*="' + t + '/"])';
       }).join(',') + '{background-color:' + color + ' !important}';
     }
 
@@ -71,13 +78,13 @@
       O + ' nav,' + O + ' aside,' + O + ' header,' + O + ' [class*="sidebar" i],' + O + ' [class*="Sidebar"],' + O + ' [class*="topbar" i],' + O + ' [class*="TopBar"]{background-color:' + BG + ' !important;background-image:none !important}',
       // Sidebar gegen den gleich-schwarzen Chatbereich abgrenzen (sonst Kante 1.0:1 = unsichtbar).
       O + ' nav,' + O + ' aside,' + O + ' [class*="sidebar" i],' + O + ' [class*="Sidebar"]{border-right:1px solid ' + HAIR_DIM + ' !important}',
-      safeBg(['bg-bg-000', 'bg-bg-100', 'bg-bg-200'], BG),
-      safeBg(['bg-bg-300', 'bg-bg-400'], BG_HI),
-      safeBg(['bg-bg-500', 'bg-bg-600'], '#1a1517'),
+      safeBg(O, ['bg-bg-000', 'bg-bg-100', 'bg-bg-200'], BG),
+      safeBg(O, ['bg-bg-300', 'bg-bg-400'], BG_HI),
+      safeBg(O, ['bg-bg-500', 'bg-bg-600'], '#1a1517'),
       // claude.ais neuere surface-Tokens (z.B. Settings-Content bg-surface-2 = grau) ebenfalls schwaerzen.
-      safeBg(['bg-surface-0', 'bg-surface-1'], BG),
-      safeBg(['bg-surface-2', 'bg-surface-3'], BG_HI),
-      safeBg(['bg-black', 'bg-neutral-900', 'bg-neutral-950', 'bg-zinc-900', 'bg-zinc-950', 'bg-gray-900', 'bg-gray-950', 'bg-stone-900', 'bg-stone-950', 'bg-slate-900', 'bg-slate-950'], BG),
+      safeBg(O, ['bg-surface-0', 'bg-surface-1'], BG),
+      safeBg(O, ['bg-surface-2', 'bg-surface-3'], BG_HI),
+      safeBg(O, ['bg-black', 'bg-neutral-900', 'bg-neutral-950', 'bg-zinc-900', 'bg-zinc-950', 'bg-gray-900', 'bg-gray-950', 'bg-stone-900', 'bg-stone-950', 'bg-slate-900', 'bg-slate-950'], BG),
       O + ' [class*="from-bg-"],' + O + ' [class*="to-bg-"],' + O + ' [class*="via-bg-"]{background-image:none !important}',
       O + ' header[class*="bg-"]{background-color:' + BG + ' !important;background-image:none !important}',
       // --- OLED: Navigation / Menues ---
@@ -92,6 +99,32 @@
       '@keyframes cdGradShift{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}',
       O + ' .cd-composer{position:relative;border-color:transparent !important;overflow:visible !important;background-color:' + BG + ' !important}',
       O + ' .cd-composer::before{content:"";position:absolute;inset:-2px;border-radius:var(--cd-composer-radius,14px);padding:2px;background:linear-gradient(135deg,var(--cd-accent-from),var(--cd-accent-to),var(--cd-accent-from),var(--cd-accent-to));background-size:300% 300%;animation:cdGradShift 6s ease-in-out infinite;-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);mask-composite:exclude;pointer-events:none;z-index:5}',
+      // --- Mitternachtsblau: gleiche Token-Gruppen wie OLED, nur auf drei Blaustufen statt
+      // near-black. Kein Sternenfeld: das bleibt die Signatur von OLED. Die Stufen liegen
+      // ebenfalls dicht beieinander (unter 1.5:1), Trennung laeuft darum wie dort ueber
+      // Hairlines, hier in einem kuehlen Blau statt dem Rot-Ton.
+      M + '{background-color:' + MBG + ' !important}',
+      M + ' body{background-color:' + MBG + ' !important;background-image:none !important}',
+      M + ' #__next,' + M + ' #root,' + M + ' main,' + M + ' [role="main"]{background-color:transparent !important;background-image:none !important}',
+      M + ' nav,' + M + ' aside,' + M + ' header,' + M + ' [class*="sidebar" i],' + M + ' [class*="Sidebar"],' + M + ' [class*="topbar" i],' + M + ' [class*="TopBar"]{background-color:' + MBG + ' !important;background-image:none !important}',
+      M + ' nav,' + M + ' aside,' + M + ' [class*="sidebar" i],' + M + ' [class*="Sidebar"]{border-right:1px solid ' + M_HAIR + ' !important}',
+      safeBg(M, ['bg-bg-000', 'bg-bg-100', 'bg-bg-200'], MBG),
+      safeBg(M, ['bg-bg-300', 'bg-bg-400'], MBG_HI),
+      safeBg(M, ['bg-bg-500', 'bg-bg-600'], MBG_TOP),
+      safeBg(M, ['bg-surface-0', 'bg-surface-1'], MBG),
+      safeBg(M, ['bg-surface-2', 'bg-surface-3'], MBG_HI),
+      safeBg(M, ['bg-black', 'bg-neutral-900', 'bg-neutral-950', 'bg-zinc-900', 'bg-zinc-950', 'bg-gray-900', 'bg-gray-950', 'bg-stone-900', 'bg-stone-950', 'bg-slate-900', 'bg-slate-950'], MBG),
+      M + ' [class*="from-bg-"],' + M + ' [class*="to-bg-"],' + M + ' [class*="via-bg-"]{background-image:none !important}',
+      M + ' header[class*="bg-"]{background-color:' + MBG + ' !important;background-image:none !important}',
+      M + ' nav a,' + M + ' nav button,' + M + ' aside a,' + M + ' aside button,' + M + ' [class*="sidebar" i] a,' + M + ' [class*="sidebar" i] button,' + M + ' [class*="Sidebar"] a,' + M + ' [class*="Sidebar"] button{background-color:transparent !important;border-color:transparent !important;box-shadow:none !important}',
+      M + ' nav a:hover,' + M + ' nav button:hover,' + M + ' aside a:hover,' + M + ' aside button:hover,' + M + ' [class*="sidebar" i] a:hover,' + M + ' [class*="sidebar" i] button:hover{background-color:' + MBG_HI + ' !important}',
+      M + ' nav [aria-current="page"],' + M + ' nav [data-state="active"],' + M + ' nav [aria-selected="true"],' + M + ' aside [aria-current="page"],' + M + ' aside [data-state="active"],' + M + ' aside [aria-selected="true"]{background-color:' + MBG_TOP + ' !important}',
+      M + ' [role="menu"],' + M + ' [role="dialog"],' + M + ' [role="listbox"],' + M + ' [role="tooltip"],' + M + ' [class*="opover"],' + M + ' [class*="ropdown"],' + M + ' [class*="enuContent"],' + M + ' [data-radix-popper-content-wrapper]>*{background-color:' + MBG_HI + ' !important;background-image:none !important;border:1px solid ' + M_EDGE + ' !important;box-shadow:0 8px 28px rgba(0,0,0,0.6) !important}',
+      M + ' [role="menu"] [role="menuitem"],' + M + ' [role="menu"] button,' + M + ' [role="menu"] a,' + M + ' [role="listbox"] [role="option"]{background-color:transparent !important;border-color:transparent !important}',
+      M + ' [role="menu"] [role="menuitem"]:hover,' + M + ' [role="menu"] button:hover,' + M + ' [role="menu"] a:hover,' + M + ' [role="listbox"] [role="option"]:hover,' + M + ' [role="menuitem"][data-highlighted]{background-color:' + MBG_TOP + ' !important}',
+      M + ' input:focus,' + M + ' textarea:focus,' + M + ' [role="searchbox"]:focus,' + M + ' [role="combobox"]:focus{outline:1.5px solid ' + M_FOCUS + ' !important;outline-offset:2px !important}',
+      M + ' .cd-composer{position:relative;border-color:transparent !important;overflow:visible !important;background-color:' + MBG + ' !important}',
+      M + ' .cd-composer::before{content:"";position:absolute;inset:-2px;border-radius:var(--cd-composer-radius,14px);padding:2px;background:linear-gradient(135deg,var(--cd-accent-from),var(--cd-accent-to),var(--cd-accent-from),var(--cd-accent-to));background-size:300% 300%;animation:cdGradShift 6s ease-in-out infinite;-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);mask-composite:exclude;pointer-events:none;z-index:5}',
       ''
     ].join('');
   }

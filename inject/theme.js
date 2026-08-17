@@ -101,6 +101,29 @@
     return null;
   }
 
+  // Gleiche Treppe wie mapDark, nur in Blau: dunkle Variablen der Seite auf die
+  // Mitternachtsblau-Stufen ziehen, damit Tokens die das statische Sheet nicht erwischt
+  // (Schatten, Raender, Inline-Flaechen) nicht als graue Inseln stehenbleiben.
+  function mapMidnight(c) {
+    if (!c) return null;
+    var sum = c[0] + c[1] + c[2];
+    if (sum < 30) return '#03081a';
+    if (sum < 150) return '#060f24';
+    if (sum < 200) return '#0e1c3f';
+    if (sum < 260) return '#16295c';
+    if (sum < 330) return '#1d3470';
+    if (sum < 400) return '#243d80';
+    return null;
+  }
+
+  // Modi mit eigener Flaechenpalette. dark und light bekommen null: dark laeuft auf
+  // claude.ais nativer Palette, light auf dem Invert-Filter, beide brauchen kein Remap.
+  function surfaceMap(mode) {
+    if (mode === 'oled') return mapDark;
+    if (mode === 'midnight') return mapMidnight;
+    return null;
+  }
+
   // ---------- Surface-Luminanz (gegen Durchschlagen auf helle Sub-Apps) ----------
   // Misst die native Hintergrundhelligkeit, BEVOR OLED seinen eigenen bg setzt. Auf
   // hellen Seiten wird nie geschwaerzt -> Messung bleibt gueltig, keine Zirkularitaet.
@@ -184,6 +207,7 @@
     if (key === _varsKey && document.getElementById('cd-theme-vars')) return;
     _varsKey = key;
     var modern = '', oled = '', seenM = {}, mid = st.accent.mid || '#E8524F';
+    var mapSurface = surfaceMap(st.mode);
     // Ein Token kann mehrfach definiert sein, hell unter :root und dunkel unter
     // [data-theme="dark"]. Die dunkle Definition ist die, die unter OLED wirklich gilt,
     // also muss sie gewinnen. Wert und Rang getrennt merken, damit eine dark-Definition
@@ -222,8 +246,8 @@
               modern += prop + ':' + mid + ' !important;';
               seenM[prop] = true;
             }
-            if (st.mode === 'oled' && isRoot && (oledRank[prop] === undefined || rank >= oledRank[prop])) {
-              oledVal[prop] = mapDark(c);
+            if (mapSurface && isRoot && (oledRank[prop] === undefined || rank >= oledRank[prop])) {
+              oledVal[prop] = mapSurface(c);
               oledRank[prop] = rank;
             }
           }
@@ -237,13 +261,13 @@
     // color statt fill, weil die Icons per fill-current/currentColor erben.
     if (st.design === 'modern' && st.mode !== 'light')
       css += 'html[data-cd-design="modern"] .text-accent-brand{color:' + mid + ' !important}';
-    if (oled) css += 'html[data-cd-theme="oled"][data-cd-surface="dark"]{' + oled + '}';
+    if (oled) css += 'html[data-cd-theme="' + st.mode + '"][data-cd-surface="dark"]{' + oled + '}';
     setSheet('cd-theme-vars', css);
     // Im OLED/Modern leeres Scan-Ergebnis = claude.ai-CSS war noch nicht (ganz) geladen.
     // Cache-Key nicht festschreiben, damit der naechste applyAll/_cdSetTheme neu scannt.
     // Auf die Scan-Treffer pruefen, nicht auf css: die .text-accent-brand-Regel wird
     // unabhaengig vom Scan emittiert und wuerde den Rescan sonst faelschlich unterdruecken.
-    if (!modern && !oled && (st.mode === 'oled' || st.design === 'modern')) _varsKey = '';
+    if (!modern && !oled && (mapSurface || st.design === 'modern')) _varsKey = '';
   }
 
   // ---------- Composer taggen ----------
@@ -357,7 +381,7 @@
     }
     var ob = new MutationObserver(function (muts) {
       var wantSVG = (st.design === 'modern' && st.mode !== 'light');
-      var wantVars = (st.mode === 'oled' || wantSVG);
+      var wantVars = (!!surfaceMap(st.mode) || wantSVG);
       var sheetsAdded = false;
       if (wantSVG || wantVars) {
         for (var i = 0; i < muts.length; i++) {

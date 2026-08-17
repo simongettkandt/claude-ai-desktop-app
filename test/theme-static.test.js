@@ -18,9 +18,15 @@ const ST = {
   oledClassic: { mode: 'oled', design: 'classic', accent: { from: '#d4734c', to: '#d4734c', mid: '#E8524F' } }
 };
 
+// Das Sheet enthaelt immer alle Modi, gewaehlt wird ueber data-cd-theme am <html>. Neue
+// Themes duerfen darum nur hinten anhaengen: was vorher drinstand, muss unveraendert und
+// in derselben Reihenfolge stehen bleiben.
 for (const name of Object.keys(ST)) {
-  test(`buildStaticCSS: ${name} unveraendert gegenueber Baseline`, { skip: base ? false : 'keine Baseline' }, () => {
-    assert.equal(CUR.buildStaticCSS(ST[name]), base.buildStaticCSS(ST[name]));
+  test(`buildStaticCSS: ${name} haengt nur an, aendert nichts Bestehendes`, { skip: base ? false : 'keine Baseline' }, () => {
+    const before = base.buildStaticCSS(ST[name]);
+    const now = CUR.buildStaticCSS(ST[name]);
+    assert.ok(now.startsWith(before), 'bestehende Regeln wurden veraendert statt ergaenzt');
+    assert.ok(!now.slice(before.length).includes('data-cd-theme="oled"'), 'neue Regeln fassen das OLED-Scope an');
     assert.equal(CUR.sparkleBg(ST[name]), base.sparkleBg(ST[name]));
   });
 }

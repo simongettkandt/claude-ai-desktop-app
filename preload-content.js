@@ -24,16 +24,20 @@ contextBridge.exposeInMainWorld('claudeDesktop', {
   offlineRetry: () => ipcRenderer.send('cd-offline-retry')
 });
 
-// Anti-FOUC: OLED-Schwarz schon bei document-start setzen (laeuft vor dem ersten Paint),
+// Anti-FOUC: die Flaechenfarbe schon bei document-start setzen (laeuft vor dem ersten Paint),
 // damit beim kalten Start/Tab nicht claude.ais eigenes Grau aufblitzt, bis der Theme-Controller
-// bei dom-ready greift. Nur auf claude.ai, nur im OLED-Mode. Der Controller raeumt das
+// bei dom-ready greift. Nur auf claude.ai, nur in Modi die die Seite selbst umfaerben
+// (OLED, Mitternachtsblau). Der Controller raeumt das
 // cd-theme-preload-Sheet beim Uebernehmen wieder weg (sonst stoert es einen spaeteren Light-Switch).
 (function () {
   try {
     if (!/(^|\.)claude\.ai$/.test(location.hostname)) return;
     var st = ipcRenderer.sendSync('cd-theme-mode') || {};
-    if (st.mode !== 'oled') return;
-    var BG = '#050306';
+    // Nur Modi, die die Seite selbst umfaerben. dark laeuft auf claude.ais eigener Palette,
+    // light auf dem Invert-Filter, beide brauchen kein Vorab-Sheet.
+    var PRE_BG = { oled: '#050306', midnight: '#060f24' };
+    if (!PRE_BG[st.mode]) return;
+    var BG = PRE_BG[st.mode];
     // Sternenfeld identisch zu theme.js sparkleBg(); muss mit theme.js synchron bleiben,
     // damit beim Uebergang Preload -> Controller kein Sprung sichtbar ist.
     function spark() {
@@ -52,7 +56,7 @@ contextBridge.exposeInMainWorld('claudeDesktop', {
       var de = document.documentElement;
       if (!de) return false;
       de.style.backgroundColor = BG;
-      de.setAttribute('data-cd-theme', 'oled');
+      de.setAttribute('data-cd-theme', st.mode);
       de.setAttribute('data-cd-surface', 'dark');
       if (!document.getElementById('cd-theme-preload')) {
         var s = document.createElement('style');
@@ -64,7 +68,7 @@ contextBridge.exposeInMainWorld('claudeDesktop', {
         // Fallback (Subset) nur, falls staticCSS mal leer ist, damit dieses Sheet allein traegt.
         s.textContent = (st.staticCSS && st.staticCSS.length) ? st.staticCSS
           : ('html{background-color:' + BG + ' !important}'
-          + 'body{background-color:' + BG + ' !important;background-image:' + spark() + ' !important;background-size:620px 620px}'
+          + 'body{background-color:' + BG + ' !important;background-image:' + (st.mode === 'oled' ? spark() : 'none') + ' !important;background-size:620px 620px}'
           + '[class*="bg-bg-"],[class*="bg-black"],[class*="bg-neutral-9"],[class*="bg-zinc-9"],[class*="bg-gray-9"],[class*="bg-stone-9"],[class*="bg-slate-9"]{background-color:' + BG + ' !important}'
           + 'nav,aside,header,[class*="sidebar" i],[class*="Sidebar"],[class*="topbar" i],[class*="TopBar"]{background-color:' + BG + ' !important;background-image:none !important}'
           + 'nav,aside,[class*="sidebar" i],[class*="Sidebar"]{border-right:1px solid rgba(255,255,255,0.07) !important}');
