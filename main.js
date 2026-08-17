@@ -1649,7 +1649,7 @@ const THEME = {
   dark:  { bg: '#262624', bgHover: '#333330', bgActive: '#3a3a37', text: '#9a9a96', textActive: '#e8e8e4', border: '#333330', frameHi: '#423d38', frameLo: '#2a2622' },
   light: { bg: '#f5f2ef', bgHover: '#ede9e4', bgActive: '#faf8f6', text: '#8a7e72', textActive: '#2a2420', border: '#e8e4de', frameHi: '#ddd6cc', frameLo: '#c8c1b6' },
   oled:  { bg: '#050306', bgHover: '#121013', bgActive: '#1c181b', text: '#9a948f', textActive: '#e8e8e4', border: '#1a1719', frameHi: '#2c2429', frameLo: '#0c090b' },
-  midnight: { bg: '#060f24', bgHover: '#0e1c3f', bgActive: '#16295c', text: '#7d93b8', textActive: '#eaf1ff', border: '#142140', frameHi: '#2a4a8a', frameLo: '#040a1a' }
+  midnight: { bg: '#070c18', bgHover: '#0d1526', bgActive: '#151f36', text: '#8a9ab5', textActive: '#e9eff8', border: '#182238', frameHi: '#2b3f66', frameLo: '#04070f' }
 };
 
 const ACCENT = {
@@ -1661,6 +1661,20 @@ const ACCENT = {
   // wuerde als Buttonflaeche mit Weiss darauf auf 1.5:1 fallen.
   midnight: { from: '#1B54BE', to: '#2A72E8', neonFrom: '#2F7FFF', neonTo: '#00E5FF' }
 };
+
+// Warnfarbe pro Theme. Bernstein bleibt das Signal, der Ton folgt dem Untergrund: das warme
+// Orange kippt auf tiefblauem Grund ins Schmutzige, auf Weiss braucht es mehr Deckung. k
+// skaliert die Flaechen-Alphas, damit der Kasten in jedem Theme gleich praesent wirkt.
+const WARN = {
+  dark:     { rgb: '224,169,62', fg: '#e0a93e', title: '#e0a93e', k: 1 },
+  oled:     { rgb: '224,169,62', fg: '#e0a93e', title: '#e0a93e', k: 1 },
+  light:    { rgb: '224,150,40', fg: '#c97e1c', title: '#a86412', k: 1.2 },
+  midnight: { rgb: '232,199,106', fg: '#e8c76a', title: '#e8c76a', k: 0.9 }
+};
+function warnColor() {
+  const w = WARN[currentThemeMode()] || WARN.dark;
+  return { fg: w.fg, title: w.title, a: v => `rgba(${w.rgb},${Math.round(v * w.k * 100) / 100})` };
+}
 
 // Beta-Build erkennen — eigene Icons (BETA-Badge) zur visuellen Unterscheidung von Stable
 const isBeta = process.env.CLAUDE_BETA === '1'
@@ -1735,18 +1749,18 @@ body{background:var(--bg);font:500 12px/1 -apple-system,BlinkMacSystemFont,'Sego
 #notif-bar:empty{display:none}
 .notif{display:flex;align-items:center;gap:14px;min-height:${NOTIFICATION_BANNER_HEIGHT}px;padding:10px 14px 10px 0;font-family:inherit;line-height:1.35;color:var(--ta);border-bottom:1px solid var(--bd);background:var(--bgh);position:relative}
 .notif[data-sev="info"]{background:linear-gradient(90deg,color-mix(in srgb,var(--ac-from) 14%,var(--bgh)),var(--bgh))}
-.notif[data-sev="warn"]{background:linear-gradient(90deg,color-mix(in srgb,#e0a93e 22%,var(--bgh)),var(--bgh))}
+.notif[data-sev="warn"]{background:linear-gradient(90deg,color-mix(in srgb,${warnColor().fg} 22%,var(--bgh)),var(--bgh))}
 .notif[data-sev="critical"]{background:linear-gradient(90deg,color-mix(in srgb,#e05e3e 28%,var(--bgh)),var(--bgh))}
 .notif[data-sev="success"]{background:linear-gradient(90deg,color-mix(in srgb,#3fb96e 22%,var(--bgh)),var(--bgh))}
 .notif-dot{flex:0 0 4px;align-self:stretch;background:var(--ac-from);margin-right:6px}
-.notif[data-sev="warn"] .notif-dot{background:#e0a93e}
+.notif[data-sev="warn"] .notif-dot{background:${warnColor().fg}}
 .notif[data-sev="critical"] .notif-dot{background:#e05e3e}
 .notif[data-sev="success"] .notif-dot{background:#3fb96e}
 .notif-text{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;overflow:hidden}
 .notif-text strong{font-weight:600;color:var(--ta);font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .notif-text span{color:var(--t);font-weight:400;font-size:12.5px;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .notif-link{flex:0 0 auto;background:var(--ac-from);color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12.5px;font-family:inherit;font-weight:600;cursor:pointer;white-space:nowrap;transition:filter .12s ease}
-.notif[data-sev="warn"] .notif-link{background:#e0a93e;color:#1c1208}
+.notif[data-sev="warn"] .notif-link{background:${warnColor().fg};color:#1c1208}
 .notif[data-sev="critical"] .notif-link{background:#e05e3e;color:#fff}
 .notif[data-sev="success"] .notif-link{background:#3fb96e;color:#0e1d14}
 .notif-link:hover{filter:brightness(1.08)}
@@ -1898,7 +1912,7 @@ const THEME_VARS={
   light:['#f5f2ef','#ede9e4','#faf8f6','#8a7e72','#2a2420','#e8e4de','#ddd6cc','#c8c1b6'],
   dark: ['#262624','#333330','#3a3a37','#9a9a96','#e8e8e4','#333330','#423d38','#2a2622'],
   oled: ['#050306','#121013','#1c181b','#9a948f','#e8e8e4','#1a1719','#2c2429','#0c090b'],
-  midnight:['#060f24','#0e1c3f','#16295c','#7d93b8','#eaf1ff','#142140','#2a4a8a','#040a1a']
+  midnight:['#070c18','#0d1526','#151f36','#8a9ab5','#e9eff8','#182238','#2b3f66','#04070f']
 };
 window.tabAPI.onThemeUpdate(u=>{
   const m=THEME_VARS[u.mode]?u.mode:'dark';
@@ -2703,6 +2717,7 @@ function showBugReportDialog() {
   const th = subTheme();
   const ac = accent();
   const dark = currentThemeMode() !== 'light';
+  const w = warnColor();
   const bg = th.bg;
   const fg = th.textActive;
   const sub = th.text;
@@ -2721,7 +2736,7 @@ function showBugReportDialog() {
     mode: getAppMode()
   };
 
-  const brSize = { width: 540, height: 1000 };
+  const brSize = fitToWorkArea(540, 820);
   const brPos = centerOnMainWindow(brSize.width, brSize.height);
   const win = new BrowserWindow({
     ...brSize, ...brPos, resizable: false,
@@ -2773,8 +2788,8 @@ textarea.errcodes{min-height:70px;line-height:1.45;font-family:ui-monospace,Menl
 .auto-info-row .hint{font-size:11.5px;color:${sub};line-height:1.4}
 .confirm-row{display:flex;align-items:flex-start;gap:10px;margin:2px 0 16px;
   padding:11px 13px;border-radius:8px;cursor:pointer;user-select:none;
-  background:${dark ? 'rgba(224,169,62,0.10)' : 'rgba(224,150,40,0.12)'};
-  border:1.5px solid ${dark ? 'rgba(224,169,62,0.45)' : 'rgba(224,150,40,0.5)'};
+  background:${w.a(0.10)};
+  border:1.5px solid ${w.a(0.45)};
   transition:border-color .15s,background .15s}
 .confirm-row:hover{border-color:${inputFocus}}
 .confirm-row.checked{background:${inputBg};border-color:${inputBorder}}
@@ -2783,11 +2798,11 @@ textarea.errcodes{min-height:70px;line-height:1.45;font-family:ui-monospace,Menl
 .confirm-row .label{font-size:13px;color:${fg};font-weight:600}
 .confirm-row .hint{font-size:11.5px;color:${sub};line-height:1.4}
 .nudge{display:none;gap:9px;align-items:flex-start;padding:10px 12px;margin:-4px 0 14px;
-  background:${dark ? 'rgba(224,169,62,0.12)' : 'rgba(224,150,40,0.14)'};
-  border:1px solid ${dark ? 'rgba(224,169,62,0.5)' : 'rgba(224,150,40,0.55)'};
+  background:${w.a(0.12)};
+  border:1px solid ${w.a(0.5)};
   border-radius:8px;font-size:12.5px;line-height:1.45}
 .nudge.show{display:flex}
-.nudge .ico{flex:0 0 auto;color:${dark ? '#e0a93e' : '#c97e1c'};line-height:0;margin-top:1px}
+.nudge .ico{flex:0 0 auto;color:${w.fg};line-height:0;margin-top:1px}
 .nudge .txt{flex:1;color:${fg}}
 .nudge a{color:${inputFocus};text-decoration:underline;cursor:pointer;font-weight:500}
 .nudge a:hover{filter:brightness(1.15)}
@@ -2802,12 +2817,12 @@ button.secondary:hover{background:${inputBg};color:${fg}}
 button:focus-visible{outline:2px solid ${ac.from};outline-offset:2px}
 .honeypot{position:absolute;left:-9999px;width:1px;height:1px;opacity:0}
 .disclaimer{display:flex;gap:10px;align-items:flex-start;padding:11px 13px;margin:-2px 0 16px;
-  background:${dark ? 'rgba(224,169,62,0.10)' : 'rgba(224,150,40,0.12)'};
-  border:1px solid ${dark ? 'rgba(224,169,62,0.35)' : 'rgba(224,150,40,0.45)'};
+  background:${w.a(0.10)};
+  border:1px solid ${w.a(0.35)};
   border-radius:8px;font-size:12.5px;line-height:1.5}
-.disclaimer .ico{flex:0 0 auto;color:${dark ? '#e0a93e' : '#c97e1c'};line-height:0;margin-top:1px}
+.disclaimer .ico{flex:0 0 auto;color:${w.fg};line-height:0;margin-top:1px}
 .disclaimer .txt{flex:1;color:${fg}}
-.disclaimer .ttl{font-weight:600;display:block;margin-bottom:3px;color:${dark ? '#e0a93e' : '#a86412'}}
+.disclaimer .ttl{font-weight:600;display:block;margin-bottom:3px;color:${w.title}}
 .disclaimer a{color:${inputFocus};text-decoration:underline;cursor:pointer;font-weight:500}
 .disclaimer a:hover{filter:brightness(1.15)}
 .status{display:none;flex-direction:column;align-items:center;justify-content:center;
@@ -3042,7 +3057,14 @@ ${customTitlebarHTML(s.title)}
     }
   });
 
-  setTimeout(() => desc.focus(), 50);
+  // preventScroll: das Beschreibungsfeld liegt unter dem Disclaimer. Ohne das scrollt der
+  // Fokus es in den Blick und der Dialog oeffnet mitten im Text statt bei der Ueberschrift.
+  // Beim Tippen zieht der Caret die Ansicht dann von selbst nach.
+  setTimeout(() => {
+    desc.focus({ preventScroll: true });
+    const main = document.querySelector('.bugreport-main');
+    if (main) main.scrollTop = 0;
+  }, 50);
 })();
 </script>
 </body></html>`;
@@ -3286,6 +3308,23 @@ function centerOnMainDisplay(width, height) {
     };
   } catch {
     return {};
+  }
+}
+
+// Feste Dialogmasse gegen die Arbeitsflaeche clampen. Auf Full HD bleiben nach Panel und
+// Leisten keine 1000px Hoehe uebrig, ein starr bemessener Dialog fuellt dann den ganzen
+// Schirm. Alle Dialoge scrollen innen, Kuerzen kostet also keinen Inhalt.
+function fitToWorkArea(width, height, margin = 80) {
+  try {
+    const d = (mainWindow && !mainWindow.isDestroyed())
+      ? screen.getDisplayMatching(mainWindow.getBounds())
+      : screen.getPrimaryDisplay();
+    return {
+      width: Math.min(width, Math.max(400, d.workArea.width - margin)),
+      height: Math.min(height, Math.max(360, d.workArea.height - margin))
+    };
+  } catch {
+    return { width, height };
   }
 }
 
@@ -4131,7 +4170,7 @@ function openWhatsNewWindow(force = false) {
     whatsNewWindow.focus();
     return;
   }
-  const size = { width: 640, height: 680 };
+  const size = fitToWorkArea(640, 680);
   const wnBase = {
     ...size,
     parent: mainWindow && !mainWindow.isDestroyed() ? mainWindow : undefined,
@@ -4268,7 +4307,7 @@ function openAboutWindow() {
     aboutWindow.focus();
     return;
   }
-  const size = { width: 540, height: 580 };
+  const size = fitToWorkArea(540, 580);
   const base = {
     ...size,
     parent: mainWindow && !mainWindow.isDestroyed() ? mainWindow : undefined,
@@ -4295,7 +4334,7 @@ function openSettingsWindow() {
     settingsWindow.focus();
     return;
   }
-  const swSize = { width: 540, height: 480 };
+  const swSize = fitToWorkArea(540, 480);
   const swBase = {
     ...swSize,
     parent: mainWindow && !mainWindow.isDestroyed() ? mainWindow : undefined,
@@ -4329,12 +4368,15 @@ const PREVIEW_SURFACE = {
   dark:     { page: '#262624', card: '#30302e' },
   light:    { page: '#faf9f7', card: '#ffffff' },
   oled:     { page: '#050306', card: '#120f12' },
-  midnight: { page: '#060f24', card: '#0e1c3f' }
+  midnight: { page: '#070c18', card: '#0d1526' }
 };
 
 function getDesignHTML() {
   const th = subTheme();
   const ac = accent();
+  // Themes ohne eigenen Akzent zeigen in der Vorschau den Ton des gewaehlten Stils. NICHT
+  // accent(): das liefert im Mitternachtsblau-Modus dessen Blau und faerbte alle vier Karten.
+  const styleAccent = customDesign ? ACCENT.custom : ACCENT.original;
   const mode = currentThemeMode();
   const i18n = {
     title: 'Design',
@@ -4360,7 +4402,7 @@ function getDesignHTML() {
     },
     oled: {
       name: 'OLED',
-      hint: t('Tiefes Schwarz mit Sternenfeld, spart Strom auf OLED-Displays.', 'Deep black with a starfield, saves power on OLED displays.', 'Noir profond avec champ d’étoiles, économise la batterie sur OLED.', 'Nero profondo con campo di stelle, risparmia energia su OLED.')
+      hint: t('Tiefes Schwarz mit Sternenfeld, spart Strom auf OLED.', 'Deep black with a starfield, saves power on OLED.', 'Noir profond avec champ d’étoiles, économise la batterie sur OLED.', 'Nero profondo con campo di stelle, risparmia energia su OLED.')
     },
     midnight: {
       name: t('Mitternachtsblau', 'Midnight Blue', 'Bleu nuit', 'Blu notte'),
@@ -4373,7 +4415,7 @@ function getDesignHTML() {
   };
 
   const card = (m) => {
-    const p = THEME[m], s = PREVIEW_SURFACE[m], a = ACCENT[m] || ac;
+    const p = THEME[m], s = PREVIEW_SURFACE[m], a = ACCENT[m] || styleAccent;
     const vars = [
       `--p:${s.page}`, `--s:${s.card}`, `--bar:${p.bg}`, `--bara:${p.bgActive}`,
       `--l:${p.border}`, `--tt:${p.text}`, `--ta:${p.textActive}`,
@@ -4433,7 +4475,7 @@ h1{font-size:16px;margin:0 0 2px;font-weight:600}
 [aria-pressed="true"] .tick{opacity:1}
 .card-hint{color:var(--tt);font-size:11px;line-height:1.4;display:block}
 /* Vorschau: Fensterleiste, Seitenleiste, Textzeilen und Eingabefeld in den echten Farben */
-.prev{display:block;border-radius:6px;overflow:hidden;border:1px solid var(--l);background:var(--p);height:96px}
+.prev{display:block;border-radius:6px;overflow:hidden;border:1px solid var(--l);background:var(--p);height:86px}
 .prev-bar{display:flex;gap:3px;align-items:center;height:15px;padding:0 4px;background:var(--bar);border-bottom:1px solid var(--l)}
 .prev-bar .tab{width:26px;height:8px;border-radius:2px;background:var(--bara);display:block}
 .prev-bar .tab.dim{background:var(--l)}
@@ -4523,7 +4565,7 @@ function openDesignWindow() {
     designWindow.focus();
     return;
   }
-  const size = { width: 560, height: 640 };
+  const size = fitToWorkArea(560, 700);
   designWindow = new BrowserWindow({
     ...size,
     ...centerOnMainWindow(size.width, size.height),
@@ -4789,7 +4831,7 @@ function getMessageBoxHTML({ type, title, message, detail, buttons, defaultId, c
   const th = subTheme();
   const ac = accent();
   const esc = (s) => String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
-  const iconColor = type === 'error' ? '#e05e3e' : (type === 'warning' ? '#e0a93e' : ac.from);
+  const iconColor = type === 'error' ? '#e05e3e' : (type === 'warning' ? warnColor().fg : ac.from);
   const iconSvg = {
     info:    '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>',
     warning: '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
@@ -5395,7 +5437,7 @@ body{font-size:13.5px;display:flex;flex-direction:column}
 .dot{width:9px;height:9px;border-radius:50%;background:${th.text};flex:0 0 auto;transition:background .2s}
 .snap[data-status="connected"] .dot{background:#3fb96e}
 .snap[data-status="disconnected"] .dot{background:#e05e3e}
-.snap[data-status="unknown"] .dot{background:#e0a93e}
+.snap[data-status="unknown"] .dot{background:${warnColor().fg}}
 .snap-title{font-weight:600;font-size:12.5px}
 .snap-status{color:${th.text};font-size:12px;flex:1}
 .btn-snap{background:${th.bg};color:${th.textActive};border:1px solid ${th.border};border-radius:6px;padding:7px 12px;font-size:12.5px;font-family:inherit;cursor:pointer;font-weight:500;align-self:flex-start}
@@ -5405,7 +5447,7 @@ body{font-size:13.5px;display:flex;flex-direction:column}
 .snap-cmd-row{display:flex;gap:6px;align-items:center}
 .snap-cmd{flex:1;background:${th.bg};border:1px solid ${th.border};border-radius:6px;padding:6px 9px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px;color:${th.textActive};user-select:text;-webkit-user-select:text;overflow-x:auto;white-space:nowrap}
 .snap-cmd-copy{padding:6px 10px;font-size:11.5px;flex:0 0 auto}
-.allow-blocker{color:#e0a93e;font-size:11.5px;line-height:1.4;margin-top:2px;display:none}
+.allow-blocker{color:${warnColor().fg};font-size:11.5px;line-height:1.4;margin-top:2px;display:none}
 .snap[data-status="disconnected"] ~ .allow-blocker{display:block}
 .snap[data-status="unknown"] ~ .allow-blocker{display:block}
 .buttons{padding:14px 22px;border-top:1px solid ${th.border};display:flex;gap:8px;justify-content:flex-end}

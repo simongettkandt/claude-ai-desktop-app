@@ -107,12 +107,12 @@
   function mapMidnight(c) {
     if (!c) return null;
     var sum = c[0] + c[1] + c[2];
-    if (sum < 30) return '#03081a';
-    if (sum < 150) return '#060f24';
-    if (sum < 200) return '#0e1c3f';
-    if (sum < 260) return '#16295c';
-    if (sum < 330) return '#1d3470';
-    if (sum < 400) return '#243d80';
+    if (sum < 30) return '#04070f';
+    if (sum < 150) return '#070c18';
+    if (sum < 200) return '#0d1526';
+    if (sum < 260) return '#151f36';
+    if (sum < 330) return '#1c2844';
+    if (sum < 400) return '#233052';
     return null;
   }
 

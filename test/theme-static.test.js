@@ -35,7 +35,12 @@ test('midnight bringt eigenen Scope und faerbt nicht ueber das OLED-Scope', () =
   const st = { mode: 'midnight', design: 'modern', accent: { from: '#2F7FFF', to: '#00E5FF', mid: '#2F7FFF' } };
   const css = CUR.buildStaticCSS(st);
   assert.ok(css.includes('html[data-cd-theme="midnight"]'), 'midnight-Scope fehlt');
-  assert.ok(css.includes('#060f24'), 'Basisfarbe fehlt');
+  // Nicht auf einen festen Hexwert pruefen, der wandert beim Feilen an der Palette. Es muss
+  // eine Basisfarbe geben und die muss blau sein, sonst haengt das Theme in Grau oder Schwarz.
+  const base = css.match(/html\[data-cd-theme="midnight"\]\[data-cd-surface="dark"\]\{background-color:(#[0-9a-f]{6})/);
+  assert.ok(base, 'midnight setzt keine Basisfarbe auf html');
+  const [r, g, b] = [1, 3, 5].map(i => parseInt(base[1].slice(i, i + 2), 16));
+  assert.ok(b > r + 8 && b > g + 4, 'Basisfarbe ist nicht blau: ' + base[1]);
   // Die OLED-Regeln bleiben im Sheet, duerfen aber nur unter ihrem eigenen Scope stehen.
   for (const rule of css.split('}')) {
     if (rule.includes('#050306')) assert.ok(rule.includes('data-cd-theme="oled"'), 'OLED-Schwarz ausserhalb des OLED-Scopes: ' + rule.slice(0, 120));

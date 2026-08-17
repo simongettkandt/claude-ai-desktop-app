@@ -35,7 +35,7 @@ contextBridge.exposeInMainWorld('claudeDesktop', {
     var st = ipcRenderer.sendSync('cd-theme-mode') || {};
     // Nur Modi, die die Seite selbst umfaerben. dark laeuft auf claude.ais eigener Palette,
     // light auf dem Invert-Filter, beide brauchen kein Vorab-Sheet.
-    var PRE_BG = { oled: '#050306', midnight: '#060f24' };
+    var PRE_BG = { oled: '#050306', midnight: '#070c18' };
     if (!PRE_BG[st.mode]) return;
     var BG = PRE_BG[st.mode];
     // Sternenfeld identisch zu theme.js sparkleBg(); muss mit theme.js synchron bleiben,
