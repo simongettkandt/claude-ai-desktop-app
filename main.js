@@ -472,6 +472,53 @@ const RELEASE_NOTES_REVISIT = {
 };
 
 const RELEASE_NOTES = {
+  '1.4.16': [
+    {
+      icon: 'palette',
+      title: {
+        de: 'Design-Fenster statt Blindschaltung',
+        en: 'A Design window instead of blind toggles',
+        fr: 'Une fenêtre Design au lieu de bascules à l’aveugle',
+        it: 'Una finestra Design invece di interruttori alla cieca'
+      },
+      text: {
+        de: 'Der Menüpunkt „Design" öffnete bisher nichts, und der Knopf in der Tab-Leiste schaltete blind durch die Themes, ohne zu zeigen, was als Nächstes kommt. Jetzt öffnet sich ein eigenes Fenster, das jedes Farbthema als kleine Nachbildung des echten Fensters und der Seite zeigt, samt Akzent-Stil. Ein Klick wirkt sofort, das Fenster färbt sich dabei selbst mit um. Der alte Knopf in der Leiste ist ausgeblendet, weil das Fenster beides übernimmt.',
+        en: 'The "Design" menu entry opened nothing, and the tab bar button cycled blind through the themes without showing what was coming. It now opens a window of its own that shows each colour theme as a small mockup of the real window and page, together with the accent style. A click applies immediately and the window recolours itself along with it. The old button in the bar is hidden, since the window covers both.',
+        fr: 'L’entrée de menu « Design » n’ouvrait rien et le bouton de la barre d’onglets faisait défiler les thèmes à l’aveugle, sans montrer ce qui venait ensuite. Une fenêtre dédiée présente désormais chaque thème de couleur sous forme de maquette de la vraie fenêtre et de la page, avec le style d’accent. Un clic s’applique immédiatement et la fenêtre change de couleur avec lui. L’ancien bouton de la barre est masqué, la fenêtre couvrant les deux.',
+        it: 'La voce di menu "Design" non apriva nulla e il pulsante nella barra delle schede scorreva i temi alla cieca, senza mostrare cosa sarebbe arrivato. Ora si apre una finestra dedicata che mostra ogni tema colore come piccola riproduzione della finestra e della pagina reali, insieme allo stile d’accento. Un clic ha effetto subito e la finestra si ricolora insieme. Il vecchio pulsante nella barra è nascosto, perché la finestra copre entrambi.'
+      }
+    },
+    {
+      icon: 'bolt',
+      title: {
+        de: 'Mitternachtsblau und der Stil Neon',
+        en: 'Midnight Blue and the Neon style',
+        fr: 'Bleu nuit et le style Neon',
+        it: 'Blu notte e lo stile Neon'
+      },
+      text: {
+        de: 'Ein viertes Farbthema kommt dazu: tiefes Blau, dessen Abstufungen App-Fenster und claude.ai-Seite gemeinsam verwenden, mit verteilten Wellenkämmen im Hintergrund als Gegenstück zum Sternenfeld von OLED. Dazu ein dritter Akzent-Stil, Neon, in Blau. Farbthema und Stil sind ab jetzt zwei getrennte Regler und lassen sich frei kombinieren: das Thema macht die Flächen, der Stil die Akzentfarbe. Zum Stil gehört auch der Sende-Pfeil im Eingabefeld, der bisher in jedem Thema orange blieb.',
+        en: 'A fourth colour theme arrives: deep blue, whose steps the app windows and the claude.ai page share, with scattered wave crests in the background as the counterpart to OLED\u2019s starfield. Alongside it a third accent style, Neon, in blue. Colour theme and style are two separate dials now and combine freely: the theme paints the surfaces, the style sets the accent colour. That includes the send arrow in the input field, which used to stay orange in every theme.',
+        fr: 'Un quatrième thème de couleur arrive : un bleu profond dont les nuances sont partagées par les fenêtres de l’application et la page claude.ai, avec des crêtes de vagues réparties en arrière-plan, pendant du champ d’étoiles d’OLED. S’y ajoute un troisième style d’accent, Neon, en bleu. Thème et style sont désormais deux réglages distincts et se combinent librement : le thème peint les surfaces, le style définit la couleur d’accent. Cela vaut aussi pour la flèche d’envoi, qui restait orange dans tous les thèmes.',
+        it: 'Arriva un quarto tema colore: un blu profondo, le cui gradazioni sono condivise dalle finestre dell’app e dalla pagina di claude.ai, con creste d’onda distribuite sullo sfondo come controparte del campo stellato di OLED. Si aggiunge un terzo stile d’accento, Neon, in blu. Tema colore e stile sono ora due regolazioni separate e si combinano liberamente: il tema dipinge le superfici, lo stile imposta il colore d’accento. Questo vale anche per la freccia di invio, che prima restava arancione in ogni tema.'
+      }
+    },
+    {
+      icon: 'bug',
+      title: {
+        de: 'Farbreste an mehreren Stellen behoben',
+        en: 'Colouring leftovers fixed in several places',
+        fr: 'Restes de coloration corrigés à plusieurs endroits',
+        it: 'Residui di colorazione corretti in più punti'
+      },
+      text: {
+        de: 'Der Rahmen um das Eingabefeld saß neben dessen Ecken, weil er die Rundung an der falschen Stelle gemessen hat. Auf den Seiten Code und Design blieben graue Balken stehen, dort halten die Übergangsstreifen von claude.ai ihren eigenen Grauton fest. Im hellen Thema war die untere Hälfte der Design-Seite schwarz. Und beim Wechsel behielt ein Symbol die Farbe des vorigen Themas, etwa der Stern in der Begrüßung. Zusätzlich passt sich das Fenster für Fehlerberichte an die Bildschirmgröße an, statt auf Full HD den ganzen Schirm zu füllen.',
+        en: 'The ring around the input field sat next to its corners, because it measured the rounding in the wrong place. Grey bars stayed on the Code and Design pages, where claude.ai\u2019s fade strips keep their own shade of grey. In the light theme the lower half of the design page was black. And on a switch an icon kept the previous theme\u2019s colour, the star in the greeting for instance. The bug report window also adapts to the screen size now instead of filling a Full HD display entirely.',
+        fr: 'L’anneau autour du champ de saisie se plaçait à côté de ses coins, car il mesurait l’arrondi au mauvais endroit. Des barres grises subsistaient sur les pages Code et Design, où les bandes de fondu de claude.ai conservent leur propre gris. Dans le thème clair, la moitié inférieure de la page Design était noire. Et lors d’un changement, une icône gardait la couleur du thème précédent, par exemple l’étoile de l’accueil. La fenêtre de rapport de bogue s’adapte en outre à la taille de l’écran au lieu de remplir tout un écran Full HD.',
+        it: 'L’anello attorno al campo di input si posizionava accanto ai suoi angoli, perché misurava l’arrotondamento nel punto sbagliato. Sulle pagine Code e Design restavano barre grigie, dove le strisce di sfumatura di claude.ai mantengono il proprio grigio. Nel tema chiaro la metà inferiore della pagina Design era nera. E al cambio un’icona conservava il colore del tema precedente, ad esempio la stella nel saluto. Inoltre la finestra di segnalazione si adatta alla dimensione dello schermo invece di riempire per intero un display Full HD.'
+      }
+    }
+  ],
   '1.4.15': [
     {
       icon: 'bug',

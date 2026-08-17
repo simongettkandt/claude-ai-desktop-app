@@ -14,7 +14,7 @@
   <a href="https://snapcraft.io/claude-ai-desktop"><img src="https://snapcraft.io/claude-ai-desktop/badge.svg" alt="Snap build status"></a>
 </p>
 
-> **v1.4.15** - Checkout and Colour Fixes. Buying a subscription was impossible: claude.ai renders the checkout with Stripe, which puts its whole payment UI into its own iframes, and the subframe guard blocked every one of them. Electron cancels a blocked frame without a load error, so nothing surfaced and the form stayed a pulsing placeholder. The six hosts the checkout needs are now allowed as subframes, but only when the page above them is claude.ai itself, and blocked subframes are logged so the next missing host is not silent. Three colouring bugs are fixed alongside it: artifacts and the Design view appeared as a colour negative in the White theme, the Share button was invisible in OLED, and the Modern design collapsed two steps of the same palette onto one red.
+> **v1.4.16** - Design Window and Themes. The menu entry for the design opened nothing and the tab bar button cycled blind through the modes, so a Design window now shows every colour theme as a small mockup of the real window and page and applies the choice live. Midnight Blue joins as a fourth colour theme, with deep blue surfaces and scattered wave crests as the counterpart to OLED's starfield, and Neon joins as a third accent style. Colour theme and style are separate axes now, freely combinable, and the style also sets claude.ai's own brand tone, so the send arrow stops being orange in every theme. Alongside: the ring around the input field follows the real corner radius instead of a default, grey bars on the Code and Design pages are gone, and in the light theme the design page no longer has a black lower half.
 
 ---
 
@@ -34,7 +34,7 @@
 - **In-App Bug Report** – Description, optional error codes, optional contact email; auto-includes app/OS info on opt-in. Includes a clear notice that this is an unofficial community wrapper (not an official Anthropic product) with a direct link to [support.anthropic.com](https://support.anthropic.com) for account/login/billing/payment questions. Since v1.4.10 a required checkbox gates the Send button. Localized in DE, EN, FR, ES, IT
 - **App Settings Window** – Configure hotkeys, minimize-to-tray, autostart, background notifications and templates from `Claude → App Settings…`
 - **Autostart** – Optional launch on system boot (Linux: writes a `.desktop` file to `~/.config/autostart/`; Snap: native autostart directive)
-- **Themes** – Dark, White and OLED, switched from the tab bar, plus a Modern or Classic design. The theme is applied before the first paint, so restored content appears already themed. claude.ai always runs in its dark palette; White is a GPU inversion of it, which switches in ~6ms instead of ~480ms for a real palette flip
+- **Themes** – Dark, White, OLED and Midnight Blue, picked in a Design window that previews each one, plus three accent styles (Modern, Classic, Neon) that combine freely with any theme. The theme is applied before the first paint, so restored content appears already themed. claude.ai always runs in its dark palette; White is a GPU inversion of it, which switches in ~6ms instead of ~480ms for a real palette flip
 - **Session Restore** – Open conversations are remembered and reopened on the next start; restored tabs load on first click, not all at once
 - **Blank-Screen Watchdog** – Detects when the chat area stops receiving frames and repairs it in escalating steps (redraw, bounds nudge, re-attaching the view), or manually via `Ctrl+Alt+R`
 - **Reset claude.ai Verification** – Toolbar button and menu entry that clears cookies and cache for all claude.ai origins, for when the Cloudflare security check is stuck in a loop (requires a new login afterwards)
@@ -97,7 +97,7 @@ cat > ~/.local/share/applications/claude-desktop.desktop << EOF
 [Desktop Entry]
 Name=Claude Desktop
 Comment=Claude AI Desktop App
-Exec=/path/to/Claude-Desktop-1.4.15.AppImage --no-sandbox
+Exec=/path/to/Claude-Desktop-1.4.16.AppImage --no-sandbox
 Icon=/path/to/icon.png
 Type=Application
 Categories=Utility;
@@ -181,7 +181,7 @@ The `--no-sandbox` flag is required for Electron AppImages on Linux because the 
 - Theming from a single source: `inject/theme-static.js` runs before the first paint, `inject/theme.js` keeps it in sync afterwards. claude.ai stays in its dark palette in every theme; White is a root-level GPU inversion with images and iframes inverted back
 - Custom design via CSS variable overrides + DOM injection
 - Session: `persist:claude` partition shared between tabs and OAuth popups
-- Tray icon via `nativeImage.createFromPath()` with separate sparkle icons for Modern/Classic
+- Tray icon via `nativeImage.createFromPath()` with separate sparkle icons for the Classic style
 - Multi-monitor handling: child windows centered on the display containing the main window
 
 ---

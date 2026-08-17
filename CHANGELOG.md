@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.4.16] - 2026-08-17 - Design Window and Themes
+
+### Added
+- **A Design window replaces the blind toggles.** The menu entry opened nothing and the tab bar button cycled through the modes without showing what was coming. It now opens a window that renders every colour theme as a small mockup of the real window chrome and page surface, plus the accent styles. A click applies live through `setThemeMode()`, and the window recolours itself from values already in the card, so there is no reload and no IPC roundtrip. Own preload (`preload-design.js`), same pattern as the settings window.
+- **New colour theme Midnight Blue.** Deep blue surfaces in three steps that App windows and the claude.ai page share, with scattered wave crests in the background as the counterpart to OLED's starfield. The crest is a flat rise off the baseline curling into a spiral, computed as a polyline so the windings stay even. Drawn-through lines were tried first and dropped: they visibly tear apart wherever claude.ai puts an opaque surface over the background.
+- **New accent style Neon.** The style was a boolean and could only ever be Modern or Classic. It is an enum now, and the blue accent carries claude.ai's own brand tone with it, which colours the send arrow among other things.
+- The tab bar's theme cycle and the Modern/Classic pill are hidden, since the Design window covers both. Button and IPC stay wired; dropping the `display:none` brings them back.
+
+### Changed
+- **Colour theme and accent style are separate axes.** Every combination is selectable: the theme paints the surfaces, the style sets the accent, including the send arrow, the composer border and the background pattern.
+- `isDarkMode`/`oledMode` are one `themeMode` value, `customDesign` is one `designStyle` value. Both migrate from the old fields on first start, and both old fields are still written on save so a downgrade to 1.4.15 does not land in the wrong state.
+- Warning amber follows the theme. The warm orange goes muddy on a deep blue ground, so Midnight Blue gets a cooler gold while the light theme keeps the stronger tint it needs. It stays a warning in every theme.
+- Dialogs are clamped to the work area. The bug report window was a fixed 1000px tall, which on a Full HD screen is the whole display; it is 820 now and clamped on top. Its description field no longer scrolls the heading out of view when it takes focus.
+
+### Fixed
+- **The ring around the input field sat next to its corners, in every theme.** It measured the radius on the fieldset it tags, but claude.ai puts the visible rounding on an inner div: measured 0px outside, 20px inside, so the ring fell back to the 12px default. It now looks for the descendant that spans the fieldset and carries a radius.
+- **Grey bars on the Code and Design pages.** The scrims that fade content into the page colour keep claude.ai's own grey, measured `rgb(21, 21, 21)`, which stays visible as a bar on any ground of ours. They follow the theme now. The design feature's hardcoded warm greys are covered as well, measured `rgb(56, 56, 53)` on the prompt shell and `rgb(107, 107, 107)` on its select.
+- **In the light theme the design page had a black lower half.** The root background sits under the invert filter, so the `#fff` it was set to rendered as black wherever claude.ai does not cover the root itself.
+- **One theme's accent survived into the next.** The SVG recolour writes fill and stroke inline and marked elements done forever, so the star in the greeting stayed OLED red under Midnight Blue. Touched elements are tagged and cleared on every real theme change. claude.ai's brand tone moved out of the cached variables sheet onto the root element, where it is rewritten on every apply and removed again when a style does not set one.
+- **In the light theme the style did not fully apply.** Light was excluded from the whole brand recolour path, though the reason only holds for the variable remap, which repaints surfaces and made the warm white go reddish. Accent icons follow the style in light now; the variable scan stays excluded.
+
+---
+
 ## [1.4.15] - 2026-08-09 - Checkout and Colour Fixes
 
 ### Fixed

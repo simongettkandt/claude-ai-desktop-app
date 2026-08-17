@@ -1,5 +1,5 @@
 name: claude-ai-desktop
-version: '1.4.15'
+version: '1.4.16'
 summary: Unofficial desktop wrapper for Claude AI with tabs, tray and voice input
 description: |
   Unofficial desktop app for Claude AI on Linux. Runs claude.ai without
@@ -8,7 +8,22 @@ description: |
 
   Not affiliated with Anthropic.
 
-  What's new in v1.4.15:
+  What's new in v1.4.16:
+
+  * A Design window replaces the blind toggles. It shows every colour
+    theme as a small preview of the real window and page, and applies
+    the choice immediately.
+  * New colour theme Midnight Blue: deep blue surfaces with scattered
+    wave crests in the background, the counterpart to OLED's stars.
+  * New style Neon, a blue accent. Style and colour theme are separate
+    now, so every combination is selectable, and the style also sets
+    the send arrow, which used to stay orange in every theme.
+  * Several colouring leftovers are gone: the ring around the input
+    field sat next to its corners, grey bars showed on the Code and
+    Design pages, and in the light theme the design page had a black
+    lower half.
+
+  Highlights from v1.4.15:
 
   * Buying a subscription works again. claude.ai renders the payment
     form in its own embedded areas, and the protection that keeps
@@ -23,14 +38,6 @@ description: |
     leaving text and surface at exactly the same brightness.
   * The Modern design no longer flattens colour scales, so red and
     orange stay distinguishable in the Design view.
-
-  Highlights from v1.4.14:
-
-  * The black chat area is fixed at the root: the throttle for
-    background tabs made the app and the display disagree about
-    whether the chat was visible.
-  * If it happens again, the self-repair starts after about 8 seconds
-    instead of 20 and escalates until the picture is back.
 
   System requirements:
 
@@ -53,7 +60,8 @@ description: |
   * Prompt templates for the Quick-Prompt window
   * Background reply notifications when Claude finishes answering
   * Clipboard & screenshot hotkeys to start a chat from selection
-  * Dark/Light mode plus two design variants (Modern, Classic)
+  * Four colour themes (Light, Dark, OLED, Midnight Blue) and three
+    accent styles (Modern, Classic, Neon), freely combinable
   * Bug report form in DE/EN/FR/ES/IT
   * Auto-update synced with the GitHub Release
   * Window memory, crash recovery, offline page, download manager,
