@@ -171,6 +171,14 @@
     var ac = st.accent || {};
     de.style.setProperty('--cd-accent-from', ac.from || '#F26A3F');
     de.style.setProperty('--cd-accent-to', ac.to || '#E83B6E');
+    // claude.ais eigener Brand-Ton faerbt unter anderem den Sende-Pfeil im Composer. Er muss
+    // dem Theme folgen und beim Zurueckschalten wieder verschwinden, darum inline statt im
+    // gecachten Variablen-Sheet. Nur als HSL-Komponenten schreiben: die Seite konsumiert das
+    // als hsl(var(--accent-brand)), ein Hex-Wert macht die Deklaration ungueltig und die
+    // Brand-Icons fallen auf Grau (deshalb steht die Variable auch in VAR_SKIP).
+    var brand = ac.brandHsl;
+    if (brand && /^[\d.]+\s+[\d.]+%\s+[\d.]+%$/.test(brand)) de.style.setProperty('--accent-brand', brand, 'important');
+    else de.style.removeProperty('--accent-brand');
   }
 
   // ---------- Statisches Stylesheet (aus gemeinsamer Quelle) ----------
@@ -324,10 +332,29 @@
     if (el._cdDone) return;
     try {
       var cs = getComputedStyle(el), mid = st.accent.mid || '#E8524F';
-      var f = parseRGB(cs.fill); if (f && isOrange(f)) el.style.fill = mid;
-      var s = parseRGB(cs.stroke); if (s && isOrange(s)) el.style.stroke = mid;
+      var f = parseRGB(cs.fill);
+      var s = parseRGB(cs.stroke);
+      if ((f && isOrange(f)) || (s && isOrange(s))) {
+        if (f && isOrange(f)) el.style.fill = mid;
+        if (s && isOrange(s)) el.style.stroke = mid;
+        // Merken, damit der naechste Themewechsel die Inline-Farbe wieder loswird.
+        el.setAttribute('data-cd-recolored', '');
+      }
       el._cdDone = true;
     } catch (e) {}
+  }
+
+  // Der Recolor schreibt fill/stroke inline und markiert das Element als erledigt. Ohne
+  // Ruecknahme behaelt ein Brand-Icon beim Themewechsel die alte Farbe: gemessen blieb der
+  // Stern im Greeting nach OLED -> Mitternachtsblau rot, obwohl der Akzent blau ist.
+  function clearRecolor() {
+    var done = document.querySelectorAll('[data-cd-recolored]');
+    for (var i = 0; i < done.length; i++) {
+      done[i].style.removeProperty('fill');
+      done[i].style.removeProperty('stroke');
+      done[i].removeAttribute('data-cd-recolored');
+      done[i]._cdDone = false;
+    }
   }
   function recolorSVGs(root) {
     if (st.design !== 'modern' || st.mode === 'light' || !root || root.nodeType !== 1) return;
@@ -364,10 +391,12 @@
   }
 
   window._cdSetTheme = function (next) {
+    var changed = !next || !window._cdTheme || JSON.stringify(next) !== JSON.stringify(window._cdTheme);
     if (next && typeof next === 'object') {
       st = next;
       window._cdTheme = next;
     }
+    if (changed) clearRecolor();
     applyAttrs();
     setSheet('cd-theme-static', buildStaticCSS());
     buildVarsCSS();
