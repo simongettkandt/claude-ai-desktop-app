@@ -114,9 +114,10 @@
       safeBg(M, ['bg-surface-0', 'bg-surface-1'], MBG),
       safeBg(M, ['bg-surface-2', 'bg-surface-3'], MBG_HI),
       safeBg(M, ['bg-black', 'bg-neutral-900', 'bg-neutral-950', 'bg-zinc-900', 'bg-zinc-950', 'bg-gray-900', 'bg-gray-950', 'bg-stone-900', 'bg-stone-950', 'bg-slate-900', 'bg-slate-950'], MBG),
-      // Das Design-Feature bringt eigene Controls mit fest verdrahtetem Grau mit (gemessen
-      // rgb(107,107,107) am Auswahlfeld), die keiner der Surface-Tokens erwischt.
-      M + ' .om-dc-select,' + M + ' [class*="om-dc-select"]{background-color:' + MBG_TOP + ' !important}',
+      // Das Design-Feature bringt eigene Flaechen mit fest verdrahtetem Warmgrau mit, die
+      // keiner der Surface-Tokens erwischt (gemessen: Auswahlfeld rgb(107,107,107), die
+      // Prompt-Schale rgb(56,56,53) auf 112000px2).
+      M + ' [class*="om-dc-select"],' + M + ' [class*="om-tray-composer-shell"]{background-color:' + MBG_HI + ' !important}',
       M + ' [class*="from-bg-"],' + M + ' [class*="to-bg-"],' + M + ' [class*="via-bg-"]{background-image:none !important}',
       M + ' header[class*="bg-"]{background-color:' + MBG + ' !important;background-image:none !important}',
       M + ' nav a,' + M + ' nav button,' + M + ' aside a,' + M + ' aside button,' + M + ' [class*="sidebar" i] a,' + M + ' [class*="sidebar" i] button,' + M + ' [class*="Sidebar"] a,' + M + ' [class*="Sidebar"] button{background-color:transparent !important;border-color:transparent !important;box-shadow:none !important}',
