@@ -267,7 +267,9 @@
     if (modern) css += 'html[data-cd-design="modern"]{' + modern + '}';
     // Ersatz fuer das ausgelassene --accent-brand: die Utility-Klasse direkt einfaerben.
     // color statt fill, weil die Icons per fill-current/currentColor erben.
-    if (st.design === 'modern' && st.mode !== 'light')
+    // Anders als der Variablen-Scan darueber gilt das auch im Hell-Modus: hier faerbt sich
+    // nur eine Icon-Utility, keine Flaeche, das warme Weiss bleibt also warm.
+    if (st.design === 'modern')
       css += 'html[data-cd-design="modern"] .text-accent-brand{color:' + mid + ' !important}';
     if (oled) css += 'html[data-cd-theme="' + st.mode + '"][data-cd-surface="dark"]{' + oled + '}';
     setSheet('cd-theme-vars', css);
@@ -275,7 +277,7 @@
     // Cache-Key nicht festschreiben, damit der naechste applyAll/_cdSetTheme neu scannt.
     // Auf die Scan-Treffer pruefen, nicht auf css: die .text-accent-brand-Regel wird
     // unabhaengig vom Scan emittiert und wuerde den Rescan sonst faelschlich unterdruecken.
-    if (!modern && !oled && (mapSurface || st.design === 'modern')) _varsKey = '';
+    if (!modern && !oled && (mapSurface || (st.design === 'modern' && st.mode !== 'light'))) _varsKey = '';
   }
 
   // ---------- Composer taggen ----------
@@ -357,7 +359,7 @@
     }
   }
   function recolorSVGs(root) {
-    if (st.design !== 'modern' || st.mode === 'light' || !root || root.nodeType !== 1) return;
+    if (st.design !== 'modern' || !root || root.nodeType !== 1) return;
     var svgs = (root.tagName === 'svg' || root.tagName === 'SVG') ? [root] : root.querySelectorAll('svg');
     for (var i = 0; i < svgs.length; i++) {
       recolorEl(svgs[i]);
@@ -377,7 +379,7 @@
   // Nur recolorSVGs bleibt deferred (minderprioritaer: claude.ai hat praktisch keine
   // hardcoded-orange SVGs, gemessen orangeFound=0) und nur im Modern-Dark/OLED-Fall.
   function deferHeavy() {
-    if (st.mode === 'light' || st.design !== 'modern') return;
+    if (st.design !== 'modern') return;
     idle(function () { recolorSVGs(document.body); }, 200);
   }
 
@@ -420,7 +422,7 @@
       }
     }
     var ob = new MutationObserver(function (muts) {
-      var wantSVG = (st.design === 'modern' && st.mode !== 'light');
+      var wantSVG = (st.design === 'modern');
       var wantVars = (!!surfaceMap(st.mode) || wantSVG);
       var sheetsAdded = false;
       if (wantSVG || wantVars) {
