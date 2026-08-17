@@ -1,7 +1,9 @@
 'use strict';
 // Sichert ab, dass das erzeugte Stylesheet fuer die bestehenden Modi Byte-gleich bleibt.
-// Baseline ist die Kopie aus .backups/2026-08-17-design-window (Stand vor dem Midnight-Umbau);
-// fehlt sie, ueberspringt der Test statt zu scheitern.
+// Baseline ist die Kopie aus .backups/2026-08-17-design-window; fehlt sie, ueberspringt der
+// Test statt zu scheitern. Die Baseline wurde am 2026-08-17 einmal bewusst nachgezogen, als
+// die Wurzelfarbe des Hell-Modus von #fff auf #000 korrigiert wurde (sie liegt unter dem
+// Invert-Filter). Ohne einen solchen Anlass wird sie nicht angefasst.
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const path = require('path');

@@ -89,7 +89,10 @@
       // prefers-color-scheme-Palettenwechsel. hue-rotate(180) haelt die Farbtoene nah am
       // Original (Rot bleibt Rot). Echte Medien (Fotos/Avatare/Thumbnails) zurueck-invertieren,
       // damit sie nicht negativ erscheinen.
-      W + '{filter:invert(1) hue-rotate(180deg) !important;background-color:#fff !important}',
+      // Die Wurzelfarbe liegt UNTER dem Filter, wird also mitgedreht: #fff rendert als Schwarz.
+      // Sichtbar ueberall dort, wo claude.ai die Wurzel nicht selbst zudeckt, gemessen auf der
+      // Design-Seite als schwarze untere Bildschirmhaelfte. Darum #000, das ergibt Weiss.
+      W + '{filter:invert(1) hue-rotate(180deg) !important;background-color:#000 !important}',
       // iframe gehoert dazu: Artefakte, das Design-Feature und der Stripe-Bezahlvorgang
       // laufen cross-origin und bringen ihr eigenes Farbschema mit. Ohne Rueck-Invertierung
       // erscheint ihr Inhalt als Negativ (gemessen am Design-Feature: gelb wurde oliv,
