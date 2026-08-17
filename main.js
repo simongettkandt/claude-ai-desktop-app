@@ -382,6 +382,7 @@ let lastSavedState = '';
 let tray = null;
 let isQuitting = false;
 let settingsWindow = null;
+let designWindow = null;
 let quickPromptWindow = null;
 let whatsNewWindow = null;
 let aboutWindow = null;
@@ -1782,6 +1783,9 @@ body{background:var(--bg);font:500 12px/1 -apple-system,BlinkMacSystemFont,'Sego
 .ctrl-btn:hover{background:color-mix(in srgb,var(--ac-from) 12%,transparent);
   border-color:color-mix(in srgb,var(--ac-from) 35%,transparent);color:var(--ac-from);opacity:1}
 .ctrl-btn svg{width:16px;height:16px}
+/* Theme-Cycle ist ausgeblendet, seit das Design-Fenster die Auswahl uebernimmt. Button und
+   IPC bleiben verdrahtet: display:none entfernen holt ihn zurueck. */
+#theme-toggle{display:none}
 #new-tab{background:linear-gradient(135deg,var(--ac-from),var(--ac-to));color:#fff;opacity:1;
   box-shadow:0 2px 8px color-mix(in srgb,var(--ac-from) 35%,transparent)}
 #new-tab:hover{background:linear-gradient(135deg,var(--ac-from),var(--ac-to));color:#fff;
@@ -4315,10 +4319,235 @@ function openSettingsWindow() {
   settingsWindow.on('closed', () => { settingsWindow = null; });
 }
 
+// Design-Fenster (Farbthema + Stil)
+
+// Wie die Seite im jeweiligen Modus wirklich aussieht. Die Chrome-Farben kommen aus THEME,
+// hier stehen nur die Flaechen der claude.ai-Seite, damit die Vorschau nicht nur die
+// Fensterleiste zeigt. dark und light entsprechen claude.ais eigener Palette bzw. dem
+// Invert-Ergebnis, oled und midnight unseren Overrides in theme-static.js.
+const PREVIEW_SURFACE = {
+  dark:     { page: '#262624', card: '#30302e' },
+  light:    { page: '#faf9f7', card: '#ffffff' },
+  oled:     { page: '#050306', card: '#120f12' },
+  midnight: { page: '#060f24', card: '#0e1c3f' }
+};
+
+function getDesignHTML() {
+  const th = subTheme();
+  const ac = accent();
+  const mode = currentThemeMode();
+  const i18n = {
+    title: 'Design',
+    subtitle: t('Farbthema und Stil', 'Colour theme and style', 'Thème de couleur et style', 'Tema colore e stile'),
+    secTheme: t('Farbthema', 'Colour theme', 'Thème de couleur', 'Tema colore'),
+    secStyle: t('Stil', 'Style', 'Style', 'Stile'),
+    styleNote: t(
+      'Der Stil wechselt Akzentfarbe und Icon-Set. Mitternachtsblau bringt seinen eigenen Akzent mit, dort wechselt nur das Icon.',
+      'The style switches accent colour and icon set. Midnight Blue brings its own accent, there only the icon changes.',
+      'Le style change la couleur d’accent et le jeu d’icônes. Bleu nuit apporte son propre accent, seule l’icône change alors.',
+      'Lo stile cambia colore d’accento e set di icone. Blu notte porta il proprio accento, lì cambia solo l’icona.'
+    ),
+    close: t('Schließen', 'Close', 'Fermer', 'Chiudi')
+  };
+  const THEME_LABELS = {
+    dark: {
+      name: t('Dunkel', 'Dark', 'Sombre', 'Scuro'),
+      hint: t('claude.ais eigenes Dunkelgrau.', 'claude.ai’s own dark grey.', 'Le gris sombre d’origine de claude.ai.', 'Il grigio scuro originale di claude.ai.')
+    },
+    light: {
+      name: t('Hell', 'White', 'Clair', 'Chiaro'),
+      hint: t('Helle Oberfläche, warmes Papierweiß.', 'Light surface, warm paper white.', 'Surface claire, blanc papier chaud.', 'Superficie chiara, bianco carta caldo.')
+    },
+    oled: {
+      name: 'OLED',
+      hint: t('Tiefes Schwarz mit Sternenfeld, spart Strom auf OLED-Displays.', 'Deep black with a starfield, saves power on OLED displays.', 'Noir profond avec champ d’étoiles, économise la batterie sur OLED.', 'Nero profondo con campo di stelle, risparmia energia su OLED.')
+    },
+    midnight: {
+      name: t('Mitternachtsblau', 'Midnight Blue', 'Bleu nuit', 'Blu notte'),
+      hint: t('Tiefblau mit Neon-Akzent.', 'Deep blue with a neon accent.', 'Bleu profond avec accent néon.', 'Blu profondo con accento neon.')
+    }
+  };
+  const STYLE_LABELS = {
+    modern: { name: 'Modern', hint: t('Wärmerer Akzent, neues Icon.', 'Warmer accent, new icon.', 'Accent plus chaud, nouvelle icône.', 'Accento più caldo, icona nuova.') },
+    classic: { name: 'Classic', hint: t('Original-Akzent und -Icon.', 'Original accent and icon.', 'Accent et icône d’origine.', 'Accento e icona originali.') }
+  };
+
+  const card = (m) => {
+    const p = THEME[m], s = PREVIEW_SURFACE[m], a = ACCENT[m] || ac;
+    const vars = [
+      `--p:${s.page}`, `--s:${s.card}`, `--bar:${p.bg}`, `--bara:${p.bgActive}`,
+      `--l:${p.border}`, `--tt:${p.text}`, `--ta:${p.textActive}`,
+      `--cf:${a.neonFrom || a.from}`, `--ct:${a.neonTo || a.to}`
+    ].join(';');
+    const chrome = JSON.stringify({ bg: p.bg, bgHover: p.bgHover, bgActive: p.bgActive, text: p.text, textActive: p.textActive, border: p.border, frameHi: p.frameHi, frameLo: p.frameLo, from: a.from, to: a.to });
+    return `<button class="card" data-mode="${m}" data-chrome='${chrome}' data-own="${ACCENT[m] ? 1 : 0}" aria-pressed="${m === mode}">
+  <span class="prev" style="${vars}">
+    <span class="prev-bar"><i class="tab"></i><i class="tab dim"></i></span>
+    <span class="prev-body">
+      <span class="prev-side"><i></i><i></i><i></i></span>
+      <span class="prev-main"><i class="ln w1"></i><i class="ln w2"></i><i class="ln w3"></i><span class="prev-comp"></span></span>
+    </span>
+  </span>
+  <span class="card-name">${THEME_LABELS[m].name}<svg class="tick" viewBox="0 0 16 16"><path d="M3 8.5l3.2 3.2L13 5" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+  <span class="card-hint">${THEME_LABELS[m].hint}</span>
+</button>`;
+  };
+
+  const styleCard = (key) => {
+    const a = key === 'modern' ? ACCENT.custom : ACCENT.original;
+    return `<button class="style-card" data-design="${key === 'modern'}" data-from="${a.from}" data-to="${a.to}" aria-pressed="${(key === 'modern') === customDesign}">
+  <span class="swatch" style="background:linear-gradient(135deg,${a.from},${a.to})"></span>
+  <span class="style-text"><span class="card-name">${STYLE_LABELS[key].name}<svg class="tick" viewBox="0 0 16 16"><path d="M3 8.5l3.2 3.2L13 5" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+  <span class="card-hint">${STYLE_LABELS[key].hint}</span></span>
+</button>`;
+  };
+
+  return `<!DOCTYPE html><html><head>
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline';">
+<style>
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ta);font-family:system-ui,-apple-system,sans-serif;font-size:13.5px;
+  user-select:none;display:flex;flex-direction:column;
+  transition:background-color .2s ease,color .2s ease}
+:root{--bg:${th.bg};--bgh:${th.bgHover};--bga:${th.bgActive};--tt:${th.text};--ta:${th.textActive};
+  --bd:${th.border};--fhi:${th.frameHi};--flo:${th.frameLo};--ac-from:${ac.from};--ac-to:${ac.to}}
+.head{padding:18px 22px 12px;border-bottom:1px solid var(--bd)}
+h1{font-size:16px;margin:0 0 2px;font-weight:600}
+.sub{color:var(--tt);font-size:12px}
+.scroll{flex:1;overflow-y:auto;padding:14px 22px 4px}
+.scroll::-webkit-scrollbar{width:8px}
+.scroll::-webkit-scrollbar-thumb{background:var(--bd);border-radius:4px}
+.section{margin-bottom:18px}
+.section h2{font-size:11px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;color:var(--tt);margin:0 0 10px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.card,.style-card{font-family:inherit;text-align:left;cursor:pointer;padding:8px;border-radius:10px;
+  background:var(--bgh);border:1.5px solid var(--bd);color:var(--ta);
+  transition:border-color .15s ease,background .15s ease}
+.card{display:flex;flex-direction:column;gap:6px}
+.card:hover,.style-card:hover{background:var(--bga)}
+.card[aria-pressed="true"],.style-card[aria-pressed="true"]{border-color:var(--ac-from)}
+.card:focus-visible,.style-card:focus-visible{outline:2px solid var(--ac-from);outline-offset:2px}
+.card-name{display:flex;align-items:center;gap:5px;font-weight:600;font-size:12.5px}
+.tick{width:13px;height:13px;flex:0 0 auto;color:var(--ac-from);opacity:0}
+[aria-pressed="true"] .tick{opacity:1}
+.card-hint{color:var(--tt);font-size:11px;line-height:1.4;display:block}
+/* Vorschau: Fensterleiste, Seitenleiste, Textzeilen und Eingabefeld in den echten Farben */
+.prev{display:block;border-radius:6px;overflow:hidden;border:1px solid var(--l);background:var(--p);height:96px}
+.prev-bar{display:flex;gap:3px;align-items:center;height:15px;padding:0 4px;background:var(--bar);border-bottom:1px solid var(--l)}
+.prev-bar .tab{width:26px;height:8px;border-radius:2px;background:var(--bara);display:block}
+.prev-bar .tab.dim{background:var(--l)}
+.prev-body{display:flex;height:calc(100% - 15px)}
+.prev-side{width:26px;flex:0 0 26px;padding:5px 3px;background:var(--bar);border-right:1px solid var(--l);display:flex;flex-direction:column;gap:4px}
+.prev-side i{height:4px;border-radius:2px;background:var(--tt);opacity:.45;display:block}
+.prev-main{flex:1;padding:6px 6px 0;display:flex;flex-direction:column;gap:4px}
+.prev-main .ln{height:4px;border-radius:2px;background:var(--ta);opacity:.55;display:block}
+.prev-main .w1{width:70%}.prev-main .w2{width:88%}.prev-main .w3{width:52%}
+.prev-comp{margin-top:auto;margin-bottom:6px;height:20px;border-radius:5px;background:var(--s);
+  border:1.5px solid transparent;background-image:linear-gradient(var(--s),var(--s)),linear-gradient(135deg,var(--cf),var(--ct));
+  background-origin:border-box;background-clip:padding-box,border-box;display:block}
+.style-card{display:flex;align-items:center;gap:9px}
+.swatch{width:26px;height:26px;flex:0 0 26px;border-radius:7px;display:block}
+.style-text{min-width:0}
+.note{color:var(--tt);font-size:11px;line-height:1.5;margin-top:8px}
+.actions{padding:12px 22px;border-top:1px solid var(--bd);display:flex;justify-content:flex-end}
+button.done{background:linear-gradient(135deg,var(--ac-from),var(--ac-to));color:#fff;border:none;
+  padding:7px 14px;border-radius:6px;cursor:pointer;font-size:12.5px;font-weight:500;font-family:inherit}
+button.done:hover{filter:brightness(1.08)}
+${customTitlebarCSS()}
+/* customTitlebarCSS backt die Farben beim Oeffnen ein. Hier auf die Variablen umbiegen,
+   sonst bleibt die Titelleiste beim Wechsel im alten Theme stehen. */
+body{border:${WINDOW_BORDER}px solid var(--flo);border-image:linear-gradient(180deg,var(--fhi),var(--flo)) ${WINDOW_BORDER}}
+.cd-titlebar,.cd-titlebar-title,.cd-titlebar-btn{color:var(--ta)}
+.cd-titlebar-btn:hover{background:var(--bgh)}
+</style></head><body>
+${customTitlebarHTML('Claude – Design')}
+<div class="head">
+  <h1>${i18n.title}</h1>
+  <div class="sub">${i18n.subtitle}</div>
+</div>
+<div class="scroll">
+  <div class="section">
+    <h2>${i18n.secTheme}</h2>
+    <div class="grid">${THEME_MODES.map(card).join('')}</div>
+  </div>
+  <div class="section">
+    <h2>${i18n.secStyle}</h2>
+    <div class="grid">${styleCard('modern')}${styleCard('classic')}</div>
+    <div class="note">${i18n.styleNote}</div>
+  </div>
+</div>
+<div class="actions"><button class="done" id="done">${i18n.close}</button></div>
+<script>
+const r=document.documentElement.style;
+function pick(list,el){for(const b of list)b.setAttribute('aria-pressed',String(b===el));}
+const cards=[...document.querySelectorAll('.card')];
+const styles=[...document.querySelectorAll('.style-card')];
+// Das Fenster faerbt sich selbst sofort um, statt bis zum naechsten Oeffnen im alten
+// Theme zu bleiben. Die Werte liegen schon in der Karte, es geht kein IPC-Roundtrip weg.
+function applyChrome(c){
+  r.setProperty('--bg',c.bg);r.setProperty('--bgh',c.bgHover);r.setProperty('--bga',c.bgActive);
+  r.setProperty('--tt',c.text);r.setProperty('--ta',c.textActive);r.setProperty('--bd',c.border);
+  r.setProperty('--fhi',c.frameHi);r.setProperty('--flo',c.frameLo);
+  r.setProperty('--ac-from',c.from);r.setProperty('--ac-to',c.to);
+}
+for(const b of cards)b.addEventListener('click',()=>{
+  pick(cards,b);
+  applyChrome(JSON.parse(b.dataset.chrome));
+  window.designAPI.setMode(b.dataset.mode);
+});
+for(const b of styles)b.addEventListener('click',()=>{
+  if(b.getAttribute('aria-pressed')==='true')return;
+  pick(styles,b);
+  // Vorschau nachziehen. Themes mit eigenem Akzent (data-own) behalten ihren, alle
+  // anderen zeigen den Ton des gewaehlten Stils.
+  const f=b.dataset.from,tc=b.dataset.to;
+  for(const c of cards){
+    if(c.dataset.own==='1')continue;
+    const pv=c.querySelector('.prev');
+    pv.style.setProperty('--cf',f);pv.style.setProperty('--ct',tc);
+    const ch=JSON.parse(c.dataset.chrome);ch.from=f;ch.to=tc;c.dataset.chrome=JSON.stringify(ch);
+  }
+  const sel=cards.find(c=>c.getAttribute('aria-pressed')==='true');
+  if(sel&&sel.dataset.own!=='1'){r.setProperty('--ac-from',f);r.setProperty('--ac-to',tc);}
+  window.designAPI.setDesign(b.dataset.design==='true');
+});
+document.getElementById('done').addEventListener('click',()=>window.designAPI.close());
+document.getElementById('cd-titlebar-close').addEventListener('click',()=>window.designAPI.close());
+document.addEventListener('keydown',e=>{if(e.key==='Escape')window.designAPI.close();});
+</script></body></html>`;
+}
+
+function openDesignWindow() {
+  if (designWindow && !designWindow.isDestroyed()) {
+    designWindow.focus();
+    return;
+  }
+  const size = { width: 560, height: 640 };
+  designWindow = new BrowserWindow({
+    ...size,
+    ...centerOnMainWindow(size.width, size.height),
+    parent: mainWindow && !mainWindow.isDestroyed() ? mainWindow : undefined,
+    modal: false, resizable: false, minimizable: false, maximizable: false,
+    title: 'Claude – Design',
+    backgroundColor: subTheme().bg,
+    icon: icon(),
+    autoHideMenuBar: true,
+    frame: false,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload-design.js'),
+      nodeIntegration: false, contextIsolation: true, sandbox: true,
+      spellcheck: false
+    }
+  });
+  designWindow.setMenu(null);
+  designWindow.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(getDesignHTML()));
+  designWindow.on('closed', () => { designWindow = null; });
+}
+
 // Custom App-Menü (HTML-Popup statt OS-nativ)
 
 function getAppMenuItems() {
-  const designLabel = `Design: ${customDesign ? 'Modern' : 'Classic'}`;
   return [
     { type: 'item', action: 'new-tab', label: t('Neuer Tab', 'New Tab', 'Nouvel onglet', 'Nuova scheda'), accel: 'Ctrl+T', icon: 'plus' },
     { type: 'item', action: 'close-tab', label: t('Tab schließen', 'Close Tab', 'Fermer l’onglet', 'Chiudi scheda'), accel: 'Ctrl+W', icon: 'x' },
@@ -4326,7 +4555,7 @@ function getAppMenuItems() {
     { type: 'item', action: 'export', label: t('Konversation exportieren…', 'Export conversation…', 'Exporter la conversation…', 'Esporta la conversazione…'), accel: 'Ctrl+Shift+E', icon: 'download' },
     { type: 'item', action: 'reload', label: t('Neu laden', 'Reload', 'Recharger', 'Ricarica'), accel: 'Ctrl+R', icon: 'refresh' },
     { type: 'sep' },
-    { type: 'item', action: 'design-toggle', label: designLabel, icon: 'palette' },
+    { type: 'item', action: 'design-toggle', label: 'Design\u2026', icon: 'palette' },
     { type: 'item', action: 'settings', label: t('App-Einstellungen…', 'App Settings…', 'Paramètres de l\'application…', 'Impostazioni dell\'app…'), accel: 'Ctrl+,', icon: 'cog' },
     { type: 'sep' },
     { type: 'item', action: 'check-updates', label: t('Nach Updates suchen…', 'Check for Updates…', 'Rechercher des mises à jour…', 'Controlla aggiornamenti…'), icon: 'refresh' },
@@ -4654,7 +4883,7 @@ function updateMenu(force = false) {
         }},
         { label: t('App-Einstellungen\u2026', 'App Settings\u2026', 'Paramètres de l’application…', 'Impostazioni dell’app…'), click: () => openSettingsWindow() },
         { type: 'separator' },
-        { label: `Design: ${customDesign ? 'Modern' : 'Classic'}`, click: toggleDesign },
+        { label: 'Design\u2026', click: () => openDesignWindow() },
         { label: t('Nach Updates suchen\u2026', 'Check for Updates\u2026', 'Rechercher des mises à jour…', 'Controlla aggiornamenti…'), click: () => triggerManualUpdateCheck() },
         { label: (bugReportStrings[sysLang] || bugReportStrings.en).title, click: showBugReportDialog },
         { type: 'separator' },
@@ -5693,6 +5922,18 @@ ipcMain.handle('settings-delete-template', (_, id) => {
   return { templates: promptTemplates.slice() };
 });
 
+ipcMain.on('design-set-mode', (event, mode) => {
+  if (!designWindow || designWindow.isDestroyed() || event.sender !== designWindow.webContents) return;
+  setThemeMode(mode);
+});
+ipcMain.on('design-set-design', (event, custom) => {
+  if (!designWindow || designWindow.isDestroyed() || event.sender !== designWindow.webContents) return;
+  if (custom !== customDesign) toggleDesign();
+});
+ipcMain.on('design-close', (event) => {
+  if (designWindow && !designWindow.isDestroyed() && event.sender === designWindow.webContents) designWindow.close();
+});
+
 ipcMain.on('settings-close', () => {
   if (settingsWindow && !settingsWindow.isDestroyed()) settingsWindow.close();
 });
@@ -5814,7 +6055,7 @@ ipcMain.on('appmenu-action', (event, name) => {
     case 'reload':
       if (tabs[activeTabIndex] && alive(tabs[activeTabIndex].view)) tabs[activeTabIndex].view.webContents.reload();
       break;
-    case 'design-toggle': toggleDesign(); break;
+    case 'design-toggle': openDesignWindow(); break;
     case 'settings': openSettingsWindow(); break;
     case 'check-updates':
       triggerManualUpdateCheck();
