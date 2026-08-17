@@ -1,13 +1,13 @@
 name: claude-ai-desktop
 # Der Store zeigt title statt name. Der Name bleibt, sonst verliert die Installbasis den
 # Update-Pfad; der angezeigte Titel verweist auf Claude statt sich so zu nennen.
-title: Unofficial Desktop for Claude AI
+title: Desktop for Claude (Unofficial)
 version: '1.4.16'
-summary: Unofficial desktop wrapper for Claude AI with tabs, tray and voice input
+summary: Desktop for Claude, an unofficial Claude AI app with tabs and tray
 description: |
-  Unofficial desktop app for Claude AI on Linux. Runs claude.ai without
-  a browser tab, with multi-tab support, system tray, voice input and
-  in-app OAuth popups for connectors.
+  Desktop for Claude is an unofficial app that runs claude.ai on Linux
+  without a browser tab, with multi-tab support, system tray, voice input
+  and in-app OAuth popups for connectors.
 
   Not affiliated with Anthropic.
 
@@ -38,13 +38,11 @@ description: |
 
   Highlights from v1.4.15:
 
-  * Buying a subscription works again. claude.ai renders the payment
-    form in its own embedded areas, and the protection that keeps
-    foreign embedded content out of the app rejected all of them
-    without any error, so only pulsing placeholders were left.
-  * In the light theme, artifacts and the Design view no longer show
-    up as a colour negative.
-  * In the OLED theme the Share button is visible again.
+  * Buying a subscription works again. The protection that keeps foreign
+    embedded content out of the app rejected claude.ai's own payment
+    frames, so only pulsing placeholders were left.
+  * In the light theme, artifacts and the Design view no longer show up
+    as a colour negative, and the OLED Share button is visible again.
 
   System requirements:
 
