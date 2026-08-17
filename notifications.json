@@ -1,0 +1,13 @@
+{
+  "notifications": [
+    {
+      "id": "official-linux-app-2026-08",
+      "severity": "info",
+      "title": "Anthropic now ships an official Claude app for Linux",
+      "body": "Ubuntu 22.04+ and Debian 12+, from Anthropic's apt repository, including Cowork and Claude Code. This app is not discontinued: updates keep coming, and it stays the option on Ubuntu 20.04 and in the Snap Store. Thanks to everyone using it.",
+      "link": "https://code.claude.com/docs/en/desktop-linux",
+      "linkLabel": "Install guide",
+      "dismissible": true
+    }
+  ]
+}
