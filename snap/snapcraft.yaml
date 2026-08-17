@@ -1,4 +1,7 @@
 name: claude-ai-desktop
+# Der Store zeigt title statt name. Der Name bleibt, sonst verliert die Installbasis den
+# Update-Pfad; der angezeigte Titel verweist auf Claude statt sich so zu nennen.
+title: Unofficial Desktop for Claude AI
 version: '1.4.16'
 summary: Unofficial desktop wrapper for Claude AI with tabs, tray and voice input
 description: |
@@ -7,6 +10,16 @@ description: |
   in-app OAuth popups for connectors.
 
   Not affiliated with Anthropic.
+
+  There is an official Claude app for Linux since 30 June 2026: Ubuntu
+  22.04+ and Debian 12+, installed from Anthropic's apt repository, with
+  Cowork and Claude Code included. If that fits your system, use it. See
+  https://code.claude.com/docs/en/desktop-linux
+
+  This app is not discontinued. Updates and fixes keep coming, new features
+  less often than before. It also remains the option on Ubuntu 20.04, which
+  the official app does not support, and here in the Snap Store, where there
+  is no official package.
 
   What's new in v1.4.16:
 
@@ -28,16 +41,10 @@ description: |
   * Buying a subscription works again. claude.ai renders the payment
     form in its own embedded areas, and the protection that keeps
     foreign embedded content out of the app rejected all of them
-    without any error, so only pulsing placeholders were left. Google
-    Pay was affected as well.
+    without any error, so only pulsing placeholders were left.
   * In the light theme, artifacts and the Design view no longer show
-    up as a colour negative. They run in their own embedded area that
-    was not excluded from the inversion.
-  * In the OLED theme the Share button is visible again. The app
-    overrode one of claude.ai's colours with the light theme's value,
-    leaving text and surface at exactly the same brightness.
-  * The Modern design no longer flattens colour scales, so red and
-    orange stay distinguishable in the Design view.
+    up as a colour negative.
+  * In the OLED theme the Share button is visible again.
 
   System requirements:
 
@@ -89,8 +96,8 @@ description: |
 
   For bugs in this Linux app itself, use the built-in "Report a Bug"
   button (App Menu -> Report a Bug), or email
-  claudeai.desktop.linux@gmail.com. That address reaches the
-  developer, not Anthropic support.
+  simonlinuxcraft@pm.me. That address reaches the developer, not
+  Anthropic support.
 
   Source code: https://github.com/simonlinuxcraft/claude-ai-desktop-app
   (MIT licence)

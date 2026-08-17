@@ -1,12 +1,12 @@
 [Desktop Entry]
-Name=Claude AI Desktop
+Name=Desktop for Claude
 GenericName=Claude AI
 Comment=Unofficial desktop wrapper for Claude AI
 Exec=claude-ai-desktop %U
 Terminal=false
 Type=Application
 Icon=${SNAP}/meta/gui/claude-ai-desktop.png
-Categories=Utility;Network;
+Categories=Development;Utility;Network;
 Keywords=Claude;AI;Anthropic;Chat;Assistant;
 StartupWMClass=Claude
 StartupNotify=true

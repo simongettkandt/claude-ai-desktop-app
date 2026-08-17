@@ -26,6 +26,7 @@ contextBridge.exposeInMainWorld('tabAPI', {
   closeTab: (i) => { if (validIndex(i)) ipcRenderer.send('tab-close', i); },
   toggleTheme: () => ipcRenderer.send('theme-toggle'),
   toggleDesign: () => ipcRenderer.send('design-toggle'),
+  officialApp: () => ipcRenderer.send('official-app-info'),
   bugReport: () => ipcRenderer.send('bug-report'),
   resetVerification: () => ipcRenderer.send('tabbar-reset-verification'),
   exportConversation: () => ipcRenderer.send('export-conversation'),

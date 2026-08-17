@@ -79,6 +79,7 @@ const MAX_NOTIFICATIONS_VISIBLE = 1;                        // ein Banner gleich
 
 const NOTIFY_SCRIPT = fs.readFileSync(path.join(__dirname, 'inject', 'notify.js'), 'utf8');
 const VERIFY_SCRIPT = fs.readFileSync(path.join(__dirname, 'inject', 'verify-banner.js'), 'utf8');
+const THANKS_SCRIPT = fs.readFileSync(path.join(__dirname, 'inject', 'thanks-badge.js'), 'utf8');
 // theme-static.js zuerst: definiert window.cdThemeStatic, das theme.js nutzt. Dieselbe
 // Quelle liefert das statische Sheet auch fuer den document-start-Preload (buildStaticCSS unten).
 const THEME_STATIC_SRC = fs.readFileSync(path.join(__dirname, 'inject', 'theme-static.js'), 'utf8');
@@ -474,6 +475,31 @@ const RELEASE_NOTES_REVISIT = {
 const RELEASE_NOTES = {
   '1.4.16': [
     {
+      // Steht bewusst an erster Stelle. Der Text nutzt HTML (slide-text wird als innerHTML
+      // gesetzt) und die wn-*-Klassen, die nur hier verwendet werden.
+      icon: 'heart',
+      title: {
+        de: 'Die offizielle App, und danke',
+        en: 'The official app, and thank you',
+        fr: 'L’application officielle, et merci',
+        it: 'L’app ufficiale, e grazie'
+      },
+      text: {
+        de: '<div class="wn-box"><b>Offizielle App, seit 30. Juni 2026</b><br>Ubuntu 22.04+ und Debian 12+, über Anthropics apt-Quelle, mit Cowork und Claude Code. Anleitung im Menü und in der Leiste oben.</div>'
+          + '<div class="wn-box"><b>Diese App</b><br>Wird nicht eingestellt. Updates kommen weiter, neue Funktionen seltener als bisher. Auf Ubuntu 20.04 und im Snap Store bleibt sie die Alternative.</div>'
+          + '<div class="wn-thanks">Danke an alle, die sie installiert und Fehler gemeldet haben. Dass sie täglich benutzt wird, war nicht selbstverständlich.</div>',
+        en: '<div class="wn-box"><b>Official app, since 30 June 2026</b><br>Ubuntu 22.04+ and Debian 12+, through Anthropic’s apt repository, with Cowork and Claude Code. Setup steps in the menu and in the bar above.</div>'
+          + '<div class="wn-box"><b>This app</b><br>Not being discontinued. Updates keep coming, new features less often than before. On Ubuntu 20.04 and in the Snap Store it stays the option.</div>'
+          + '<div class="wn-thanks">Thank you to everyone who installed it and reported bugs. That it gets used daily was never a given.</div>',
+        fr: '<div class="wn-box"><b>Application officielle, depuis le 30 juin 2026</b><br>Ubuntu 22.04+ et Debian 12+, via le dépôt apt d’Anthropic, avec Cowork et Claude Code. Procédure dans le menu et dans la barre ci-dessus.</div>'
+          + '<div class="wn-box"><b>Cette application</b><br>N’est pas abandonnée. Les mises à jour continuent, les nouvelles fonctions plus rarement qu’avant. Sous Ubuntu 20.04 et dans le Snap Store, elle reste l’alternative.</div>'
+          + '<div class="wn-thanks">Merci à tous ceux qui l’ont installée et ont signalé des bogues. Qu’elle serve au quotidien n’allait pas de soi.</div>',
+        it: '<div class="wn-box"><b>App ufficiale, dal 30 giugno 2026</b><br>Ubuntu 22.04+ e Debian 12+, tramite il repository apt di Anthropic, con Cowork e Claude Code. Istruzioni nel menu e nella barra in alto.</div>'
+          + '<div class="wn-box"><b>Questa app</b><br>Non viene abbandonata. Gli aggiornamenti continuano, nuove funzioni più raramente di prima. Su Ubuntu 20.04 e nello Snap Store resta l’alternativa.</div>'
+          + '<div class="wn-thanks">Grazie a tutti quelli che l’hanno installata e hanno segnalato errori. Che venga usata ogni giorno non era scontato.</div>'
+      }
+    },
+    {
       icon: 'palette',
       title: {
         de: 'Design-Fenster statt Blindschaltung',
@@ -516,6 +542,21 @@ const RELEASE_NOTES = {
         en: 'The ring around the input field sat next to its corners, because it measured the rounding in the wrong place. Grey bars stayed on the Code and Design pages, where claude.ai\u2019s fade strips keep their own shade of grey. In the light theme the lower half of the design page was black. And on a switch an icon kept the previous theme\u2019s colour, the star in the greeting for instance. The bug report window also adapts to the screen size now instead of filling a Full HD display entirely.',
         fr: 'L’anneau autour du champ de saisie se plaçait à côté de ses coins, car il mesurait l’arrondi au mauvais endroit. Des barres grises subsistaient sur les pages Code et Design, où les bandes de fondu de claude.ai conservent leur propre gris. Dans le thème clair, la moitié inférieure de la page Design était noire. Et lors d’un changement, une icône gardait la couleur du thème précédent, par exemple l’étoile de l’accueil. La fenêtre de rapport de bogue s’adapte en outre à la taille de l’écran au lieu de remplir tout un écran Full HD.',
         it: 'L’anello attorno al campo di input si posizionava accanto ai suoi angoli, perché misurava l’arrotondamento nel punto sbagliato. Sulle pagine Code e Design restavano barre grigie, dove le strisce di sfumatura di claude.ai mantengono il proprio grigio. Nel tema chiaro la metà inferiore della pagina Design era nera. E al cambio un’icona conservava il colore del tema precedente, ad esempio la stella nel saluto. Inoltre la finestra di segnalazione si adatta alla dimensione dello schermo invece di riempire per intero un display Full HD.'
+      }
+    },
+    {
+      icon: 'info',
+      title: {
+        de: 'Die App heißt jetzt Desktop for Claude',
+        en: 'The app is now called Desktop for Claude',
+        fr: 'L’application s’appelle désormais Desktop for Claude',
+        it: 'L’app ora si chiama Desktop for Claude'
+      },
+      text: {
+        de: 'Anthropic liefert seit Ende Juni eine eigene Claude-App für Linux aus. Damit klar bleibt, wer was gebaut hat, heißt diese App nicht mehr wie deren Produkt: sie verweist auf Claude, statt sich so zu nennen. Nur der angezeigte Name ändert sich. Chats, Login, Einstellungen und der Update-Pfad bleiben, wo sie sind, ein Neuanmelden ist nicht nötig.',
+        en: 'Anthropic has been shipping its own Claude app for Linux since the end of June. To keep it clear who built what, this app no longer carries the same name as their product: it points to Claude instead of calling itself that. Only the displayed name changes. Chats, login, settings and the update path stay where they are, and there is no need to sign in again.',
+        fr: 'Anthropic distribue sa propre application Claude pour Linux depuis fin juin. Pour que l’on sache qui a construit quoi, cette application ne porte plus le même nom que leur produit : elle renvoie à Claude au lieu de s’appeler ainsi. Seul le nom affiché change. Les conversations, la connexion, les réglages et le chemin de mise à jour restent en place, aucune reconnexion n’est nécessaire.',
+        it: 'Da fine giugno Anthropic distribuisce una propria app Claude per Linux. Per rendere chiaro chi ha costruito cosa, questa app non porta più lo stesso nome del loro prodotto: rimanda a Claude invece di chiamarsi così. Cambia solo il nome visualizzato. Chat, accesso, impostazioni e percorso di aggiornamento restano dove sono e non serve accedere di nuovo.'
       }
     }
   ],
@@ -1715,10 +1756,9 @@ const ACCENT = {
   modern:  { from: '#F26A3F', to: '#E83B6E' },
   classic: { from: '#d4734c', to: '#d4734c' },
   neon:    { from: '#1B54BE', to: '#2A72E8', neonFrom: '#2F7FFF', neonTo: '#00E5FF', brandHsl: '217 100% 59%' },
-  // Nach Theme-Namen benannt = das Theme bringt seinen eigenen Akzent mit und schlaegt
-  // Modern/Classic (siehe accent()). Zwei Paare: from/to liegt unter weissem Buttontext
-  // (4.5:1 bzw. 6.9:1), neonFrom/neonTo ist reine Deko (Composer-Rand, Fokus-Ring) und
-  // wuerde als Buttonflaeche mit Weiss darauf auf 1.5:1 fallen.
+  // Neon fuehrt zwei Paare: from/to liegt unter weissem Buttontext (4.5:1 bzw. 6.9:1),
+  // neonFrom/neonTo ist reine Deko (Composer-Rand, Fokus-Ring) und wuerde als
+  // Buttonflaeche mit Weiss darauf auf 1.5:1 fallen.
 };
 
 // Warnfarbe pro Theme. Bernstein bleibt das Signal, der Ton folgt dem Untergrund: das warme
@@ -1868,6 +1908,15 @@ body{background:var(--bg);font:500 12px/1 -apple-system,BlinkMacSystemFont,'Sego
   background:var(--bgh);color:var(--t);transition:all .15s;-webkit-app-region:no-drag;margin-right:4px;
   border:1px solid var(--bd)}
 .design-pill:hover{background:linear-gradient(135deg,var(--ac-from),var(--ac-to));color:#fff;border-color:transparent}
+/* Dauerhafter Verweis auf Anthropics eigene Linux-App. Unter 900px Fensterbreite
+   ausgeblendet, sonst draengt sie die Tabs weg. */
+.official-pill{padding:2px 11px;height:22px;border-radius:11px;font-size:10px;font-weight:600;
+  letter-spacing:.4px;display:flex;align-items:center;gap:5px;cursor:pointer;white-space:nowrap;
+  background:transparent;color:var(--t);transition:all .15s;-webkit-app-region:no-drag;margin-right:4px;
+  border:1px solid var(--bd)}
+.official-pill:hover{background:var(--bgh);color:var(--ta);border-color:var(--ac-from)}
+.official-pill svg{width:11px;height:11px;flex-shrink:0}
+@media (max-width:900px){.official-pill{display:none}}
 .win-controls{display:flex;align-items:stretch;margin-left:6px;padding-right:2px;-webkit-app-region:no-drag;height:${TAB_BAR_HEIGHT}px}
 .win-btn{width:38px;height:100%;border:none;background:transparent;color:var(--ta);
   cursor:pointer;display:flex;align-items:center;justify-content:center;
@@ -1884,6 +1933,10 @@ body{background:var(--bg);font:500 12px/1 -apple-system,BlinkMacSystemFont,'Sego
 <div id="tabs"></div>
 <div class="controls">
   <div class="design-pill" id="design-toggle" title="${t('Design wechseln', 'Toggle design', 'Changer de design', 'Cambia design')}">${DESIGN_STYLE_LABEL[designStyle]}</div>
+  <div class="official-pill" id="official-app" title="${t('Anthropic bietet eine eigene Claude-App für Linux an. Hier steht, wie sie installiert wird.', 'Anthropic ships its own Claude app for Linux. This explains how to install it.', 'Anthropic propose sa propre application Claude pour Linux. Voici comment l’installer.', 'Anthropic distribuisce una propria app Claude per Linux. Qui come installarla.')}">
+    <svg viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    ${t('Offizielle App', 'Official app', 'App officielle', 'App ufficiale')}
+  </div>
   <div class="ctrl-btn" id="export-btn" title="${t('Konversation als Markdown exportieren', 'Export conversation as Markdown', 'Exporter la conversation en Markdown', 'Esporta la conversazione in Markdown')}">
     <svg viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
   </div>
@@ -1922,6 +1975,7 @@ let tabEls=[];
 document.getElementById('new-tab').addEventListener('click',()=>window.tabAPI.newTab());
 document.getElementById('theme-toggle').addEventListener('click',()=>window.tabAPI.toggleTheme());
 document.getElementById('design-toggle').addEventListener('click',()=>window.tabAPI.toggleDesign());
+document.getElementById('official-app').addEventListener('click',()=>window.tabAPI.officialApp());
 document.getElementById('bug-report').addEventListener('click',()=>window.tabAPI.bugReport());
 document.getElementById('reset-verify').addEventListener('click',()=>window.tabAPI.resetVerification());
 document.getElementById('export-btn').addEventListener('click',()=>window.tabAPI.exportConversation());
@@ -2067,6 +2121,19 @@ function verifyScript() {
   return VERIFY_SCRIPT.replace('__VERIFY_I18N__', JSON.stringify(i18n));
 }
 
+function thanksScript() {
+  const i18n = {
+    msg: t(
+      'Danke, dass du diese App benutzt. Sie wird nicht eingestellt und bekommt weiter Updates.',
+      'Thanks for using this app. It is not being discontinued and keeps getting updates.',
+      'Merci d’utiliser cette application. Elle n’est pas abandonnée et continue de recevoir des mises à jour.',
+      'Grazie per usare questa app. Non viene abbandonata e continua a ricevere aggiornamenti.'
+    ),
+    close: t('Schließen', 'Dismiss', 'Fermer', 'Chiudi')
+  };
+  return THANKS_SCRIPT.replace('__THANKS_I18N__', JSON.stringify(i18n));
+}
+
 // Theme-State fuer den Controller (inject/theme.js): mode + design + accent.
 // mid (#E8524F) ist der Brand-Mittelton fuer das Orange->Brand-Recoloring (Modern).
 function themeState() {
@@ -2104,6 +2171,7 @@ function injectScripts(wc) {
   if (!isAllowedDomain(wc.getURL())) return;
   wc.executeJavaScript(NOTIFY_SCRIPT).catch(() => {});
   wc.executeJavaScript(verifyScript()).catch(() => {});
+  wc.executeJavaScript(thanksScript()).catch(() => {});
   wc.executeJavaScript(themeScript()).catch(() => {});
 }
 
@@ -2251,7 +2319,7 @@ function setupView(view) {
   // Tab-Titel
   wc.on('page-title-updated', (e, title) => {
     e.preventDefault();
-    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.setTitle(`Claude v${version}`);
+    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.setTitle(`Desktop for Claude v${version}`);
     const idx = tabs.findIndex(tab => tab.view === view);
     if (idx >= 0) {
       const clean = title.replace(/\s*[-\u2013]\s*Claude.*$/, '') || t('Neuer Chat', 'New Chat', 'Nouvelle conversation', 'Nuova chat');
@@ -2554,7 +2622,7 @@ function closeTab(index) {
 
 function updateTitle() {
   if (!mainWindow || mainWindow.isDestroyed()) return;
-  const title = `Claude v${version}`;
+  const title = `Desktop for Claude v${version}`;
   if (mainWindow.getTitle() !== title) mainWindow.setTitle(title);
 }
 
@@ -2602,13 +2670,15 @@ function setDesignStyle(style) {
   }
   // Snap liefert sein Icon ueber die gebundelte .desktop, Schreiben in ~/ ist no-op und macht journalctl-Laerm
   if (!process.env.SNAP) {
-    try { fs.copyFileSync(icon(), path.join(app.getPath('home'), 'Apps', 'claude-desktop-icon.png')); } catch {}
+    try { fs.copyFileSync(icon(), path.join(app.getPath('home'), 'Apps', 'desktop-for-claude-icon.png')); } catch {}
   }
 
   // Pinned-Icon im Dock/Taskleiste mit-switchen (Linux: GNOME/Plasma lesen aus icon-theme)
-  // Beta-Build überschreibt nur claude-desktop-beta.png, nicht das Stable-Icon
+  // Beta-Build überschreibt nur desktop-for-claude-beta.png, nicht das Stable-Icon.
+  // Der Name MUSS von Anthropics claude-desktop.png abweichen: das User-Icon-Theme
+  // schlaegt /usr/share/icons, ein Stilwechsel hier wuerde sonst deren Menue-Icon mitfaerben.
   if (process.platform === 'linux' && !process.env.SNAP) {
-    const iconFile = isBeta ? 'claude-desktop-beta.png' : 'claude-desktop.png';
+    const iconFile = isBeta ? 'desktop-for-claude-beta.png' : 'desktop-for-claude.png';
     const sizes = ['512x512', '256x256', '128x128', '64x64', '48x48', '32x32', '16x16'];
     for (const sz of sizes) {
       const target = path.join(app.getPath('home'), '.local', 'share', 'icons', 'hicolor', sz, 'apps', iconFile);
@@ -2645,7 +2715,7 @@ function setDesignStyle(style) {
 
 // Bug-Report-Dialog
 
-const BUG_EMAIL = 'claudeai.desktop.linux@gmail.com';
+const BUG_EMAIL = 'simonlinuxcraft@pm.me';
 const WEB3FORMS_ACCESS_KEY = 'f72095f3-b338-4fa5-8462-5ddee347eb32';
 const WEB3FORMS_ENDPOINT = 'https://api.web3forms.com/submit';
 
@@ -2658,7 +2728,7 @@ function getAppMode() {
 
 async function copyDiagnosticsInfo() {
   const lines = [];
-  lines.push(`App: Claude Desktop v${app.getVersion()}`);
+  lines.push(`App: Desktop for Claude v${app.getVersion()}`);
   lines.push(`Mode: ${getAppMode()}`);
   lines.push(`Electron: ${process.versions.electron}  Chrome: ${process.versions.chrome}  Node: ${process.versions.node}`);
   lines.push(`OS: ${process.platform} ${process.arch}  Kernel: ${require('os').release()}`);
@@ -2718,7 +2788,7 @@ async function copyDiagnosticsInfo() {
   try { clipboard.writeText(text); } catch {}
   showCustomMessageBox({
     type: 'info',
-    title: 'Claude',
+    title: 'Desktop for Claude',
     message: t('Diagnose-Info in Zwischenablage kopiert', 'Diagnostics info copied to clipboard', 'Infos de diagnostic copiées dans le presse-papiers', 'Informazioni di diagnostica copiate negli appunti'),
     detail: text
   });
@@ -2727,7 +2797,7 @@ async function copyDiagnosticsInfo() {
 async function resetClaudeVerification(targetTab) {
   const confirm = await showCustomMessageBox({
     type: 'warning',
-    title: 'Claude',
+    title: 'Desktop for Claude',
     message: t(
       'claude.ai-Cache und -Cookies zurücksetzen?',
       'Reset claude.ai cache and cookies?',
@@ -3090,8 +3160,8 @@ ${customTitlebarHTML(s.title)}
 
     const payload = {
       access_key: cfg.web3formsKey,
-      subject: 'Claude Desktop Bug Report v' + meta.version,
-      from_name: 'Claude Desktop App',
+      subject: 'Desktop for Claude Bug Report v' + meta.version,
+      from_name: 'Desktop for Claude App',
       message: bodyMessage,
       botcheck: ''
     };
@@ -3437,7 +3507,7 @@ function setupTray() {
     const img = nativeImage.createFromPath(trayIcon());
     tray = new Tray(img.isEmpty() ? trayIcon() : img);
     if (!img.isEmpty()) tray.setImage(img);
-    tray.setToolTip('Claude');
+    tray.setToolTip('Desktop for Claude');
     tray.on('click', toggleMainWindow);
     updateTrayMenu();
   } catch (e) {
@@ -3487,7 +3557,7 @@ function openClipboardChat() {
     let hasImage = false;
     try { hasImage = !clipboard.readImage().isEmpty(); } catch {}
     notify({
-      title: 'Claude',
+      title: 'Desktop for Claude',
       body: hasImage
         ? t('Bild in der Zwischenablage. Bitte direkt im Chat mit Strg+V einfügen.', 'Image in clipboard. Paste it directly in the chat with Ctrl+V.', 'Image dans le presse-papiers. Collez-la directement dans le chat avec Ctrl+V.', 'Immagine negli appunti. Incollala direttamente nella chat con Ctrl+V.')
         : t('Zwischenablage ist leer.', 'Clipboard is empty.', 'Le presse-papiers est vide.', 'Gli appunti sono vuoti.')
@@ -3522,7 +3592,7 @@ async function exportActiveConversation() {
   const url = wc.getURL();
   if (!/^https:\/\/(?:[a-z0-9-]+\.)?claude\.ai\//i.test(url)) {
     showCustomMessageBox({
-      type: 'info', title: 'Claude',
+      type: 'info', title: 'Desktop for Claude',
       message: t('Export nur in claude.ai-Tabs verfügbar.', 'Export only available in claude.ai tabs.', 'Export disponible uniquement dans les onglets claude.ai.', 'Esportazione disponibile solo nelle schede claude.ai.')
     });
     return;
@@ -3598,7 +3668,7 @@ async function exportActiveConversation() {
   }
   if (!payload || !payload.blocks || !payload.blocks.length) {
     showCustomMessageBox({
-      type: 'info', title: 'Claude',
+      type: 'info', title: 'Desktop for Claude',
       message: t('Konnte keine Konversation finden.', 'Could not find a conversation on this page.', 'Impossible de trouver une conversation sur cette page.', 'Impossibile trovare una conversazione in questa pagina.'),
       detail: t('Stelle sicher, dass du in einem Chat bist (nicht auf der Übersicht).', 'Make sure you are inside a chat (not on the overview).', 'Assurez-vous d’être dans une conversation (pas sur la vue d’ensemble).', 'Assicurati di essere in una chat (non nella panoramica).')
     });
@@ -3748,7 +3818,7 @@ button:disabled{opacity:.5;cursor:not-allowed}
 @keyframes dotpulse{0%{box-shadow:0 0 0 0 rgba(58,175,82,.6)}70%{box-shadow:0 0 0 6px rgba(58,175,82,0)}100%{box-shadow:0 0 0 0 rgba(58,175,82,0)}}
 ${customTitlebarCSS()}
 </style></head><body>
-${customTitlebarHTML(t('Claude – Einstellungen', 'Claude – Settings', 'Claude – Paramètres', 'Claude – Impostazioni'))}
+${customTitlebarHTML(t('Desktop for Claude - Einstellungen', 'Desktop for Claude - Settings', 'Desktop for Claude - Paramètres', 'Desktop for Claude - Impostazioni'))}
 <div class="head">
   <h1>${i18n.title}</h1>
   <div class="sub">${i18n.subtitle}</div>
@@ -4087,7 +4157,7 @@ function getWhatsNewHTML(force = false) {
     refresh: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>'
   };
   const i18n = {
-    header: t('Neu in Claude v' + version, 'New in Claude v' + version, 'Nouveautés de Claude v' + version, 'Novità di Claude v' + version),
+    header: t('Neu in v' + version, 'New in v' + version, 'Nouveautés de la v' + version, 'Novità nella v' + version),
     sub: t('Ein kurzer \u00dcberblick \u00fcber die wichtigsten \u00c4nderungen', 'A quick look at the highlights', 'Un aperçu rapide des principales nouveautés', 'Una rapida panoramica sulle novità principali'),
     close: t('Los geht\u2019s', 'Let\u2019s go', 'C’est parti', 'Iniziamo'),
     openSettings: t('App-Einstellungen \u00f6ffnen', 'Open app settings', 'Ouvrir les paramètres de l’application', 'Apri le impostazioni dell’app')
@@ -4174,6 +4244,12 @@ ${customTitlebarCSS()}
 .slide-ic svg{width:30px;height:30px}
 .slide-title{font-weight:700;font-size:20px;letter-spacing:-.3px;color:${th.textActive};margin-bottom:12px;line-height:1.2}
 .slide-text{color:${th.text};font-size:14px;line-height:1.65}
+/* Nur fuer den Hinweis-Slide zur offiziellen App. Kein anderer Slide nutzt diese Klassen. */
+.wn-box{margin-top:10px;padding:10px 13px;border-radius:11px;text-align:left;font-size:12.5px;
+  line-height:1.5;background:${th.bgHover};border:1px solid ${th.border}}
+.wn-box b{color:${th.textActive};font-weight:600}
+.wn-thanks{margin-top:13px;padding-top:11px;border-top:1px solid ${th.border};
+  color:${th.textActive};font-size:13.5px;line-height:1.5}
 .dots{display:flex;gap:7px;justify-content:center;padding:4px 0 2px;flex-shrink:0}
 .dot{width:7px;height:7px;border-radius:50%;background:${th.border};cursor:pointer;transition:background .2s,width .2s,border-radius .2s}
 .dot.active{background:${ac.from};width:20px;border-radius:4px}
@@ -4185,7 +4261,7 @@ ${customTitlebarCSS()}
 .footer button.primary:hover{filter:brightness(1.08)}
 .footer button:focus-visible{outline:2px solid ${ac.from};outline-offset:2px}
 </style></head><body>
-${customTitlebarHTML(t('Neu in Claude', 'What’s new in Claude', 'Nouveautés de Claude', 'Novità di Claude'))}
+${customTitlebarHTML(t('Was ist neu', 'What’s new', 'Nouveautés', 'Novità'))}
 <div class="hero">
   <div class="hero-pill">v${version}</div>
   <div class="hero-title">${t('Was ist neu', 'What’s new', 'Nouveautés', 'Novità')}</div>
@@ -4236,7 +4312,7 @@ function openWhatsNewWindow(force = false) {
     ...size,
     parent: mainWindow && !mainWindow.isDestroyed() ? mainWindow : undefined,
     modal: false, resizable: false, minimizable: false, maximizable: false,
-    title: t('Neu in Claude', 'What\u2019s new in Claude', 'Nouveautés de Claude', 'Novità di Claude'),
+    title: t('Was ist neu', 'What\u2019s new', 'Nouveautés', 'Novità'),
     backgroundColor: subTheme().bg,
     icon: icon(),
     autoHideMenuBar: true,
@@ -4314,11 +4390,11 @@ button:hover{filter:brightness(1.08)}
 button:focus-visible{outline:2px solid ${ac.from};outline-offset:2px}
 ${customTitlebarCSS()}
 </style></head><body>
-${customTitlebarHTML(t('Über Claude Desktop', 'About Claude Desktop', 'À propos de Claude Desktop', 'Informazioni su Claude Desktop'))}
+${customTitlebarHTML(t('Über Desktop for Claude', 'About Desktop for Claude', 'À propos de Desktop for Claude', 'Informazioni su Desktop for Claude'))}
 <div class="hero">
-  <img class="hero-logo" src="${iconDataUrlForCurrentTheme()}" alt="Claude Desktop"/>
+  <img class="hero-logo" src="${iconDataUrlForCurrentTheme()}" alt="Desktop for Claude"/>
   <div class="hero-text">
-    <div class="hero-name">Claude Desktop</div>
+    <div class="hero-name">Desktop for Claude</div>
     <div class="hero-version">v${version}</div>
     <div class="hero-tagline">${i18n.tagline}</div>
   </div>
@@ -4373,7 +4449,7 @@ function openAboutWindow() {
     ...size,
     parent: mainWindow && !mainWindow.isDestroyed() ? mainWindow : undefined,
     modal: false, resizable: false, minimizable: false, maximizable: false,
-    title: t('Über Claude Desktop', 'About Claude Desktop', 'À propos de Claude Desktop', 'Informazioni su Claude Desktop'),
+    title: t('Über Desktop for Claude', 'About Desktop for Claude', 'À propos de Desktop for Claude', 'Informazioni su Desktop for Claude'),
     backgroundColor: subTheme().bg,
     icon: icon(),
     autoHideMenuBar: true,
@@ -4400,7 +4476,7 @@ function openSettingsWindow() {
     ...swSize,
     parent: mainWindow && !mainWindow.isDestroyed() ? mainWindow : undefined,
     modal: false, resizable: false, minimizable: false, maximizable: false,
-    title: t('Claude \u2013 Einstellungen', 'Claude \u2013 Settings', 'Claude – Paramètres', 'Claude – Impostazioni'),
+    title: t('Desktop for Claude - Einstellungen', 'Desktop for Claude - Settings', 'Desktop for Claude - Paramètres', 'Desktop for Claude - Impostazioni'),
     backgroundColor: subTheme().bg,
     icon: icon(),
     autoHideMenuBar: true,
@@ -4499,7 +4575,7 @@ function getDesignHTML() {
 
   const styleCard = (key) => {
     const a = ACCENT[key];
-    return `<button class="style-card" data-design="${key}" data-from="${a.from}" data-to="${a.to}" aria-pressed="${key === designStyle}">
+    return `<button class="style-card" data-design="${key}" data-from="${a.from}" data-to="${a.to}" data-cf="${a.neonFrom || a.from}" data-ct="${a.neonTo || a.to}" aria-pressed="${key === designStyle}">
   <span class="swatch" style="background:linear-gradient(135deg,${a.from},${a.to})"></span>
   <span class="style-text"><span class="card-name">${STYLE_LABELS[key].name}<svg class="tick" viewBox="0 0 16 16"><path d="M3 8.5l3.2 3.2L13 5" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
   <span class="card-hint">${STYLE_LABELS[key].hint}</span></span>
@@ -4566,7 +4642,7 @@ body{border:${WINDOW_BORDER}px solid var(--flo);border-image:linear-gradient(180
 .cd-titlebar,.cd-titlebar-title,.cd-titlebar-btn{color:var(--ta)}
 .cd-titlebar-btn:hover{background:var(--bgh)}
 </style></head><body>
-${customTitlebarHTML('Claude – Design')}
+${customTitlebarHTML('Desktop for Claude - Design')}
 <div class="head">
   <h1>${i18n.title}</h1>
   <div class="sub">${i18n.subtitle}</div>
@@ -4605,10 +4681,12 @@ for(const b of styles)b.addEventListener('click',()=>{
   if(b.getAttribute('aria-pressed')==='true')return;
   pick(styles,b);
   // Vorschau nachziehen: der Stil setzt den Akzent in jedem Farbthema.
+  // --cf/--ct ist der Deko-Rand des Composers und nimmt das hellere Paar, --ac-*/chrome
+  // liegt unter weissem Text und nimmt das kontrastfeste. Gleiche Trennung wie in card().
   const f=b.dataset.from,tc=b.dataset.to;
   for(const c of cards){
     const pv=c.querySelector('.prev');
-    pv.style.setProperty('--cf',f);pv.style.setProperty('--ct',tc);
+    pv.style.setProperty('--cf',b.dataset.cf);pv.style.setProperty('--ct',b.dataset.ct);
     const ch=JSON.parse(c.dataset.chrome);ch.from=f;ch.to=tc;c.dataset.chrome=JSON.stringify(ch);
   }
   r.setProperty('--ac-from',f);r.setProperty('--ac-to',tc);
@@ -4631,7 +4709,7 @@ function openDesignWindow() {
     ...centerOnMainWindow(size.width, size.height),
     parent: mainWindow && !mainWindow.isDestroyed() ? mainWindow : undefined,
     modal: false, resizable: false, minimizable: false, maximizable: false,
-    title: 'Claude – Design',
+    title: 'Desktop for Claude - Design',
     backgroundColor: subTheme().bg,
     icon: icon(),
     autoHideMenuBar: true,
@@ -4647,6 +4725,37 @@ function openDesignWindow() {
   designWindow.on('closed', () => { designWindow = null; });
 }
 
+// Fester Hinweis auf Anthropics eigene Linux-App. Absichtlich nur der Link und keine
+// apt-Befehle: Repo-Pfad, Key-Fingerprint und Distro-Liste stehen in ihrer Doku und
+// koennen sich aendern, hardkodierte Befehle wuerden veralten und Support kosten.
+const OFFICIAL_APP_DOCS = 'https://code.claude.com/docs/en/desktop-linux';
+
+async function showOfficialAppInfo() {
+  const res = await showCustomMessageBox({
+    type: 'info',
+    title: t('Offizielle Claude-App', 'Official Claude app', 'Application Claude officielle', 'App Claude ufficiale'),
+    message: t(
+      'Anthropic bietet seit dem 30. Juni 2026 eine eigene Claude-App für Linux an.',
+      'Anthropic has shipped its own Claude app for Linux since 30 June 2026.',
+      'Anthropic propose sa propre application Claude pour Linux depuis le 30 juin 2026.',
+      'Dal 30 giugno 2026 Anthropic distribuisce una propria app Claude per Linux.'
+    ),
+    detail: t(
+      'Sie läuft auf Ubuntu 22.04 und neuer sowie Debian 12 und neuer (amd64/arm64) und wird über Anthropics apt-Quelle installiert. Enthalten sind Chat, Cowork und Claude Code mit Terminal und Editor. Auf Ubuntu 20.04 läuft sie nicht, und ein offizielles Snap gibt es nicht.\n\nDiese App hier ist nicht von Anthropic und wird nicht eingestellt. Updates und Fehlerbehebungen kommen weiter, neue Funktionen seltener als bisher.',
+      'It runs on Ubuntu 22.04 and newer and Debian 12 and newer (amd64/arm64), installed through Anthropic’s apt repository. It includes Chat, Cowork and Claude Code with a terminal and editor. It does not run on Ubuntu 20.04, and there is no official snap.\n\nThis app is not from Anthropic and is not being discontinued. Updates and fixes keep coming, new features less often than before.',
+      'Elle fonctionne sur Ubuntu 22.04 et plus récent ainsi que Debian 12 et plus récent (amd64/arm64), via le dépôt apt d’Anthropic. Elle inclut Chat, Cowork et Claude Code avec terminal et éditeur. Elle ne fonctionne pas sous Ubuntu 20.04 et il n’existe pas de snap officiel.\n\nCette application n’est pas d’Anthropic et n’est pas abandonnée. Les mises à jour et correctifs continuent, les nouvelles fonctions plus rarement qu’avant.',
+      'Funziona su Ubuntu 22.04 e successivi e Debian 12 e successivi (amd64/arm64), tramite il repository apt di Anthropic. Include Chat, Cowork e Claude Code con terminale ed editor. Su Ubuntu 20.04 non funziona e non esiste uno snap ufficiale.\n\nQuesta app non è di Anthropic e non viene abbandonata. Aggiornamenti e correzioni continuano, nuove funzioni più raramente di prima.'
+    ),
+    buttons: [
+      t('Anleitung öffnen', 'Open install guide', 'Ouvrir le guide', 'Apri la guida'),
+      t('Schließen', 'Close', 'Fermer', 'Chiudi')
+    ],
+    defaultId: 0,
+    cancelId: 1
+  });
+  if (res.response === 0) openExternalSafe(OFFICIAL_APP_DOCS);
+}
+
 // Custom App-Menü (HTML-Popup statt OS-nativ)
 
 function getAppMenuItems() {
@@ -4657,7 +4766,7 @@ function getAppMenuItems() {
     { type: 'item', action: 'export', label: t('Konversation exportieren…', 'Export conversation…', 'Exporter la conversation…', 'Esporta la conversazione…'), accel: 'Ctrl+Shift+E', icon: 'download' },
     { type: 'item', action: 'reload', label: t('Neu laden', 'Reload', 'Recharger', 'Ricarica'), accel: 'Ctrl+R', icon: 'refresh' },
     { type: 'sep' },
-    { type: 'item', action: 'design-toggle', label: 'Design\u2026', icon: 'palette' },
+    { type: 'item', action: 'design-open', label: 'Design\u2026', icon: 'palette' },
     { type: 'item', action: 'settings', label: t('App-Einstellungen…', 'App Settings…', 'Paramètres de l\'application…', 'Impostazioni dell\'app…'), accel: 'Ctrl+,', icon: 'cog' },
     { type: 'sep' },
     { type: 'item', action: 'check-updates', label: t('Nach Updates suchen…', 'Check for Updates…', 'Rechercher des mises à jour…', 'Controlla aggiornamenti…'), icon: 'refresh' },
@@ -4665,8 +4774,9 @@ function getAppMenuItems() {
     { type: 'item', action: 'copy-diagnostics', label: t('Diagnose-Info kopieren', 'Copy diagnostics info', 'Copier les infos de diagnostic', 'Copia informazioni di diagnostica'), icon: 'info' },
     { type: 'item', action: 'reset-verification', label: t('claude.ai-Verifizierung zurücksetzen…', 'Reset claude.ai verification…', 'Réinitialiser la vérification claude.ai…', 'Reimposta la verifica claude.ai…'), icon: 'shield' },
     { type: 'sep' },
+    { type: 'item', action: 'official-app', label: t('Offizielle Claude-App…', 'Official Claude app…', 'Application Claude officielle…', 'App Claude ufficiale…'), icon: 'download' },
     { type: 'item', action: 'whats-new', label: t('Was ist neu?…', 'What’s New…', 'Nouveautés…', 'Novità…'), icon: 'bolt' },
-    { type: 'item', action: 'about', label: t('Über Claude Desktop…', 'About Claude Desktop…', 'À propos de Claude Desktop…', 'Informazioni su Claude Desktop…'), icon: 'info' },
+    { type: 'item', action: 'about', label: t('Über Desktop for Claude…', 'About Desktop for Claude…', 'À propos de Desktop for Claude…', 'Informazioni su Desktop for Claude…'), icon: 'info' },
     { type: 'sep' },
     { type: 'item', action: 'quit', label: t('Beenden', 'Quit', 'Quitter', 'Esci'), accel: 'Ctrl+Q', icon: 'power' }
   ];
@@ -5036,7 +5146,7 @@ function handleOnlineChange(online) {
   updateTitle();
   if (!online) {
     showOfflinePage();
-    notify({ title: 'Claude', body: t('Keine Internetverbindung.', 'No internet connection.', 'Pas de connexion Internet.', 'Nessuna connessione a Internet.') });
+    notify({ title: 'Desktop for Claude', body: t('Keine Internetverbindung.', 'No internet connection.', 'Pas de connexion Internet.', 'Nessuna connessione a Internet.') });
   } else {
     // Jeder Tab, der auf der Offline-Seite haengt, muss per loadURL zurueck auf seinen
     // echten Chat. reload() wuerde nur die data:-Seite neu laden. Inaktive Tabs bleiben
@@ -5048,7 +5158,7 @@ function handleOnlineChange(online) {
         tab.view.webContents.loadURL(tab.url || 'https://claude.ai');
       else if (tab === active) tab.view.webContents.reload();
     }
-    notify({ title: 'Claude', body: t('Verbindung wiederhergestellt!', 'Connection restored!', 'Connexion rétablie !', 'Connessione ripristinata!') });
+    notify({ title: 'Desktop for Claude', body: t('Verbindung wiederhergestellt!', 'Connection restored!', 'Connexion rétablie !', 'Connessione ripristinata!') });
   }
 }
 
@@ -5177,7 +5287,7 @@ function setupDownloadManager() {
         const total = item.getTotalBytes();
         if (total > 0) {
           const pct = Math.round((item.getReceivedBytes() / total) * 100);
-          mainWindow.setTitle(`Claude \u2013 Download ${pct}%`);
+          mainWindow.setTitle(`Desktop for Claude - Download ${pct}%`);
           mainWindow.setProgressBar(pct / 100);
         }
       }
@@ -5203,11 +5313,11 @@ let manualUpdateCheck = false;
 // statt eines stummen checkForUpdates() ohne sichtbares Ergebnis.
 function triggerManualUpdateCheck() {
   if (isDev) {
-    showCustomMessageBox({ type: 'info', title: 'Claude', message: t('Updates sind im Entwicklungsmodus deaktiviert.', 'Updates are disabled in development mode.', 'Les mises à jour sont désactivées en mode développement.', 'Gli aggiornamenti sono disattivati in modalità sviluppo.') });
+    showCustomMessageBox({ type: 'info', title: 'Desktop for Claude', message: t('Updates sind im Entwicklungsmodus deaktiviert.', 'Updates are disabled in development mode.', 'Les mises à jour sont désactivées en mode développement.', 'Gli aggiornamenti sono disattivati in modalità sviluppo.') });
     return;
   }
   if (isSnap) {
-    showCustomMessageBox({ type: 'info', title: 'Claude', message: t('Updates werden über den Snap Store verwaltet und automatisch installiert.', 'Updates are managed by the Snap Store and installed automatically.', 'Les mises à jour sont gérées par le Snap Store et installées automatiquement.', 'Gli aggiornamenti sono gestiti dallo Snap Store e installati automaticamente.') });
+    showCustomMessageBox({ type: 'info', title: 'Desktop for Claude', message: t('Updates werden über den Snap Store verwaltet und automatisch installiert.', 'Updates are managed by the Snap Store and installed automatically.', 'Les mises à jour sont gérées par le Snap Store et installées automatiquement.', 'Gli aggiornamenti sono gestiti dallo Snap Store e installati automaticamente.') });
     return;
   }
   manualUpdateCheck = true;
@@ -5244,14 +5354,14 @@ function setupAutoUpdater() {
   autoUpdater.on('download-progress', (p) => {
     if (isQuitting) return;
     if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.setTitle(`Claude \u2013 Update ${Math.round(p.percent)}%`);
+      mainWindow.setTitle(`Desktop for Claude - Update ${Math.round(p.percent)}%`);
       mainWindow.setProgressBar(p.percent / 100);
     }
   });
 
   autoUpdater.on('update-downloaded', (info) => {
     if (isQuitting) return;
-    if (mainWindow && !mainWindow.isDestroyed()) { mainWindow.setTitle('Claude'); mainWindow.setProgressBar(-1); }
+    if (mainWindow && !mainWindow.isDestroyed()) { mainWindow.setTitle(`Desktop for Claude v${version}`); mainWindow.setProgressBar(-1); }
     showCustomMessageBox({
       type: 'info', title: t('Update bereit', 'Update ready', 'Mise à jour prête', 'Aggiornamento pronto'),
       message: `v${info.version} ${t('heruntergeladen. Jetzt neu starten?', 'downloaded. Restart now?', 'téléchargée. Redémarrer maintenant ?', 'scaricato. Riavviare ora?')}`,
@@ -5432,10 +5542,10 @@ function getMicConsentHTML({ respondChannel, snapOpenChannel, statusChannel, cop
   const i18n = {
     title: t('Mikrofon-Zugriff', 'Microphone access', 'Accès au microphone', 'Accesso al microfono'),
     message: t(
-      'Claude Desktop möchte auf dein Mikrofon zugreifen, um Spracheingaben zu ermöglichen.',
-      'Claude Desktop wants to access your microphone to enable voice input.',
-      'Claude Desktop souhaite accéder à votre microphone pour permettre la saisie vocale.',
-      'Claude Desktop vuole accedere al microfono per consentire l\'input vocale.'
+      'Desktop for Claude möchte auf dein Mikrofon zugreifen, um Spracheingaben zu ermöglichen.',
+      'Desktop for Claude wants to access your microphone to enable voice input.',
+      'Desktop for Claude souhaite accéder à votre microphone pour permettre la saisie vocale.',
+      'Desktop for Claude vuole accedere al microfono per consentire l\'input vocale.'
     ),
     hint: t(
       'Du kannst diese Erlaubnis jederzeit in den App-Einstellungen unter „Mikrofon" widerrufen.',
@@ -5843,8 +5953,8 @@ function setAutostart(enabled) {
       fs.writeFileSync(AUTOSTART_FILE,
 `[Desktop Entry]
 Type=Application
-Name=Claude
-Comment=Claude AI Desktop
+Name=Desktop for Claude
+Comment=Unofficial desktop app for Claude AI
 Exec=${exec}
 Icon=claude-ai-desktop
 Terminal=false
@@ -5874,21 +5984,27 @@ function selfHealDesktopFiles() {
   const appImagePath = process.env.APPIMAGE;
   if (!appImagePath) return;
 
-  const appsDesktop = path.join(app.getPath('home'), '.local', 'share', 'applications', 'claude-desktop.desktop');
+  // Zwei Kandidaten: der aktuelle Dateiname und der aus Builds vor der Umbenennung.
+  // Bestandsnutzer haben claude-desktop.desktop integriert und wuerden sonst nach dem
+  // ersten Auto-Update ins Leere starten.
+  const appsDir = path.join(app.getPath('home'), '.local', 'share', 'applications');
+  const desktopCandidates = ['desktop-for-claude.desktop', 'claude-desktop.desktop']
+    .map((f) => path.join(appsDir, f));
   let appsChanged = false;
 
-  try {
-    if (fs.existsSync(appsDesktop)) {
-      const content = fs.readFileSync(appsDesktop, 'utf8');
+  for (const file of desktopCandidates) {
+    try {
+      if (!fs.existsSync(file)) continue;
+      const content = fs.readFileSync(file, 'utf8');
       const updated = content
         .replace(/^Exec=.*$/m, () => `Exec="${appImagePath}" --no-sandbox %U`)
         .replace(/^X-AppImage-Version=.*$/m, () => `X-AppImage-Version=${version}`);
       if (updated !== content) {
-        fs.writeFileSync(appsDesktop, updated);
+        fs.writeFileSync(file, updated);
         appsChanged = true;
       }
-    }
-  } catch (_) {}
+    } catch (_) {}
+  }
 
   try {
     if (fs.existsSync(AUTOSTART_FILE)) {
@@ -5901,7 +6017,7 @@ function selfHealDesktopFiles() {
   if (appsChanged) {
     try {
       const { execFile } = require('child_process');
-      execFile('update-desktop-database', [path.dirname(appsDesktop)], { timeout: 5000 }, () => {});
+      execFile('update-desktop-database', [appsDir], { timeout: 5000 }, () => {});
     } catch (_) {}
   }
 }
@@ -6145,6 +6261,7 @@ ipcMain.on('design-toggle', () => {
   const i = DESIGN_STYLES.indexOf(designStyle);
   setDesignStyle(DESIGN_STYLES[(i + 1) % DESIGN_STYLES.length]);
 });
+ipcMain.on('official-app-info', () => showOfficialAppInfo());
 ipcMain.on('bug-report', showBugReportDialog);
 ipcMain.on('export-conversation', () => exportActiveConversation());
 ipcMain.on('app-menu-popup', (_event, x, y) => {
@@ -6161,7 +6278,8 @@ ipcMain.on('appmenu-action', (event, name) => {
     case 'reload':
       if (tabs[activeTabIndex] && alive(tabs[activeTabIndex].view)) tabs[activeTabIndex].view.webContents.reload();
       break;
-    case 'design-toggle': openDesignWindow(); break;
+    case 'design-open': openDesignWindow(); break;
+    case 'official-app': showOfficialAppInfo(); break;
     case 'settings': openSettingsWindow(); break;
     case 'check-updates':
       triggerManualUpdateCheck();
@@ -6194,7 +6312,7 @@ function createWindow() {
 
   mainWindow = new BrowserWindow({
     width: state.width, height: state.height, x: state.x, y: state.y,
-    minWidth: 480, minHeight: 600, title: `Claude v${version}`,
+    minWidth: 480, minHeight: 600, title: `Desktop for Claude v${version}`,
     icon: icon(),
     backgroundColor: theme().bg,
     autoHideMenuBar: true,
@@ -6212,7 +6330,7 @@ function createWindow() {
   if (state.isMaximized) mainWindow.maximize();
 
   mainWindow.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(getTabBarHTML()));
-  mainWindow.setTitle(`Claude v${version}`);
+  mainWindow.setTitle(`Desktop for Claude v${version}`);
   mainWindow.once('ready-to-show', () => mainWindow.show());
   setTimeout(() => {
     if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.isVisible()) {

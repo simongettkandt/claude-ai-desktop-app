@@ -1,8 +1,10 @@
 <p align="center">
-  <img src="icon.png" width="120" alt="Claude Desktop logo">
+  <img src="icon.png" width="120" alt="Desktop for Claude logo">
 </p>
 
-<h1 align="center">Unofficial Claude Desktop App for Linux</h1>
+<h1 align="center">Desktop for Claude</h1>
+
+<p align="center">Unofficial desktop app for Claude AI on Linux. Not affiliated with Anthropic PBC.</p>
 
 <p align="center">Desktop wrapper for claude.ai. Runs as a native window on Linux without a browser tab.</p>
 
@@ -13,6 +15,13 @@
   <br>
   <a href="https://snapcraft.io/claude-ai-desktop"><img src="https://snapcraft.io/claude-ai-desktop/badge.svg" alt="Snap build status"></a>
 </p>
+
+> [!IMPORTANT]
+> **There is an official Claude desktop app for Linux.** Anthropic ships it since 30 June 2026 for Ubuntu 22.04+ and Debian 12+ (amd64/arm64) from their own apt repository, and it includes Cowork and Claude Code with an integrated terminal and editor, which a browser wrapper cannot provide. If that fits your system, use it: **[official install guide](https://code.claude.com/docs/en/desktop-linux)**.
+>
+> **This app is not discontinued.** Updates and fixes keep coming, new features less often than before. It also remains the option on Ubuntu 20.04, which the official app does not support, and in the Snap Store, where there is no official package.
+
+---
 
 > **v1.4.16** - Design Window and Themes. The menu entry for the design opened nothing and the tab bar button cycled blind through the modes, so a Design window now shows every colour theme as a small mockup of the real window and page and applies the choice live. Midnight Blue joins as a fourth colour theme, with deep blue surfaces and scattered wave crests as the counterpart to OLED's starfield, and Neon joins as a third accent style. Colour theme and style are separate axes now, freely combinable, and the style also sets claude.ai's own brand tone, so the send arrow stops being orange in every theme. Alongside: the ring around the input field follows the real corner radius instead of a default, grey bars on the Code and Design pages are gone, and in the light theme the design page no longer has a black lower half.
 
@@ -95,8 +104,8 @@ chmod +x start-claude.sh
 ```bash
 cat > ~/.local/share/applications/claude-desktop.desktop << EOF
 [Desktop Entry]
-Name=Claude Desktop
-Comment=Claude AI Desktop App
+Name=Desktop for Claude
+Comment=Unofficial desktop app for Claude AI
 Exec=/path/to/Claude-Desktop-1.4.16.AppImage --no-sandbox
 Icon=/path/to/icon.png
 Type=Application
