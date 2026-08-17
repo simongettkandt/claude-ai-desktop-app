@@ -4,7 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 const { version } = require('./package.json');
-const { compareVersions, safeJson, isClaudeAiOrigin, isPaymentFrameDomain, validateAccelerator, THEME_MODES, resolveThemeMode } = require('./utils/pure');
+const { compareVersions, safeJson, isClaudeAiOrigin, isPaymentFrameDomain, validateAccelerator, THEME_MODES, resolveThemeMode, DESIGN_STYLES, resolveDesignStyle } = require('./utils/pure');
 
 // Electron "Object has been destroyed" Error-Dialog abfangen
 const _origErrorBox = dialog.showErrorBox;
@@ -93,7 +93,7 @@ let activeTabIndex = 0;
 let isOnline = true;
 let themeMode = 'dark';        // aus THEME_MODES, Reihenfolge dort ist der Cycle der Tab-Leiste
 let oledIntroSeen = false;
-let customDesign = true;
+let designStyle = 'modern';   // aus DESIGN_STYLES
 
 // Tab-Pool (vorgeladene Views)
 const viewPool = [];
@@ -413,8 +413,11 @@ let dismissedNotificationIds = [];                // persistiert in windowState
 // (behalten sonst den Modul-Default), die anderen werden immer auf den
 // validierten Wert gezwungen.
 const STATE_SCHEMA = [
-  { key: 'customDesign', optional: true, get: () => customDesign,
-    set: v => { customDesign = v === true; } },
+  // Lesen laeuft ueber resolveDesignStyle (kennt auch den alten Boolean), set ist No-op.
+  { key: 'designStyle', get: () => designStyle, set: () => {} },
+  // Legacy: 1.4.15 und aelter kennen nur den Boolean. Weiter mitschreiben, damit ein
+  // Downgrade nicht im falschen Stil startet (Neon faellt dort auf Modern zurueck).
+  { key: 'customDesign', get: () => designStyle !== 'classic', set: () => {} },
   // Lesen laeuft ueber resolveThemeMode (kennt auch den Alt-State), set ist darum No-op.
   { key: 'themeMode', get: () => themeMode, set: () => {} },
   // Legacy: 1.4.15 und aelter kennen nur diese beiden Booleans. Weiter mitschreiben, damit
@@ -1528,9 +1531,10 @@ function loadWindowState() {
   }
 
   themeMode = resolveThemeMode(windowState);
+  designStyle = resolveDesignStyle(windowState);
 
   // Einmalige Intro-Aktivierung: OLED als Default beim ersten Start mit dem
-  // OLED-Release. Bei bestehenden Nutzern bleibt customDesign (Modern/Classic)
+  // OLED-Release. Bei bestehenden Nutzern bleibt der Stil (Modern/Classic/Neon)
   // wie vorher, nur der Modus wird auf OLED gesetzt. Sobald oledIntroSeen=true
   // persistiert ist, wird der Modus beim Folge-Start aus dem State gelesen.
   if (!oledIntroSeen) {
@@ -1645,6 +1649,8 @@ function looksLikeOAuthUrl(url) {
 
 // Theme & Design
 
+const DESIGN_STYLE_LABEL = { modern: 'Modern', classic: 'Classic', neon: 'Neon' };
+
 const THEME = {
   dark:  { bg: '#262624', bgHover: '#333330', bgActive: '#3a3a37', text: '#9a9a96', textActive: '#e8e8e4', border: '#333330', frameHi: '#423d38', frameLo: '#2a2622' },
   light: { bg: '#f5f2ef', bgHover: '#ede9e4', bgActive: '#faf8f6', text: '#8a7e72', textActive: '#2a2420', border: '#e8e4de', frameHi: '#ddd6cc', frameLo: '#c8c1b6' },
@@ -1652,14 +1658,20 @@ const THEME = {
   midnight: { bg: '#070c18', bgHover: '#0d1526', bgActive: '#151f36', text: '#8a9ab5', textActive: '#e9eff8', border: '#182238', frameHi: '#2b3f66', frameLo: '#04070f' }
 };
 
+// Akzent pro Stil. Kein Theme erzwingt einen eigenen: jede Kombination aus Farbthema und
+// Stil ist waehlbar.
+// brandHsl setzt claude.ais eigenes --accent-brand um, das den Sende-Pfeil und die
+// Brand-Icons faerbt. Es MUSS als HSL-Komponenten geschrieben werden: die Seite konsumiert
+// es als hsl(var(--accent-brand)), ein Hex-Wert macht die Deklaration ungueltig und die
+// Icons fallen auf Grau zurueck. Ohne brandHsl bleibt claude.ais Original stehen.
 const ACCENT = {
-  custom:   { from: '#F26A3F', to: '#E83B6E' },
-  original: { from: '#d4734c', to: '#d4734c' },
+  modern:  { from: '#F26A3F', to: '#E83B6E' },
+  classic: { from: '#d4734c', to: '#d4734c' },
+  neon:    { from: '#1B54BE', to: '#2A72E8', neonFrom: '#2F7FFF', neonTo: '#00E5FF', brandHsl: '217 100% 59%' },
   // Nach Theme-Namen benannt = das Theme bringt seinen eigenen Akzent mit und schlaegt
   // Modern/Classic (siehe accent()). Zwei Paare: from/to liegt unter weissem Buttontext
   // (4.5:1 bzw. 6.9:1), neonFrom/neonTo ist reine Deko (Composer-Rand, Fokus-Ring) und
   // wuerde als Buttonflaeche mit Weiss darauf auf 1.5:1 fallen.
-  midnight: { from: '#1B54BE', to: '#2A72E8', neonFrom: '#2F7FFF', neonTo: '#00E5FF' }
 };
 
 // Warnfarbe pro Theme. Bernstein bleibt das Signal, der Ton folgt dem Untergrund: das warme
@@ -1691,17 +1703,17 @@ function subTheme() {
   return theme();
 }
 function accent() {
-  // Themes mit eigenem Akzent gewinnen gegen Modern/Classic: der warme Original-Ton
-  // beisst sich sichtbar mit einer tiefblauen Flaeche.
-  return ACCENT[currentThemeMode()] || (customDesign ? ACCENT.custom : ACCENT.original);
+  return ACCENT[designStyle] || ACCENT.modern;
 }
 function icon()   {
-  if (isBeta) return path.join(__dirname, customDesign ? 'icon-beta.png' : 'icon-original-beta.png');
-  return path.join(__dirname, customDesign ? 'icon.png' : 'icon-original.png');
+  const modern = designStyle !== 'classic';
+  if (isBeta) return path.join(__dirname, modern ? 'icon-beta.png' : 'icon-original-beta.png');
+  return path.join(__dirname, modern ? 'icon.png' : 'icon-original.png');
 }
 function trayIcon() {
-  if (isBeta) return path.join(__dirname, customDesign ? 'icon-tray-beta.png' : 'icon-original-tray-beta.png');
-  return path.join(__dirname, customDesign ? 'icon-tray.png' : 'icon-original-tray.png');
+  const modern = designStyle !== 'classic';
+  if (isBeta) return path.join(__dirname, modern ? 'icon-tray-beta.png' : 'icon-original-tray-beta.png');
+  return path.join(__dirname, modern ? 'icon-tray.png' : 'icon-original-tray.png');
 }
 
 const _iconDataUrlCache = {};
@@ -1727,7 +1739,7 @@ let _tabBarCache = '';
 let _tabBarKey = '';
 
 function getTabBarHTML() {
-  const key = `${currentThemeMode()}:${customDesign}`;
+  const key = `${currentThemeMode()}:${designStyle}`;
   if (key === _tabBarKey && _tabBarCache) return _tabBarCache;
   _tabBarKey = key;
   const th = theme();
@@ -1824,7 +1836,7 @@ body{background:var(--bg);font:500 12px/1 -apple-system,BlinkMacSystemFont,'Sego
 </div>
 <div id="tabs"></div>
 <div class="controls">
-  <div class="design-pill" id="design-toggle" title="${t('Design wechseln', 'Toggle design', 'Changer de design', 'Cambia design')}">${customDesign ? 'Modern' : 'Classic'}</div>
+  <div class="design-pill" id="design-toggle" title="${t('Design wechseln', 'Toggle design', 'Changer de design', 'Cambia design')}">${DESIGN_STYLE_LABEL[designStyle]}</div>
   <div class="ctrl-btn" id="export-btn" title="${t('Konversation als Markdown exportieren', 'Export conversation as Markdown', 'Exporter la conversation en Markdown', 'Esporta la conversazione in Markdown')}">
     <svg viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
   </div>
@@ -1880,8 +1892,9 @@ window.tabAPI.onWindowStateUpdate(s=>{
 });
 window.tabAPI.requestWindowState();
 
-window.tabAPI.onDesignUpdate(custom=>{
-  document.getElementById('design-toggle').textContent=custom?'Modern':'Classic';
+const STYLE_LABEL=${JSON.stringify(DESIGN_STYLE_LABEL)};
+window.tabAPI.onDesignUpdate(style=>{
+  document.getElementById('design-toggle').textContent=STYLE_LABEL[style]||style;
 });
 
 window.tabAPI.onTabsUpdate(data=>{
@@ -1987,7 +2000,7 @@ function sendThemeUpdate() {
 }
 
 function sendDesignUpdate() {
-  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('design-update', customDesign);
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('design-update', designStyle);
 }
 
 // Script-Injection
@@ -2015,8 +2028,8 @@ function themeState() {
   // das Neon-Paar ran. mid faerbt claude.ais eigenes Orange um und muss zum Theme passen.
   return {
     mode: currentThemeMode(),
-    design: customDesign ? 'modern' : 'classic',
-    accent: { from: ac.neonFrom || ac.from, to: ac.neonTo || ac.to, mid: ac.neonFrom || '#E8524F' }
+    design: designStyle === 'classic' ? 'classic' : 'modern',
+    accent: { from: ac.neonFrom || ac.from, to: ac.neonTo || ac.to, mid: ac.neonFrom || '#E8524F', brandHsl: ac.brandHsl || null }
   };
 }
 function themeScript() {
@@ -2529,8 +2542,9 @@ function setThemeMode(mode) {
 
 // Design-Toggle
 
-function toggleDesign() {
-  customDesign = !customDesign;
+function setDesignStyle(style) {
+  if (!DESIGN_STYLES.includes(style) || style === designStyle) return;
+  designStyle = style;
 
   if (mainWindow && !mainWindow.isDestroyed()) mainWindow.setIcon(icon());
   if (tray) {
@@ -4376,7 +4390,7 @@ function getDesignHTML() {
   const ac = accent();
   // Themes ohne eigenen Akzent zeigen in der Vorschau den Ton des gewaehlten Stils. NICHT
   // accent(): das liefert im Mitternachtsblau-Modus dessen Blau und faerbte alle vier Karten.
-  const styleAccent = customDesign ? ACCENT.custom : ACCENT.original;
+  const styleAccent = ACCENT[designStyle] || ACCENT.modern;
   const mode = currentThemeMode();
   const i18n = {
     title: 'Design',
@@ -4384,10 +4398,10 @@ function getDesignHTML() {
     secTheme: t('Farbthema', 'Colour theme', 'Thème de couleur', 'Tema colore'),
     secStyle: t('Stil', 'Style', 'Style', 'Stile'),
     styleNote: t(
-      'Der Stil wechselt Akzentfarbe und Icon-Set. Mitternachtsblau bringt seinen eigenen Akzent mit, dort wechselt nur das Icon.',
-      'The style switches accent colour and icon set. Midnight Blue brings its own accent, there only the icon changes.',
-      'Le style change la couleur d’accent et le jeu d’icônes. Bleu nuit apporte son propre accent, seule l’icône change alors.',
-      'Lo stile cambia colore d’accento e set di icone. Blu notte porta il proprio accento, lì cambia solo l’icona.'
+      'Der Stil setzt die Akzentfarbe: Sende-Pfeil, Composer-Rand, Muster und Highlights. Jeder Stil laesst sich mit jedem Farbthema kombinieren.',
+      'The style sets the accent colour: send arrow, composer border, pattern and highlights. Every style combines with every colour theme.',
+      'Le style définit la couleur d’accent : flèche d’envoi, bordure du composeur, motif et surbrillances. Chaque style se combine avec chaque thème.',
+      'Lo stile imposta il colore d’accento: freccia di invio, bordo del composer, motivo ed evidenziazioni. Ogni stile si combina con ogni tema.'
     ),
     close: t('Schließen', 'Close', 'Fermer', 'Chiudi')
   };
@@ -4410,19 +4424,20 @@ function getDesignHTML() {
     }
   };
   const STYLE_LABELS = {
-    modern: { name: 'Modern', hint: t('Wärmerer Akzent, neues Icon.', 'Warmer accent, new icon.', 'Accent plus chaud, nouvelle icône.', 'Accento più caldo, icona nuova.') },
-    classic: { name: 'Classic', hint: t('Original-Akzent und -Icon.', 'Original accent and icon.', 'Accent et icône d’origine.', 'Accento e icona originali.') }
+    modern: { name: 'Modern', hint: t('Warmes Orange.', 'Warm orange.', 'Orange chaud.', 'Arancione caldo.') },
+    classic: { name: 'Classic', hint: t('Anthropics Original-Ton, eigenes Icon.', 'Anthropic’s original tone, its own icon.', 'Le ton d’origine d’Anthropic, icône propre.', 'Il tono originale di Anthropic, icona propria.') },
+    neon: { name: 'Neon', hint: t('Blau, auch in den anderen Themes.', 'Blue, in the other themes too.', 'Bleu, aussi dans les autres thèmes.', 'Blu, anche negli altri temi.') }
   };
 
   const card = (m) => {
-    const p = THEME[m], s = PREVIEW_SURFACE[m], a = ACCENT[m] || styleAccent;
+    const p = THEME[m], s = PREVIEW_SURFACE[m], a = styleAccent;
     const vars = [
       `--p:${s.page}`, `--s:${s.card}`, `--bar:${p.bg}`, `--bara:${p.bgActive}`,
       `--l:${p.border}`, `--tt:${p.text}`, `--ta:${p.textActive}`,
       `--cf:${a.neonFrom || a.from}`, `--ct:${a.neonTo || a.to}`
     ].join(';');
     const chrome = JSON.stringify({ bg: p.bg, bgHover: p.bgHover, bgActive: p.bgActive, text: p.text, textActive: p.textActive, border: p.border, frameHi: p.frameHi, frameLo: p.frameLo, from: a.from, to: a.to });
-    return `<button class="card" data-mode="${m}" data-chrome='${chrome}' data-own="${ACCENT[m] ? 1 : 0}" aria-pressed="${m === mode}">
+    return `<button class="card" data-mode="${m}" data-chrome='${chrome}' aria-pressed="${m === mode}">
   <span class="prev" style="${vars}">
     <span class="prev-bar"><i class="tab"></i><i class="tab dim"></i></span>
     <span class="prev-body">
@@ -4436,8 +4451,8 @@ function getDesignHTML() {
   };
 
   const styleCard = (key) => {
-    const a = key === 'modern' ? ACCENT.custom : ACCENT.original;
-    return `<button class="style-card" data-design="${key === 'modern'}" data-from="${a.from}" data-to="${a.to}" aria-pressed="${(key === 'modern') === customDesign}">
+    const a = ACCENT[key];
+    return `<button class="style-card" data-design="${key}" data-from="${a.from}" data-to="${a.to}" aria-pressed="${key === designStyle}">
   <span class="swatch" style="background:linear-gradient(135deg,${a.from},${a.to})"></span>
   <span class="style-text"><span class="card-name">${STYLE_LABELS[key].name}<svg class="tick" viewBox="0 0 16 16"><path d="M3 8.5l3.2 3.2L13 5" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
   <span class="card-hint">${STYLE_LABELS[key].hint}</span></span>
@@ -4463,6 +4478,7 @@ h1{font-size:16px;margin:0 0 2px;font-weight:600}
 .section{margin-bottom:18px}
 .section h2{font-size:11px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;color:var(--tt);margin:0 0 10px}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.grid3{grid-template-columns:1fr 1fr 1fr}
 .card,.style-card{font-family:inherit;text-align:left;cursor:pointer;padding:8px;border-radius:10px;
   background:var(--bgh);border:1.5px solid var(--bd);color:var(--ta);
   transition:border-color .15s ease,background .15s ease}
@@ -4488,8 +4504,8 @@ h1{font-size:16px;margin:0 0 2px;font-weight:600}
 .prev-comp{margin-top:auto;margin-bottom:6px;height:20px;border-radius:5px;background:var(--s);
   border:1.5px solid transparent;background-image:linear-gradient(var(--s),var(--s)),linear-gradient(135deg,var(--cf),var(--ct));
   background-origin:border-box;background-clip:padding-box,border-box;display:block}
-.style-card{display:flex;align-items:center;gap:9px}
-.swatch{width:26px;height:26px;flex:0 0 26px;border-radius:7px;display:block}
+.style-card{display:flex;align-items:center;gap:8px;min-width:0}
+.swatch{width:22px;height:22px;flex:0 0 22px;border-radius:6px;display:block}
 .style-text{min-width:0}
 .note{color:var(--tt);font-size:11px;line-height:1.5;margin-top:8px}
 .actions{padding:12px 22px;border-top:1px solid var(--bd);display:flex;justify-content:flex-end}
@@ -4515,7 +4531,7 @@ ${customTitlebarHTML('Claude – Design')}
   </div>
   <div class="section">
     <h2>${i18n.secStyle}</h2>
-    <div class="grid">${styleCard('modern')}${styleCard('classic')}</div>
+    <div class="grid grid3">${styleCard('modern')}${styleCard('classic')}${styleCard('neon')}</div>
     <div class="note">${i18n.styleNote}</div>
   </div>
 </div>
@@ -4541,18 +4557,15 @@ for(const b of cards)b.addEventListener('click',()=>{
 for(const b of styles)b.addEventListener('click',()=>{
   if(b.getAttribute('aria-pressed')==='true')return;
   pick(styles,b);
-  // Vorschau nachziehen. Themes mit eigenem Akzent (data-own) behalten ihren, alle
-  // anderen zeigen den Ton des gewaehlten Stils.
+  // Vorschau nachziehen: der Stil setzt den Akzent in jedem Farbthema.
   const f=b.dataset.from,tc=b.dataset.to;
   for(const c of cards){
-    if(c.dataset.own==='1')continue;
     const pv=c.querySelector('.prev');
     pv.style.setProperty('--cf',f);pv.style.setProperty('--ct',tc);
     const ch=JSON.parse(c.dataset.chrome);ch.from=f;ch.to=tc;c.dataset.chrome=JSON.stringify(ch);
   }
-  const sel=cards.find(c=>c.getAttribute('aria-pressed')==='true');
-  if(sel&&sel.dataset.own!=='1'){r.setProperty('--ac-from',f);r.setProperty('--ac-to',tc);}
-  window.designAPI.setDesign(b.dataset.design==='true');
+  r.setProperty('--ac-from',f);r.setProperty('--ac-to',tc);
+  window.designAPI.setDesign(b.dataset.design);
 });
 document.getElementById('done').addEventListener('click',()=>window.designAPI.close());
 document.getElementById('cd-titlebar-close').addEventListener('click',()=>window.designAPI.close());
@@ -5968,9 +5981,9 @@ ipcMain.on('design-set-mode', (event, mode) => {
   if (!designWindow || designWindow.isDestroyed() || event.sender !== designWindow.webContents) return;
   setThemeMode(mode);
 });
-ipcMain.on('design-set-design', (event, custom) => {
+ipcMain.on('design-set-design', (event, style) => {
   if (!designWindow || designWindow.isDestroyed() || event.sender !== designWindow.webContents) return;
-  if (custom !== customDesign) toggleDesign();
+  setDesignStyle(style);
 });
 ipcMain.on('design-close', (event) => {
   if (designWindow && !designWindow.isDestroyed() && event.sender === designWindow.webContents) designWindow.close();
@@ -6080,7 +6093,11 @@ ipcMain.on('tab-switch', (_, i) => {
 ipcMain.on('tab-close', (_, i) => {
   if (typeof i === 'number' && Number.isInteger(i) && i >= 0 && i < tabs.length) closeTab(i);
 });
-ipcMain.on('design-toggle', toggleDesign);
+// Die (ausgeblendete) Pille in der Tab-Leiste schaltet weiter im Kreis.
+ipcMain.on('design-toggle', () => {
+  const i = DESIGN_STYLES.indexOf(designStyle);
+  setDesignStyle(DESIGN_STYLES[(i + 1) % DESIGN_STYLES.length]);
+});
 ipcMain.on('bug-report', showBugReportDialog);
 ipcMain.on('export-conversation', () => exportActiveConversation());
 ipcMain.on('app-menu-popup', (_event, x, y) => {

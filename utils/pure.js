@@ -76,4 +76,16 @@ function resolveThemeMode(saved) {
   return 'dark';
 }
 
-module.exports = { compareVersions, safeJson, isClaudeAiOrigin, isPaymentFrameDomain, validateAccelerator, HOTKEY_RE, THEME_MODES, resolveThemeMode };
+const DESIGN_STYLES = ['modern', 'classic', 'neon'];
+
+// Wie resolveThemeMode, nur fuer den Stil: bis 1.4.15 stand er als Boolean customDesign im
+// State (true = Modern, false = Classic), seitdem als designStyle.
+function resolveDesignStyle(saved) {
+  const s = saved || {};
+  if (DESIGN_STYLES.includes(s.designStyle)) return s.designStyle;
+  if (s.designStyle !== undefined) return 'modern';
+  if (s.customDesign === false) return 'classic';
+  return 'modern';
+}
+
+module.exports = { compareVersions, safeJson, isClaudeAiOrigin, isPaymentFrameDomain, validateAccelerator, HOTKEY_RE, THEME_MODES, resolveThemeMode, DESIGN_STYLES, resolveDesignStyle };

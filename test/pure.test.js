@@ -8,7 +8,8 @@ const {
   isClaudeAiOrigin,
   isPaymentFrameDomain,
   validateAccelerator,
-  resolveThemeMode
+  resolveThemeMode,
+  resolveDesignStyle
 } = require('../utils/pure');
 
 test('compareVersions: gleiche Version', () => {
@@ -159,4 +160,20 @@ test('resolveThemeMode: leerer/kaputter State faellt auf dark', () => {
   assert.equal(resolveThemeMode({}), 'dark');
   assert.equal(resolveThemeMode(null), 'dark');
   assert.equal(resolveThemeMode({ themeMode: 'neon' }), 'dark');
+});
+
+test('resolveDesignStyle: neues Feld gewinnt', () => {
+  assert.equal(resolveDesignStyle({ designStyle: 'neon', customDesign: false }), 'neon');
+  assert.equal(resolveDesignStyle({ designStyle: 'classic' }), 'classic');
+});
+
+test('resolveDesignStyle: alter Boolean wird migriert', () => {
+  assert.equal(resolveDesignStyle({ customDesign: false }), 'classic');
+  assert.equal(resolveDesignStyle({ customDesign: true }), 'modern');
+});
+
+test('resolveDesignStyle: leerer/kaputter State faellt auf modern', () => {
+  assert.equal(resolveDesignStyle({}), 'modern');
+  assert.equal(resolveDesignStyle(null), 'modern');
+  assert.equal(resolveDesignStyle({ designStyle: 'pink' }), 'modern');
 });
