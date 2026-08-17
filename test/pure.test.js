@@ -7,7 +7,8 @@ const {
   safeJson,
   isClaudeAiOrigin,
   isPaymentFrameDomain,
-  validateAccelerator
+  validateAccelerator,
+  resolveThemeMode
 } = require('../utils/pure');
 
 test('compareVersions: gleiche Version', () => {
@@ -141,4 +142,21 @@ test('validateAccelerator: Junk abgelehnt', () => {
   assert.equal(validateAccelerator('not a hotkey'), null);
   assert.equal(validateAccelerator('CommandOrControl+'), null);
   assert.equal(validateAccelerator('+E'), null);
+});
+
+test('resolveThemeMode: neues Feld gewinnt', () => {
+  assert.equal(resolveThemeMode({ themeMode: 'midnight', isDarkMode: true, oledMode: false }), 'midnight');
+  assert.equal(resolveThemeMode({ themeMode: 'light' }), 'light');
+});
+
+test('resolveThemeMode: Alt-State ohne themeMode wird migriert', () => {
+  assert.equal(resolveThemeMode({ isDarkMode: true, oledMode: true }), 'oled');
+  assert.equal(resolveThemeMode({ isDarkMode: false, oledMode: false }), 'light');
+  assert.equal(resolveThemeMode({ isDarkMode: true, oledMode: false }), 'dark');
+});
+
+test('resolveThemeMode: leerer/kaputter State faellt auf dark', () => {
+  assert.equal(resolveThemeMode({}), 'dark');
+  assert.equal(resolveThemeMode(null), 'dark');
+  assert.equal(resolveThemeMode({ themeMode: 'neon' }), 'dark');
 });

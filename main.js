@@ -4,7 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 const { version } = require('./package.json');
-const { compareVersions, safeJson, isClaudeAiOrigin, isPaymentFrameDomain, validateAccelerator } = require('./utils/pure');
+const { compareVersions, safeJson, isClaudeAiOrigin, isPaymentFrameDomain, validateAccelerator, THEME_MODES, resolveThemeMode } = require('./utils/pure');
 
 // Electron "Object has been destroyed" Error-Dialog abfangen
 const _origErrorBox = dialog.showErrorBox;
@@ -91,8 +91,7 @@ let mainWindow = null;
 let tabs = [];
 let activeTabIndex = 0;
 let isOnline = true;
-let isDarkMode = true;
-let oledMode = false;
+let themeMode = 'dark';        // aus THEME_MODES, Reihenfolge dort ist der Cycle der Tab-Leiste
 let oledIntroSeen = false;
 let customDesign = true;
 
@@ -415,10 +414,12 @@ let dismissedNotificationIds = [];                // persistiert in windowState
 const STATE_SCHEMA = [
   { key: 'customDesign', optional: true, get: () => customDesign,
     set: v => { customDesign = v === true; } },
-  { key: 'isDarkMode', optional: true, get: () => isDarkMode,
-    set: v => { isDarkMode = v === true; } },
-  { key: 'oledMode', optional: true, get: () => oledMode,
-    set: v => { oledMode = v === true; } },
+  // Lesen laeuft ueber resolveThemeMode (kennt auch den Alt-State), set ist darum No-op.
+  { key: 'themeMode', get: () => themeMode, set: () => {} },
+  // Legacy: 1.4.15 und aelter kennen nur diese beiden Booleans. Weiter mitschreiben, damit
+  // ein Downgrade nicht im falschen Modus startet (midnight faellt dort auf oled zurueck).
+  { key: 'isDarkMode', get: () => themeMode !== 'light', set: () => {} },
+  { key: 'oledMode', get: () => themeMode === 'oled' || themeMode === 'midnight', set: () => {} },
   { key: 'oledIntroSeen', optional: true, get: () => oledIntroSeen,
     set: v => { oledIntroSeen = v === true; } },
   { key: 'minimizeOnClose', get: () => minimizeOnClose,
@@ -1525,12 +1526,14 @@ function loadWindowState() {
     f.set(windowState[f.key]);
   }
 
+  themeMode = resolveThemeMode(windowState);
+
   // Einmalige Intro-Aktivierung: OLED als Default beim ersten Start mit dem
   // OLED-Release. Bei bestehenden Nutzern bleibt customDesign (Modern/Classic)
-  // wie vorher, nur oledMode wird an. Sobald oledIntroSeen=true persistiert ist,
-  // wird oledMode beim Folge-Start aus dem State gelesen.
+  // wie vorher, nur der Modus wird auf OLED gesetzt. Sobald oledIntroSeen=true
+  // persistiert ist, wird der Modus beim Folge-Start aus dem State gelesen.
   if (!oledIntroSeen) {
-    oledMode = true;
+    themeMode = 'oled';
     oledIntroSeen = true;
     // Sofort persistieren, damit ein Hard-Crash vor dem ersten Save den User
     // nicht beim Folge-Start nochmal zwangsweise in OLED schickt.
@@ -1657,8 +1660,7 @@ const isBeta = process.env.CLAUDE_BETA === '1'
             || (process.env.APPIMAGE || '').toLowerCase().includes('beta');
 
 function currentThemeMode() {
-  if (!isDarkMode) return 'light';
-  return oledMode ? 'oled' : 'dark';
+  return THEME[themeMode] ? themeMode : 'dark';
 }
 function theme()  { return THEME[currentThemeMode()]; }
 // Sub-Window-Theme: identisch mit theme(). Im OLED-Mode kommt die zusaetzliche
@@ -2453,6 +2455,35 @@ function updateTitle() {
   if (mainWindow.getTitle() !== title) mainWindow.setTitle(title);
 }
 
+// Theme-Wechsel
+
+// Einziger Weg, den Farbmodus zu setzen: Tab-Leisten-Cycle und Design-Fenster laufen beide
+// hier durch. Der Pool wird geleert, weil die vorgeladenen Views ihre Hintergrundfarbe beim
+// Erzeugen bekommen und sonst im alten Modus stehenbleiben.
+function setThemeMode(mode) {
+  if (!THEME_MODES.includes(mode) || mode === currentThemeMode()) return;
+  themeMode = mode;
+  drainPool();
+  applyThemeToAllViews();
+
+  const bg = theme().bg;
+  const active = tabs[activeTabIndex]?.view;
+  if (active && alive(active)) active.setBackgroundColor(bg);
+
+  // claude.ai bleibt immer im dark-Modus; White entsteht per GPU-Invert im injizierten Theme
+  // (data-cd-theme="light" -> filter:invert am Wurzelknoten, ~6ms statt ~480ms fuer claude.ais
+  // prefers-color-scheme-Palettenwechsel). Deshalb kein Farbschema-Flip mehr.
+  nativeTheme.themeSource = 'dark';
+  sendThemeUpdate();
+
+  for (const tab of tabs) {
+    if (tab.view !== active && alive(tab.view)) tab.view.setBackgroundColor(bg);
+  }
+
+  setTimeout(fillPool, 3000);
+  saveWindowState();
+}
+
 // Design-Toggle
 
 function toggleDesign() {
@@ -2642,7 +2673,7 @@ function showBugReportDialog() {
   const s = { ...bugReportStrings.en, ...(bugReportStrings[sysLang] || {}) };
   const th = subTheme();
   const ac = accent();
-  const dark = isDarkMode;
+  const dark = currentThemeMode() !== 'light';
   const bg = th.bg;
   const fg = th.textActive;
   const sub = th.text;
@@ -4288,7 +4319,7 @@ function getAppMenuItems() {
 function getAppMenuHTML() {
   const th = subTheme();
   const ac = accent();
-  const dark = isDarkMode;
+  const dark = currentThemeMode() !== 'light';
   const items = getAppMenuItems();
   const ICONS = {
     plus:    '<path d="M12 5v14M5 12h14"/>',
@@ -5777,29 +5808,8 @@ ipcMain.on('appmenu-close', (event) => {
   }
 });
 ipcMain.on('theme-toggle', () => {
-  // Cycle: light -> dark -> oled -> light
-  if (!isDarkMode) { isDarkMode = true; oledMode = false; }
-  else if (!oledMode) { oledMode = true; }
-  else { isDarkMode = false; oledMode = false; }
-  drainPool();
-  applyThemeToAllViews();
-
-  const bg = theme().bg;
-  const active = tabs[activeTabIndex]?.view;
-  if (active && alive(active)) active.setBackgroundColor(bg);
-
-  // claude.ai bleibt immer im dark-Modus; White entsteht per GPU-Invert im injizierten Theme
-  // (data-cd-theme="light" -> filter:invert am Wurzelknoten, ~6ms statt ~480ms fuer claude.ais
-  // prefers-color-scheme-Palettenwechsel). Deshalb kein Farbschema-Flip mehr.
-  nativeTheme.themeSource = 'dark';
-  sendThemeUpdate();
-
-  for (const tab of tabs) {
-    if (tab.view !== active && alive(tab.view)) tab.view.setBackgroundColor(bg);
-  }
-
-  setTimeout(fillPool, 3000);
-  saveWindowState();
+  const i = THEME_MODES.indexOf(currentThemeMode());
+  setThemeMode(THEME_MODES[(i + 1) % THEME_MODES.length]);
 });
 
 // Fenster erstellen

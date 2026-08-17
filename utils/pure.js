@@ -62,4 +62,18 @@ function validateAccelerator(accel) {
   return HOTKEY_RE.test(accel) ? accel : null;
 }
 
-module.exports = { compareVersions, safeJson, isClaudeAiOrigin, isPaymentFrameDomain, validateAccelerator, HOTKEY_RE };
+const THEME_MODES = ['light', 'dark', 'oled', 'midnight'];
+
+// Loest den Farbmodus aus einem gespeicherten window-state.json auf. Bis 1.4.15 stand er
+// dort in zwei Booleans, seitdem in themeMode. Ohne diese Ableitung startet jede bestehende
+// Installation nach dem Update in Dark statt im zuletzt gewaehlten Modus.
+function resolveThemeMode(saved) {
+  const s = saved || {};
+  if (THEME_MODES.includes(s.themeMode)) return s.themeMode;
+  if (s.themeMode !== undefined) return 'dark';   // unbekannter Wert, z.B. aus einer neueren Version
+  if (s.oledMode === true) return 'oled';
+  if (s.isDarkMode === false) return 'light';
+  return 'dark';
+}
+
+module.exports = { compareVersions, safeJson, isClaudeAiOrigin, isPaymentFrameDomain, validateAccelerator, HOTKEY_RE, THEME_MODES, resolveThemeMode };
