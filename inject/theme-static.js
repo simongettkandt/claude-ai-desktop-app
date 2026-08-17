@@ -22,6 +22,40 @@
     return 'url("data:image/svg+xml,' + encodeURIComponent(svg) + '")';
   }
 
+  // Pendant zum Sternenfeld, fuer Mitternachtsblau: verteilte Wellen-Glyphen statt
+  // durchgezogener Linien. Eine Linie ueber die volle Breite reisst sichtbar ab, sobald
+  // claude.ai irgendwo eine deckende Flaeche darueberlegt; ein einzelnes Motiv kann nicht
+  // "kaputt" aussehen. Abstand zum Kachelrand, damit beim Kacheln nichts angeschnitten wird.
+  // Wellenkamm mit eingerolltem Scheitel, wie das klassische Wellenzeichen: flacher Anstieg
+  // von der Grundlinie, dann gut eine Umdrehung Spirale nach innen. Die Spirale wird als
+  // Polylinie gerechnet statt von Hand als Bezier gelegt, sonst stimmen die Windungen nicht.
+  function crestPath() {
+    var cx = 0.20, cy = -0.14, r = 0.38, a = -Math.PI / 2;
+    var d = 'M-1.25,0.44 C-0.70,0.54 -0.60,-0.40 ' + cx.toFixed(2) + ',' + (cy - r).toFixed(2);
+    for (var i = 0; i < 22; i++) {
+      a -= 0.42;
+      r *= 0.90;
+      d += ' L' + (cx + r * Math.cos(a)).toFixed(3) + ',' + (cy + r * Math.sin(a)).toFixed(3);
+    }
+    return d;
+  }
+
+  function waveUse(x, y, sc, op) {
+    return "<use href='#w' transform='translate(" + x + "," + y + ") scale(" + sc + ")' opacity='" + op + "'/>";
+  }
+  function wavesBg(st) {
+    var ac = (st && st.accent) || {}, f = ac.from || '#2F7FFF', t = ac.to || '#00E5FF';
+    var svg = "<svg xmlns='http://www.w3.org/2000/svg' width='620' height='620' viewBox='0 0 620 620'>"
+      + "<defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='" + f + "'/><stop offset='1' stop-color='" + t + "'/></linearGradient>"
+      + "<path id='w' d='" + crestPath() + "' fill='none' stroke-width='0.13' stroke-linecap='round' stroke-linejoin='round'/></defs>"
+      + "<g stroke='url(#g)' fill='none'>"
+      + waveUse(120, 130, 26, .24) + waveUse(430, 95, 17, .16) + waveUse(515, 370, 23, .20)
+      + waveUse(215, 470, 15, .14) + waveUse(330, 265, 20, .18) + waveUse(95, 335, 13, .12)
+      + waveUse(545, 545, 14, .13)
+      + "</g></svg>";
+    return 'url("data:image/svg+xml,' + encodeURIComponent(svg) + '")';
+  }
+
   function buildStaticCSS(st) {
     var BG = '#050306', BG_HI = '#120f12';
     // OLED: Flaechen liegen alle unter 1.2:1 Kontrast -> auf near-black crush unsichtbar.
@@ -37,6 +71,7 @@
     var MBG = '#070c18', MBG_HI = '#0d1526', MBG_TOP = '#151f36';
     var M_EDGE = 'rgba(47,127,255,0.20)', M_HAIR = 'rgba(138,154,181,0.20)', M_FOCUS = 'rgba(0,229,255,0.55)';
     var M = 'html[data-cd-theme="midnight"][data-cd-surface="dark"]';
+    var WAVES = wavesBg(st);
 
     // [class*="X"] matcht auch Tailwinds Opacity-Modifier "X/NN" (z.B. eine helle 5%-Toenung
     // fuer einen Preis-Chip), die sonst faelschlich volldeckend geschwaerzt wird und ihren
@@ -104,7 +139,10 @@
       // ebenfalls dicht beieinander (unter 1.5:1), Trennung laeuft darum wie dort ueber
       // Hairlines, hier in einem kuehlen Blau statt dem Rot-Ton.
       M + '{background-color:' + MBG + ' !important}',
-      M + ' body{background-color:' + MBG + ' !important;background-image:none !important}',
+      // Wie beim Sternenfeld kein background-attachment:fixed, das kostet den Compositor-Pfad
+      // und macht Scrollen und Streamen zaeh.
+      M + ' body{background-color:' + MBG + ' !important;background-image:' + WAVES + ' !important;background-size:620px 620px}',
+      M + '[data-cd-modal] body{background-image:none !important}',
       M + ' #__next,' + M + ' #root,' + M + ' main,' + M + ' [role="main"]{background-color:transparent !important;background-image:none !important}',
       M + ' nav,' + M + ' aside,' + M + ' header,' + M + ' [class*="sidebar" i],' + M + ' [class*="Sidebar"],' + M + ' [class*="topbar" i],' + M + ' [class*="TopBar"]{background-color:' + MBG + ' !important;background-image:none !important}',
       M + ' nav,' + M + ' aside,' + M + ' [class*="sidebar" i],' + M + ' [class*="Sidebar"]{border-right:1px solid ' + M_HAIR + ' !important}',
@@ -116,7 +154,7 @@
       safeBg(M, ['bg-black', 'bg-neutral-900', 'bg-neutral-950', 'bg-zinc-900', 'bg-zinc-950', 'bg-gray-900', 'bg-gray-950', 'bg-stone-900', 'bg-stone-950', 'bg-slate-900', 'bg-slate-950'], MBG),
       // Das Design-Feature bringt eigene Controls mit fest verdrahtetem Grau mit (gemessen
       // rgb(107,107,107) am Auswahlfeld), die keiner der Surface-Tokens erwischt.
-      M + ' .om-dc-select,' + M + ' [class*="om-dc-select"]{background-color:' + MBG_TOP + ' !important}',
+      M + ' [class*="om-dc-select"],' + M + ' [class*="om-tray-composer-shell"]{background-color:' + MBG_HI + ' !important}',
       M + ' [class*="from-bg-"],' + M + ' [class*="to-bg-"],' + M + ' [class*="via-bg-"]{background-image:none !important}',
       // claude.ai legt eine dekorative Vollbild-Flaeche ueber die Seite (gemessen: inset-0,
       // 1438x704). Von den Surface-Tokens oben wird sie deckend eingefaerbt und schneidet die
@@ -124,6 +162,10 @@
       // sind und deckend bleiben muessen. Steht nach safeBg, sonst gewinnt die Reihenfolge nicht.
       M + ' [class*="pointer-events-none"][class*="inset-0"]{background-color:transparent !important;background-image:none !important}',
       M + ' header[class*="bg-"]{background-color:' + MBG + ' !important;background-image:none !important}',
+      // Scrims faden den Inhalt in die Seitenfarbe. Ueber einem Muster koennen sie das nicht
+      // leisten: als Verlauf in der Basisfarbe schneiden sie die Wellen sichtbar durch. Hier
+      // also ganz weg, statt claude.ais Grau (das als Balken stehenbleibt) nachzumalen.
+      M + ' [class*="top-scrim"],' + M + ' [class*="bottom-scrim"]{background-image:none !important}',
       M + ' nav a,' + M + ' nav button,' + M + ' aside a,' + M + ' aside button,' + M + ' [class*="sidebar" i] a,' + M + ' [class*="sidebar" i] button,' + M + ' [class*="Sidebar"] a,' + M + ' [class*="Sidebar"] button{background-color:transparent !important;border-color:transparent !important;box-shadow:none !important}',
       M + ' nav a:hover,' + M + ' nav button:hover,' + M + ' aside a:hover,' + M + ' aside button:hover,' + M + ' [class*="sidebar" i] a:hover,' + M + ' [class*="sidebar" i] button:hover{background-color:' + MBG_HI + ' !important}',
       M + ' nav [aria-current="page"],' + M + ' nav [data-state="active"],' + M + ' nav [aria-selected="true"],' + M + ' aside [aria-current="page"],' + M + ' aside [data-state="active"],' + M + ' aside [aria-selected="true"]{background-color:' + MBG_TOP + ' !important}',
@@ -133,6 +175,11 @@
       M + ' input:focus,' + M + ' textarea:focus,' + M + ' [role="searchbox"]:focus,' + M + ' [role="combobox"]:focus{outline:1.5px solid ' + M_FOCUS + ' !important;outline-offset:2px !important}',
       M + ' .cd-composer{position:relative;border-color:transparent !important;overflow:visible !important;background-color:' + MBG + ' !important}',
       M + ' .cd-composer::before{content:"";position:absolute;inset:-2px;border-radius:var(--cd-composer-radius,14px);padding:2px;background:linear-gradient(135deg,var(--cd-accent-from),var(--cd-accent-to),var(--cd-accent-from),var(--cd-accent-to));background-size:300% 300%;animation:cdGradShift 6s ease-in-out infinite;-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);mask-composite:exclude;pointer-events:none;z-index:5}',
+      // Scrims sind die Verlaufsstreifen, die den Inhalt oben und unten in die Seitenfarbe
+      // faden. claude.ai haelt darin sein eigenes Grau (gemessen rgb(21,21,21)), das auf jedem
+      // eigenen Grund als Balken stehenbleibt, in OLED genauso wie in Mitternachtsblau.
+      O + ' [class*="top-scrim"]{background-image:linear-gradient(' + BG + ',rgba(0,0,0,0)) !important}',
+      O + ' [class*="bottom-scrim"]{background-image:linear-gradient(0deg,' + BG + ',rgba(0,0,0,0)) !important}',
       ''
     ].join('');
   }
