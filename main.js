@@ -1797,9 +1797,9 @@ body{background:var(--bg);font:500 12px/1 -apple-system,BlinkMacSystemFont,'Sego
 .ctrl-btn:hover{background:color-mix(in srgb,var(--ac-from) 12%,transparent);
   border-color:color-mix(in srgb,var(--ac-from) 35%,transparent);color:var(--ac-from);opacity:1}
 .ctrl-btn svg{width:16px;height:16px}
-/* Theme-Cycle ist ausgeblendet, seit das Design-Fenster die Auswahl uebernimmt. Button und
-   IPC bleiben verdrahtet: display:none entfernen holt ihn zurueck. */
-#theme-toggle{display:none}
+/* Theme-Cycle und Modern/Classic-Pille sind ausgeblendet, seit das Design-Fenster beides
+   uebernimmt. Buttons und IPC bleiben verdrahtet: display:none entfernen holt sie zurueck. */
+#theme-toggle,#design-toggle{display:none}
 #new-tab{background:linear-gradient(135deg,var(--ac-from),var(--ac-to));color:#fff;opacity:1;
   box-shadow:0 2px 8px color-mix(in srgb,var(--ac-from) 35%,transparent)}
 #new-tab:hover{background:linear-gradient(135deg,var(--ac-from),var(--ac-to));color:#fff;
