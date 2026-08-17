@@ -1647,12 +1647,18 @@ function looksLikeOAuthUrl(url) {
 const THEME = {
   dark:  { bg: '#262624', bgHover: '#333330', bgActive: '#3a3a37', text: '#9a9a96', textActive: '#e8e8e4', border: '#333330', frameHi: '#423d38', frameLo: '#2a2622' },
   light: { bg: '#f5f2ef', bgHover: '#ede9e4', bgActive: '#faf8f6', text: '#8a7e72', textActive: '#2a2420', border: '#e8e4de', frameHi: '#ddd6cc', frameLo: '#c8c1b6' },
-  oled:  { bg: '#050306', bgHover: '#121013', bgActive: '#1c181b', text: '#9a948f', textActive: '#e8e8e4', border: '#1a1719', frameHi: '#2c2429', frameLo: '#0c090b' }
+  oled:  { bg: '#050306', bgHover: '#121013', bgActive: '#1c181b', text: '#9a948f', textActive: '#e8e8e4', border: '#1a1719', frameHi: '#2c2429', frameLo: '#0c090b' },
+  midnight: { bg: '#060f24', bgHover: '#0e1c3f', bgActive: '#16295c', text: '#7d93b8', textActive: '#eaf1ff', border: '#142140', frameHi: '#2a4a8a', frameLo: '#040a1a' }
 };
 
 const ACCENT = {
   custom:   { from: '#F26A3F', to: '#E83B6E' },
-  original: { from: '#d4734c', to: '#d4734c' }
+  original: { from: '#d4734c', to: '#d4734c' },
+  // Nach Theme-Namen benannt = das Theme bringt seinen eigenen Akzent mit und schlaegt
+  // Modern/Classic (siehe accent()). Zwei Paare: from/to liegt unter weissem Buttontext
+  // (4.5:1 bzw. 6.9:1), neonFrom/neonTo ist reine Deko (Composer-Rand, Fokus-Ring) und
+  // wuerde als Buttonflaeche mit Weiss darauf auf 1.5:1 fallen.
+  midnight: { from: '#1B54BE', to: '#2A72E8', neonFrom: '#2F7FFF', neonTo: '#00E5FF' }
 };
 
 // Beta-Build erkennen — eigene Icons (BETA-Badge) zur visuellen Unterscheidung von Stable
@@ -1669,7 +1675,11 @@ function theme()  { return THEME[currentThemeMode()]; }
 function subTheme() {
   return theme();
 }
-function accent() { return customDesign ? ACCENT.custom : ACCENT.original; }
+function accent() {
+  // Themes mit eigenem Akzent gewinnen gegen Modern/Classic: der warme Original-Ton
+  // beisst sich sichtbar mit einer tiefblauen Flaeche.
+  return ACCENT[currentThemeMode()] || (customDesign ? ACCENT.custom : ACCENT.original);
+}
 function icon()   {
   if (isBeta) return path.join(__dirname, customDesign ? 'icon-beta.png' : 'icon-original-beta.png');
   return path.join(__dirname, customDesign ? 'icon.png' : 'icon-original.png');
@@ -1810,6 +1820,7 @@ body{background:var(--bg);font:500 12px/1 -apple-system,BlinkMacSystemFont,'Sego
     <svg id="theme-icon-dark" viewBox="0 0 24 24"${currentThemeMode() === 'dark' ? '' : ' style="display:none"'}><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
     <svg id="theme-icon-light" viewBox="0 0 24 24"${currentThemeMode() === 'light' ? '' : ' style="display:none"'}><circle cx="12" cy="12" r="5" stroke="currentColor" stroke-width="2" fill="none"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>
     <svg id="theme-icon-oled" viewBox="0 0 24 24"${currentThemeMode() === 'oled' ? '' : ' style="display:none"'}><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z" fill="currentColor"/></svg>
+    <svg id="theme-icon-midnight" viewBox="0 0 24 24"${currentThemeMode() === 'midnight' ? '' : ' style="display:none"'}><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z" fill="currentColor" opacity=".5"/><path d="M5.6 3l.75 2.05L8.4 5.8l-2.05.75L5.6 8.6l-.75-2.05L2.8 5.8l2.05-.75z" fill="currentColor"/></svg>
   </div>
   <div class="ctrl-btn" id="new-tab" title="${t('Neuer Tab', 'New Tab', 'Nouvel onglet', 'Nuova scheda')} (Ctrl+T)">
     <svg viewBox="0 0 16 16"><path d="M8 2v12M2 8h12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"/></svg>
@@ -1882,10 +1893,11 @@ window.tabAPI.onTabsUpdate(data=>{
 const THEME_VARS={
   light:['#f5f2ef','#ede9e4','#faf8f6','#8a7e72','#2a2420','#e8e4de','#ddd6cc','#c8c1b6'],
   dark: ['#262624','#333330','#3a3a37','#9a9a96','#e8e8e4','#333330','#423d38','#2a2622'],
-  oled: ['#050306','#121013','#1c181b','#9a948f','#e8e8e4','#1a1719','#2c2429','#0c090b']
+  oled: ['#050306','#121013','#1c181b','#9a948f','#e8e8e4','#1a1719','#2c2429','#0c090b'],
+  midnight:['#060f24','#0e1c3f','#16295c','#7d93b8','#eaf1ff','#142140','#2a4a8a','#040a1a']
 };
-window.tabAPI.onThemeUpdate(mode=>{
-  const m=(mode==='light'||mode==='oled')?mode:'dark';
+window.tabAPI.onThemeUpdate(u=>{
+  const m=THEME_VARS[u.mode]?u.mode:'dark';
   // Weicher Wechsel: bei echtem Moduswechsel (nicht beim ersten Aufruf) kurz eine
   // Farb-Transition einblenden, damit die Leiste mit dem Inhalt zusammen fadet statt
   // hart umzuspringen. Danach leeren, damit Hover etc. nicht dauerhaft mitanimieren.
@@ -1902,10 +1914,15 @@ window.tabAPI.onThemeUpdate(mode=>{
   r.setProperty('--bg',v[0]);r.setProperty('--bgh',v[1]);r.setProperty('--bga',v[2]);
   r.setProperty('--t',v[3]);r.setProperty('--ta',v[4]);r.setProperty('--bd',v[5]);
   r.setProperty('--frame-hi',v[6]);r.setProperty('--frame-lo',v[7]);
+  // Der Akzent kommt mit, weil er am Theme haengen kann (Mitternachtsblau bringt einen
+  // eigenen mit). Ohne das bliebe beim Moduswechsel der alte Ton in Plus-Button und Hover.
+  if(u.from)r.setProperty('--ac-from',u.from);
+  if(u.to)r.setProperty('--ac-to',u.to);
   document.body.style.background='';
-  document.getElementById('theme-icon-dark').style.display=m==='dark'?'':'none';
-  document.getElementById('theme-icon-light').style.display=m==='light'?'':'none';
-  document.getElementById('theme-icon-oled').style.display=m==='oled'?'':'none';
+  for(const k of Object.keys(THEME_VARS)){
+    const el=document.getElementById('theme-icon-'+k);
+    if(el)el.style.display=m===k?'':'none';
+  }
 });
 
 const notifBar=document.getElementById('notif-bar');
@@ -1946,7 +1963,9 @@ const sendTabsUpdate = throttle(() => {
 }, 100);
 
 function sendThemeUpdate() {
-  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('theme-update', currentThemeMode());
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  const ac = accent();
+  mainWindow.webContents.send('theme-update', { mode: currentThemeMode(), from: ac.from, to: ac.to });
 }
 
 function sendDesignUpdate() {
@@ -1973,8 +1992,14 @@ function verifyScript() {
 // Theme-State fuer den Controller (inject/theme.js): mode + design + accent.
 // mid (#E8524F) ist der Brand-Mittelton fuer das Orange->Brand-Recoloring (Modern).
 function themeState() {
-  const ac = customDesign ? ACCENT.custom : ACCENT.original;
-  return { mode: currentThemeMode(), design: customDesign ? 'modern' : 'classic', accent: { from: ac.from, to: ac.to, mid: '#E8524F' } };
+  const ac = accent();
+  // Auf der Seite ist der Akzent nur Deko (Composer-Rand, Fokus-Ring, Sterne), da darf
+  // das Neon-Paar ran. mid faerbt claude.ais eigenes Orange um und muss zum Theme passen.
+  return {
+    mode: currentThemeMode(),
+    design: customDesign ? 'modern' : 'classic',
+    accent: { from: ac.neonFrom || ac.from, to: ac.neonTo || ac.to, mid: ac.neonFrom || '#E8524F' }
+  };
 }
 function themeScript() {
   return 'window._cdTheme=' + JSON.stringify(themeState()) + ';' + THEME_SCRIPT;

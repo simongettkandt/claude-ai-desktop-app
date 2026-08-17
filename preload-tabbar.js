@@ -18,7 +18,7 @@ function once(channel, handler) {
 
 contextBridge.exposeInMainWorld('tabAPI', {
   onTabsUpdate: (cb) => once('tabs-update', (_, data) => cb(data)),
-  onThemeUpdate: (cb) => once('theme-update', (_, mode) => cb(mode)),
+  onThemeUpdate: (cb) => once('theme-update', (_, state) => cb(state)),
   onDesignUpdate: (cb) => once('design-update', (_, custom) => cb(custom)),
   onNotificationsUpdate: (cb) => once('notifications-update', (_, list) => cb(list)),
   newTab: () => ipcRenderer.send('tab-new'),
