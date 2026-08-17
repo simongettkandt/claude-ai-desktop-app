@@ -290,8 +290,19 @@
     if (fs) {
       if (!fs.classList.contains('cd-composer')) fs.classList.add('cd-composer');
       try {
-        var br = parseFloat(getComputedStyle(fs).borderRadius) || 12;
-        fs.style.setProperty('--cd-composer-radius', (br + 2) + 'px');
+        var br = parseFloat(getComputedStyle(fs).borderRadius) || 0;
+        // claude.ai legt die sichtbare Rundung auf ein inneres DIV, das Fieldset selbst hat
+        // 0 (gemessen: aussen 0px, innen 20px). Ohne diese Suche faellt der Ring auf den
+        // 12px-Default und sitzt sichtbar neben den Ecken der Eingabe.
+        if (!br) {
+          var kids = fs.querySelectorAll('*');
+          for (var i = 0; i < kids.length; i++) {
+            if (kids[i].offsetWidth < fs.offsetWidth - 4) continue;
+            var kb = parseFloat(getComputedStyle(kids[i]).borderRadius) || 0;
+            if (kb) { br = kb; break; }
+          }
+        }
+        fs.style.setProperty('--cd-composer-radius', ((br || 12) + 2) + 'px');
       } catch (e) {}
     }
   }
