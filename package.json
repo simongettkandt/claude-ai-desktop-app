@@ -1,7 +1,7 @@
 {
   "name": "claude-desktop",
   "version": "1.4.17",
-  "description": "Claude AI Native Desktop App für Linux",
+  "description": "Claude AI Native Desktop App f\u00fcr Linux",
   "main": "main.js",
   "license": "MIT",
   "homepage": "https://github.com/simonlinuxcraft/claude-ai-desktop-app",
@@ -39,7 +39,7 @@
       "icon": "icon.png",
       "category": "Development;Utility",
       "synopsis": "Claude AI Desktop Client",
-      "description": "Eine schnelle, native Desktop-App für Claude AI",
+      "description": "Eine schnelle, native Desktop-App f\u00fcr Claude AI",
       "maintainer": "Simon Gettkandt",
       "desktop": {
         "entry": {
@@ -103,5 +103,31 @@
   "devDependencies": {
     "electron": "^41.7.1",
     "electron-builder": "^26.15.2"
+  },
+  "overrides": {
+    "app-builder-lib": {
+      "js-yaml": "4.3.1"
+    },
+    "builder-util": {
+      "js-yaml": "4.3.1"
+    },
+    "dmg-builder": {
+      "js-yaml": "4.3.1"
+    },
+    "electron-builder": {
+      "js-yaml": "4.3.1"
+    },
+    "electron-builder-squirrel-windows": {
+      "js-yaml": "4.3.1"
+    },
+    "electron-publish": {
+      "js-yaml": "4.3.1"
+    },
+    "electron-updater": {
+      "js-yaml": "4.3.1"
+    },
+    "js-yaml": {
+      "js-yaml": "4.3.1"
+    }
   }
 }
