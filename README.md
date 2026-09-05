@@ -23,7 +23,7 @@
 
 ---
 
-> **v1.4.16** - Desktop for Claude. The app is renamed and points at Anthropic's official Linux app from the tab bar, the menu and What's New, so nobody has to find out elsewhere that it exists. It also gets out of that app's way: binary, `.desktop` filename and icon name no longer collide with their package, which previously let a style switch here recolour their menu icon. A Design window now shows every colour theme as a small mockup of the real window and page and applies the choice live; in packaged builds it was broken before this release because its preload script never made it into the bundle. Midnight Blue joins as a fourth colour theme, with deep blue surfaces and scattered wave crests as the counterpart to OLED's starfield, and Neon joins as a third accent style. Colour theme and style are separate axes now, freely combinable, and the style also sets claude.ai's own brand tone, so the send arrow stops being orange in every theme. Alongside: the ring around the input field follows the real corner radius instead of a default, grey bars on the Code and Design pages are gone, and in the light theme the design page no longer has a black lower half.
+> **v1.4.17** - Send Button Fix. The thank-you badge that 1.4.16 put in the lower right corner of the page sat on top of claude.ai's send button and swallowed the click. Measured in a 1438x704 window, it covered about three quarters of the button, along with dictation, voice input and the model picker. Since the composer is centred at a maximum width of 768, this happened at any window width below roughly 1444 pixels, so on every unmaximised window and every 1366px laptop, and never on a wide monitor, which is why it survived testing. Enter still sent, so only two people ran into it: one reported that responses would not load, the other that no message went out at all. The badge is removed rather than made click-through, so it cannot cover anything else later.
 
 ---
 
@@ -106,7 +106,7 @@ cat > ~/.local/share/applications/claude-desktop.desktop << EOF
 [Desktop Entry]
 Name=Desktop for Claude
 Comment=Unofficial desktop app for Claude AI
-Exec=/path/to/Claude-Desktop-1.4.16.AppImage --no-sandbox
+Exec=/path/to/Claude-Desktop-1.4.17.AppImage --no-sandbox
 Icon=/path/to/icon.png
 Type=Application
 Categories=Utility;

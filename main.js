@@ -79,7 +79,6 @@ const MAX_NOTIFICATIONS_VISIBLE = 1;                        // ein Banner gleich
 
 const NOTIFY_SCRIPT = fs.readFileSync(path.join(__dirname, 'inject', 'notify.js'), 'utf8');
 const VERIFY_SCRIPT = fs.readFileSync(path.join(__dirname, 'inject', 'verify-banner.js'), 'utf8');
-const THANKS_SCRIPT = fs.readFileSync(path.join(__dirname, 'inject', 'thanks-badge.js'), 'utf8');
 // theme-static.js zuerst: definiert window.cdThemeStatic, das theme.js nutzt. Dieselbe
 // Quelle liefert das statische Sheet auch fuer den document-start-Preload (buildStaticCSS unten).
 const THEME_STATIC_SRC = fs.readFileSync(path.join(__dirname, 'inject', 'theme-static.js'), 'utf8');
@@ -473,6 +472,23 @@ const RELEASE_NOTES_REVISIT = {
 };
 
 const RELEASE_NOTES = {
+  '1.4.17': [
+    {
+      icon: 'check',
+      title: {
+        de: 'Der Senden-Knopf war verdeckt',
+        en: 'The send button was covered',
+        fr: 'Le bouton d’envoi était masqué',
+        it: 'Il pulsante di invio era coperto'
+      },
+      text: {
+        de: 'Das Danke-Feld aus 1.4.16 lag unten rechts über dem Senden-Knopf und fing den Klick ab. Unterhalb von etwa 1444 Pixeln Fensterbreite verdeckte es rund drei Viertel des Knopfes, auf einem breiten Monitor gar nicht, deshalb ist es beim Testen nie aufgefallen. Gemeldet haben es zwei Leute, die nicht mehr senden konnten und keine Antwort mehr bekamen. Das Feld ist ganz entfernt.',
+        en: 'The thank-you box from 1.4.16 sat over the send button in the lower right corner and swallowed the click. Below roughly 1444 pixels of window width it covered about three quarters of the button, on a wide monitor not at all, which is why it never showed up in testing. Two people reported it after they could not send any more and got no answer back. The box is gone.',
+        fr: 'L’encadré de remerciement de la 1.4.16 se plaçait en bas à droite au-dessus du bouton d’envoi et absorbait le clic. En dessous d’environ 1444 pixels de largeur de fenêtre, il couvrait près des trois quarts du bouton, et pas du tout sur un écran large: le problème est donc passé inaperçu aux tests. Deux personnes l’ont signalé après ne plus pouvoir envoyer et ne plus recevoir de réponse. L’encadré est supprimé.',
+        it: 'Il riquadro di ringraziamento della 1.4.16 si sovrapponeva in basso a destra al pulsante di invio e ne assorbiva il clic. Sotto i 1444 pixel circa di larghezza della finestra copriva circa tre quarti del pulsante, su un monitor largo per niente: per questo nei test non era mai emerso. Lo hanno segnalato due persone che non riuscivano più a inviare e non ricevevano risposta. Il riquadro è stato rimosso.'
+      }
+    }
+  ],
   '1.4.16': [
     {
       // Steht bewusst an erster Stelle. Der Text nutzt HTML (slide-text wird als innerHTML
@@ -2121,19 +2137,6 @@ function verifyScript() {
   return VERIFY_SCRIPT.replace('__VERIFY_I18N__', JSON.stringify(i18n));
 }
 
-function thanksScript() {
-  const i18n = {
-    msg: t(
-      'Danke, dass du diese App benutzt. Sie wird nicht eingestellt und bekommt weiter Updates.',
-      'Thanks for using this app. It is not being discontinued and keeps getting updates.',
-      'Merci d’utiliser cette application. Elle n’est pas abandonnée et continue de recevoir des mises à jour.',
-      'Grazie per usare questa app. Non viene abbandonata e continua a ricevere aggiornamenti.'
-    ),
-    close: t('Schließen', 'Dismiss', 'Fermer', 'Chiudi')
-  };
-  return THANKS_SCRIPT.replace('__THANKS_I18N__', JSON.stringify(i18n));
-}
-
 // Theme-State fuer den Controller (inject/theme.js): mode + design + accent.
 // mid (#E8524F) ist der Brand-Mittelton fuer das Orange->Brand-Recoloring (Modern).
 function themeState() {
@@ -2171,7 +2174,6 @@ function injectScripts(wc) {
   if (!isAllowedDomain(wc.getURL())) return;
   wc.executeJavaScript(NOTIFY_SCRIPT).catch(() => {});
   wc.executeJavaScript(verifyScript()).catch(() => {});
-  wc.executeJavaScript(thanksScript()).catch(() => {});
   wc.executeJavaScript(themeScript()).catch(() => {});
 }
 

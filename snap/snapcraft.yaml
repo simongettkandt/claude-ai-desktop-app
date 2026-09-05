@@ -2,7 +2,7 @@ name: claude-ai-desktop
 # Der Store zeigt title statt name. Der Name bleibt, sonst verliert die Installbasis den
 # Update-Pfad; der angezeigte Titel verweist auf Claude statt sich so zu nennen.
 title: Desktop for Claude (Unofficial)
-version: '1.4.16'
+version: '1.4.17'
 summary: Desktop for Claude, an unofficial Claude AI app with tabs and tray
 description: |
   Desktop for Claude is an unofficial app that runs claude.ai on Linux
@@ -21,28 +21,20 @@ description: |
   the official app does not support, and here in the Snap Store, where there
   is no official package.
 
-  What's new in v1.4.16:
+  What's new in v1.4.17:
 
-  * A Design window replaces the blind toggles. It shows every colour
-    theme as a small preview of the real window and page, and applies
-    the choice immediately.
-  * New colour theme Midnight Blue: deep blue surfaces with scattered
-    wave crests in the background, the counterpart to OLED's stars.
-  * New style Neon, a blue accent. Style and colour theme are separate
-    now, so every combination is selectable, and the style also sets
-    the send arrow, which used to stay orange in every theme.
-  * Several colouring leftovers are gone: the ring around the input
-    field sat next to its corners, grey bars showed on the Code and
-    Design pages, and in the light theme the design page had a black
-    lower half.
+  * The thank-you badge from 1.4.16 sat on top of claude.ai's send
+    button and swallowed the click. Below about 1444 pixels of window
+    width it covered three quarters of the button, so on any window
+    that is not maximised. Enter still sent, which is why it took two
+    reports to surface. The badge is removed.
 
-  Highlights from v1.4.15:
+  Highlights from v1.4.16:
 
-  * Buying a subscription works again. The protection that keeps foreign
-    embedded content out of the app rejected claude.ai's own payment
-    frames, so only pulsing placeholders were left.
-  * In the light theme, artifacts and the Design view no longer show up
-    as a colour negative, and the OLED Share button is visible again.
+  * A Design window shows every colour theme as a small preview of the
+    real window and page, and applies the choice immediately.
+  * New colour theme Midnight Blue and new accent style Neon. Style and
+    colour theme are separate now, so every combination is selectable.
 
   System requirements:
 

@@ -7,7 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [1.4.16] - 2026-08-17 - Design Window and Themes
+## [1.4.17] - 2026-09-05 - Send Button Fix
+
+### Fixed
+- **The thank-you badge covered claude.ai's send button and swallowed the click.** It was fixed to the lower right corner with no `pointer-events: none`, so it took every click inside its 320px box. Measured in a running window of 1438x704: the badge spans x 1100-1420, y 631-686, the send button sits at x 1206-1238, y 622-654, and `elementFromPoint` returns the badge. Dictation, voice input and the model picker were covered as well. The composer is centred at a maximum width of 768, so the overlap happens at any window width below roughly 1444 pixels, which is every unmaximised window and every 1366px laptop, and never on a wide monitor. Enter still sent, which is why only two people hit it: one reported "its not loading responses", the other that no message went out at all.
+
+### Removed
+- The thank-you badge (`inject/thanks-badge.js` and its injection). The overlay is gone rather than made click-through, so it cannot cover anything else later.
 
 ### Added
 - **A Design window replaces the blind toggles.** The menu entry opened nothing and the tab bar button cycled through the modes without showing what was coming. It now opens a window that renders every colour theme as a small mockup of the real window chrome and page surface, plus the accent styles. A click applies live through `setThemeMode()`, and the window recolours itself from values already in the card, so there is no reload and no IPC roundtrip. Own preload (`preload-design.js`), same pattern as the settings window.
